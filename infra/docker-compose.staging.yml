@@ -23,6 +23,8 @@ services:
         condition: service_healthy
     networks:
       - penster-staging
+    volumes:
+      - ../migrations:/app/migrations:ro
     restart: unless-stopped
     deploy:
       resources:

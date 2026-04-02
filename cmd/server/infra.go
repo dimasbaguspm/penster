@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/dimasbaguspm/penster/config"
@@ -10,34 +9,30 @@ import (
 	appquery "github.com/dimasbaguspm/penster/internal/application/query"
 	"github.com/dimasbaguspm/penster/internal/application/service"
 	"github.com/dimasbaguspm/penster/internal/domain/repository"
-	"github.com/dimasbaguspm/penster/internal/infrastructure/database"
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
-	"github.com/jackc/pgx/v5"
+	"github.com/dimasbaguspm/penster/internal/infrastructure/postgres"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Infra struct {
-	DB              *pgx.Conn
+	DB              *pgxpool.Pool
 	AccountService  *service.AccountService
 	CategoryService *service.CategoryService
 }
 
 func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
-	conn, err := pgx.Connect(ctx, cfg.DB.DSN())
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
-
-	if err := conn.Ping(ctx); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
-	}
+	conn := postgres.MustConnect(ctx, postgres.Config{
+		Primary:  cfg.DB.Primary,
+		MaxConns: cfg.DB.MaxConns,
+		MinConns: cfg.DB.MinConns,
+	})
 
 	log.Println("Connected to database")
 
 	if cfg.Migrate.AutoMigrate {
-		migrator := database.NewMigrator(conn, &cfg.DB)
-		if err := migrator.MigrateUp(ctx); err != nil {
-			return nil, fmt.Errorf("failed to run migrations: %w", err)
-		}
+		postgres.RunMigration(postgres.Config{
+			Primary: cfg.DB.Primary,
+		})
 	}
 
 	dbQueries := query.New(conn)
@@ -59,7 +54,7 @@ func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
 
 func (i *Infra) Close(ctx context.Context) {
 	if i.DB != nil {
-		i.DB.Close(ctx)
+		i.DB.Close()
 	}
 }
 

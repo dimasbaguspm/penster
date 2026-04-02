@@ -3,6 +3,6 @@ packages:
   - name: "query"
     path: "internal/infrastructure/database/query"
     queries: "./internal/infrastructure/database/query"
-    schema: "./internal/infrastructure/database/migrations"
+    schema: "./migrations"
     engine: "postgresql"
     sql_package: "pgx/v5"
