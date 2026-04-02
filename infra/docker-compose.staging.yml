@@ -25,6 +25,7 @@ services:
       - penster-staging
     volumes:
       - ../migrations:/app/migrations:ro
+      - ../swagger:/app/swagger:ro
     restart: unless-stopped
     deploy:
       resources:

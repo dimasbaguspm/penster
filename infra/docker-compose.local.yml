@@ -26,6 +26,7 @@ services:
       - penster-local
     volumes:
       - ../migrations:/app/migrations:ro
+      - ../swagger:/app/swagger:ro
 
   postgres:
     image: postgres:16-alpine

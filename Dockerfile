@@ -35,6 +35,7 @@ RUN adduser -D -g '' appuser
 COPY --from=builder /app/server .
 COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/internal/infrastructure/database/query ./query
+COPY --from=builder /app/swagger ./swagger
 COPY --from=builder /app/sqlc.yaml .
 COPY --from=builder /app/config ./config
 
