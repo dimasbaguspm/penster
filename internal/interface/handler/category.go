@@ -19,6 +19,19 @@ func NewCategoryHandler(svc *service.CategoryService) *CategoryHandler {
 }
 
 // List handles GET /categories
+// @Summary List all categories
+// @Description Get a paginated list of categories with optional filtering
+// @Tags categories
+// @Accept json
+// @Produce json
+// @Param q query string false "Search query"
+// @Param sort_by query string false "Sort by field"
+// @Param sort_order query string false "Sort order (asc/desc)"
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(10)
+// @Success 200 {object} response.PaginatedResponse
+// @Failure 500 {object} response.Response
+// @Router /categories [get]
 func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -42,6 +55,17 @@ func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 // Get handles GET /categories/:id
+// @Summary Get category by ID
+// @Description Get a single category by its UUID
+// @Tags categories
+// @Accept json
+// @Produce json
+// @Param id path string true "Category UUID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /categories/{id} [get]
 func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -69,6 +93,16 @@ func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 // Create handles POST /categories
+// @Summary Create a new category
+// @Description Create a new category with name and type
+// @Tags categories
+// @Accept json
+// @Produce json
+// @Param request body models.CreateCategoryRequest true "Category creation request"
+// @Success 201 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /categories [post]
 func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -97,6 +131,18 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 // Update handles PUT /categories/:id
+// @Summary Update a category
+// @Description Update an existing category by its UUID
+// @Tags categories
+// @Accept json
+// @Produce json
+// @Param id path string true "Category UUID"
+// @Param request body models.UpdateCategoryRequest true "Category update request"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /categories/{id} [put]
 func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -135,6 +181,17 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 // Delete handles DELETE /categories/:id
+// @Summary Delete a category
+// @Description Soft delete a category by its UUID
+// @Tags categories
+// @Accept json
+// @Produce json
+// @Param id path string true "Category UUID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /categories/{id} [delete]
 func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		w.WriteHeader(http.StatusMethodNotAllowed)

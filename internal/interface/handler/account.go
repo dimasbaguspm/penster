@@ -19,6 +19,19 @@ func NewAccountHandler(svc *service.AccountService) *AccountHandler {
 }
 
 // List handles GET /accounts
+// @Summary List all accounts
+// @Description Get a paginated list of accounts with optional filtering
+// @Tags accounts
+// @Accept json
+// @Produce json
+// @Param q query string false "Search query"
+// @Param sort_by query string false "Sort by field"
+// @Param sort_order query string false "Sort order (asc/desc)"
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(10)
+// @Success 200 {object} response.PaginatedResponse
+// @Failure 500 {object} response.Response
+// @Router /accounts [get]
 func (h *AccountHandler) List(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -42,6 +55,17 @@ func (h *AccountHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 // Get handles GET /accounts/:id
+// @Summary Get account by ID
+// @Description Get a single account by its UUID
+// @Tags accounts
+// @Accept json
+// @Produce json
+// @Param id path string true "Account UUID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /accounts/{id} [get]
 func (h *AccountHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -69,6 +93,16 @@ func (h *AccountHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 // Create handles POST /accounts
+// @Summary Create a new account
+// @Description Create a new account with name, type and optional balance
+// @Tags accounts
+// @Accept json
+// @Produce json
+// @Param request body models.CreateAccountRequest true "Account creation request"
+// @Success 201 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /accounts [post]
 func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -97,6 +131,18 @@ func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 // Update handles PUT /accounts/:id
+// @Summary Update an account
+// @Description Update an existing account by its UUID
+// @Tags accounts
+// @Accept json
+// @Produce json
+// @Param id path string true "Account UUID"
+// @Param request body models.UpdateAccountRequest true "Account update request"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /accounts/{id} [put]
 func (h *AccountHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -135,6 +181,17 @@ func (h *AccountHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 // Delete handles DELETE /accounts/:id
+// @Summary Delete an account
+// @Description Soft delete an account by its UUID
+// @Tags accounts
+// @Accept json
+// @Produce json
+// @Param id path string true "Account UUID"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /accounts/{id} [delete]
 func (h *AccountHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		w.WriteHeader(http.StatusMethodNotAllowed)

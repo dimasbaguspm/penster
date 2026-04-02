@@ -1,6 +1,7 @@
 .PHONY: init dev-backend dev-reset
 
 init:
+	go install github.com/swaggo/swag/cmd/swag@latest
 	go mod tidy
 	go mod download
 

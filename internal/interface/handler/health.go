@@ -5,7 +5,20 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
+
+// @title Penster API
+// @version 1.0
+// @description Expense tracker API with accounts and categories management
+// @host localhost:8080
+// @BasePath /
+
+// SwaggerHandler serves the swagger documentation
+func (h *HealthHandler) SwaggerHandler(w http.ResponseWriter, r *http.Request) {
+	httpSwagger.Handler(httpSwagger.URL("/swagger/doc.json")).ServeHTTP(w, r)
+}
 
 type ReadyChecker interface {
 	Health(ctx context.Context) error
@@ -29,6 +42,14 @@ type HealthResponse struct {
 	Version   string `json:"version"`
 }
 
+// Health handles GET /health
+// @Summary Health check
+// @Description Returns the health status of the API
+// @Tags health
+// @Accept json
+// @Produce json
+// @Success 200 {object} HealthResponse
+// @Router /health [get]
 func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -46,6 +67,15 @@ func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
+// Ready handles GET /ready
+// @Summary Readiness check
+// @Description Returns the readiness status of the API
+// @Tags health
+// @Accept json
+// @Produce json
+// @Success 200 {object} HealthResponse
+// @Failure 503 {object} HealthResponse
+// @Router /ready [get]
 func (h *HealthHandler) Ready(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
