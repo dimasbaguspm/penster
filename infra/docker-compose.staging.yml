@@ -1,0 +1,96 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: penster-app-staging
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_ENV=staging
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=penster
+      - DB_PASSWORD=placeholder
+      - DB_NAME=penster
+      - KAFKA_BROKERS=redpanda:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    networks:
+      - penster-staging
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: penster-postgres-staging
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=penster
+      - POSTGRES_PASSWORD=placeholder
+      - POSTGRES_DB=penster
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U penster -d penster"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - penster-staging
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  redpanda:
+    image: redpandadata/redpanda:v24.1.1
+    container_name: penster-redpanda-staging
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    command: [
+      "redpanda", "start",
+      "--smp", "1",
+      "--memory", "1G",
+      "--overprovisioned",
+      "--node-id", "0",
+      "--check",
+      "--kafka-addr", "redpanda:9092",
+      "--advertise-kafka-addr", "redpanda:9092"
+    ]
+    healthcheck:
+      test: ["CMD", "curl", "-s", "http://localhost:9644/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - penster-staging
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+volumes:
+  postgres_staging_data:
+
+networks:
+  penster-staging:
+    driver: bridge

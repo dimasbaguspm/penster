@@ -1,0 +1,98 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: penster-app-local
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_ENV=local
+      - APP_PORT=8080
+      - AUTO_MIGRATE=true
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=penster
+      - DB_PASSWORD=placeholder
+      - DB_NAME=penster
+      - DB_SSLMODE=disable
+      - KAFKA_BROKERS=redpanda:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    networks:
+      - penster-local
+    volumes:
+      - ../migrations:/app/migrations:ro
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: penster-postgres-local
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=penster
+      - POSTGRES_PASSWORD=placeholder
+      - POSTGRES_DB=penster
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U penster -d penster"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - penster-local
+
+  redpanda:
+    image: redpandadata/redpanda:v24.1.1
+    container_name: penster-redpanda-local
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    command: [
+      "redpanda", "start",
+      "--smp", "1",
+      "--memory", "1G",
+      "--overprovisioned",
+      "--node-id", "0",
+      "--check",
+      "--kafka-addr", "redpanda:9092",
+      "--advertise-kafka-addr", "redpanda:9092"
+    ]
+    healthcheck:
+      test: ["CMD", "curl", "-s", "http://localhost:9644/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - penster-local
+
+  # Optional: Redis for caching (commented out - enable if needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: penster-redis-local
+  #   ports:
+  #     - "6379:6379"
+  #   networks:
+  #     - penster-local
+
+  # Optional: Meilisearch for search (commented out - enable if needed)
+  # meilisearch:
+  #   image: getmeili/meilisearch:v1.6
+  #   container_name: penster-meilisearch-local
+  #   ports:
+  #     - "7700:7700"
+  #   environment:
+  #     - MEILI_ENV=development
+  #   networks:
+  #     - penster-local
+
+volumes:
+  postgres_data:
+
+networks:
+  penster-local:
+    driver: bridge
