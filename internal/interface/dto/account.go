@@ -9,7 +9,10 @@ import (
 
 func ParseAccountListParams(r *http.Request) *models.AccountSearchParams {
 	q := r.URL.Query()
-	params := &models.AccountSearchParams{}
+	params := &models.AccountSearchParams{
+		PageNumber: 1,
+		PageSize:   10,
+	}
 
 	if v := q.Get("q"); v != "" {
 		params.Q = &v

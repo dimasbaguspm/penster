@@ -1,0 +1,46 @@
+package main
+
+import (
+	"net/http"
+	"testing"
+
+	"github.com/dimasbaguspm/penster/pkg/models"
+)
+
+func TestGetAccount_Success(t *testing.T) {
+	createReq := &models.CreateAccountRequest{
+		Name:    "Test Account",
+		Type:    models.AccountTypeExpense,
+		Balance: 1000,
+	}
+	created, _, _ := doCreateAccount(createReq)
+	id := created.Data.SubID
+
+	result, status, err := doGetAccount(id)
+	if err != nil {
+		t.Fatalf("Failed to get account: %v", err)
+	}
+	if status != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", status)
+	}
+	if !result.Success {
+		t.Errorf("Expected success=true, got false with error: %s", result.Error)
+	}
+}
+
+func TestGetAccount_NotFound(t *testing.T) {
+	_, status, _ := doGetAccount("00000000-0000-0000-0000-000000000000")
+	if status != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", status)
+	}
+}
+
+func TestListAccounts_Success(t *testing.T) {
+	_, status, err := doListAccounts()
+	if err != nil {
+		t.Fatalf("Failed to list accounts: %v", err)
+	}
+	if status != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", status)
+	}
+}
