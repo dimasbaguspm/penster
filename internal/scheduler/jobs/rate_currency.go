@@ -1,0 +1,143 @@
+package jobs
+
+import (
+	"context"
+	"encoding/xml"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"time"
+
+	"github.com/dimasbaguspm/penster/config"
+	"github.com/dimasbaguspm/penster/internal/application/service"
+	"github.com/dimasbaguspm/penster/internal/scheduler/engine"
+	"github.com/dimasbaguspm/penster/pkg/models"
+)
+
+type RateCurrencyJob struct {
+	cfg *config.Config
+}
+
+var _ engine.Job = (*RateCurrencyJob)(nil)
+
+func NewRateCurrencyJob(cfg *config.Config) *RateCurrencyJob {
+	return &RateCurrencyJob{cfg: cfg}
+}
+
+func (j *RateCurrencyJob) Name() string {
+	return "rate_currency"
+}
+
+func (j *RateCurrencyJob) Schedule() engine.Schedule {
+	return engine.IntervalSchedule{
+		Interval: j.cfg.RateCurrency.Interval,
+	}
+}
+
+func (j *RateCurrencyJob) Run(ctx context.Context, svc *service.RateCurrencyService) error {
+	log.Println("Running rate_currency job - fetching ECB rates")
+
+	rates, err := fetchECBRates(ctx, j.cfg.RateCurrency.ECBURL)
+	if err != nil {
+		return fmt.Errorf("failed to fetch ECB rates: %w", err)
+	}
+
+	if len(rates) == 0 {
+		return fmt.Errorf("no rates found in ECB data")
+	}
+
+	rateDate := time.Now().Truncate(24 * time.Hour)
+
+	existing, err := svc.Get(ctx, "EUR", "USD", rateDate)
+	if err != nil {
+		log.Printf("Failed to check existing rate: %v", err)
+	}
+
+	if existing != nil {
+		log.Printf("Rates for %s already exist, skipping upsert", rateDate.Format("2006-01-02"))
+		return nil
+	}
+
+	log.Printf("Upserting %d rates for %s", len(rates), rateDate.Format("2006-01-02"))
+
+	for currency, rate := range rates {
+		req := &models.UpsertRateCurrencyRequest{
+			FromCurrency: "EUR",
+			ToCurrency:   currency,
+			Rate:         rate,
+			RateDate:     rateDate,
+		}
+		_, err := svc.Upsert(ctx, req)
+		if err != nil {
+			log.Printf("Failed to upsert rate %s/%s: %v", "EUR", currency, err)
+		}
+	}
+
+	log.Println("Rate currency job completed")
+	return nil
+}
+
+type ecbEnvelope struct {
+	Cube ecbCube `xml:"Cube"`
+}
+
+type ecbCube struct {
+	Time string   `xml:"time,attr"`
+	Cube ecbCube2 `xml:"Cube"`
+}
+
+type ecbCube2 struct {
+	Cubes []ecbRate `xml:"Cube"`
+}
+
+type ecbRate struct {
+	Currency string  `xml:"currency,attr"`
+	Rate     float64 `xml:"rate,attr"`
+}
+
+func fetchECBRates(ctx context.Context, url string) (map[string]float64, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch ECB data: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ECB returned status %d", resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return parseXML(data)
+}
+
+func parseXML(data []byte) (map[string]float64, error) {
+	var envelope ecbEnvelope
+	if err := xml.Unmarshal(data, &envelope); err != nil {
+		return nil, fmt.Errorf("XML unmarshal failed: %w", err)
+	}
+
+	rates := make(map[string]float64)
+	rates["EUR"] = 1.0
+
+	for _, cube := range envelope.Cube.Cube.Cubes {
+		if cube.Currency == "" {
+			continue
+		}
+		if cube.Rate <= 0 {
+			return nil, fmt.Errorf("invalid rate for %s: %f", cube.Currency, cube.Rate)
+		}
+		rates[cube.Currency] = cube.Rate
+	}
+
+	return rates, nil
+}

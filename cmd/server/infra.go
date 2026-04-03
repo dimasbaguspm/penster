@@ -11,6 +11,8 @@ import (
 	"github.com/dimasbaguspm/penster/internal/domain/repository"
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/internal/infrastructure/postgres"
+	"github.com/dimasbaguspm/penster/internal/scheduler/engine"
+	"github.com/dimasbaguspm/penster/internal/scheduler/jobs"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -19,6 +21,7 @@ type Infra struct {
 	AccountService      *service.AccountService
 	CategoryService     *service.CategoryService
 	RateCurrencyService *service.RateCurrencyService
+	Scheduler           *engine.Engine
 }
 
 func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
@@ -48,16 +51,27 @@ func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
 	categoryCommand := command.NewCategoryCommand(categoryRepo)
 	rateCurrencyQuery := appquery.NewRateCurrencyQuery(rateCurrencyRepo)
 	rateCurrencyCommand := command.NewRateCurrencyCommand(rateCurrencyRepo)
+	rateCurrencyService := service.NewRateCurrencyService(rateCurrencyQuery, rateCurrencyCommand)
+
+	scheduler := engine.NewEngine(cfg, rateCurrencyService)
 
 	return &Infra{
 		DB:                  conn,
 		AccountService:      service.NewAccountService(accountQuery, accountCommand),
 		CategoryService:     service.NewCategoryService(categoryQuery, categoryCommand),
-		RateCurrencyService: service.NewRateCurrencyService(rateCurrencyQuery, rateCurrencyCommand),
+		RateCurrencyService: rateCurrencyService,
+		Scheduler:           scheduler,
 	}, nil
 }
 
+func (i *Infra) RegisterJobs(cfg *config.Config) {
+	i.Scheduler.RegisterJob(jobs.NewRateCurrencyJob(cfg))
+}
+
 func (i *Infra) Close(ctx context.Context) {
+	if i.Scheduler != nil {
+		i.Scheduler.Stop()
+	}
 	if i.DB != nil {
 		i.DB.Close()
 	}

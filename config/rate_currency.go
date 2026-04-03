@@ -1,11 +1,15 @@
 package config
 
+import "time"
+
 type RateCurrencyConfig struct {
-	ECBURL string
+	Interval time.Duration
+	ECBURL   string
 }
 
 func LoadRateCurrencyConfig() RateCurrencyConfig {
 	return RateCurrencyConfig{
-		ECBURL: getEnv("ECB_URL", "http://www.ecb.int/vocabulary/2002-08-01/eurofxref"),
+		Interval: time.Hour,
+		ECBURL:   getEnv("ECB_URL", "http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"),
 	}
 }

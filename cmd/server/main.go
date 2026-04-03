@@ -27,6 +27,9 @@ func main() {
 	}
 	defer infra.Close(ctx)
 
+	infra.RegisterJobs(cfg)
+	infra.Scheduler.Start(ctx)
+
 	healthHandler := handler.NewHealthHandler(infra)
 	r := router.NewRouter(healthHandler, infra.AccountService, infra.CategoryService)
 
