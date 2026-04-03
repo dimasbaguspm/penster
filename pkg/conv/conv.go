@@ -18,3 +18,11 @@ func StringPtrToEmpty(s *string) string {
 	}
 	return *s
 }
+
+// StringPtrToNull converts a nil string pointer to an empty string
+func StringPtrToNull(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
