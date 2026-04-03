@@ -3,10 +3,6 @@ package models
 import (
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
-	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
-	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
@@ -65,19 +61,4 @@ func (p *AccountSearchParams) Offset() int {
 		return 0
 	}
 	return (p.PageNumber - 1) * p.PageSize
-}
-
-func (p *AccountSearchParams) ToQueryParams() query.ListAccountsParams {
-	var subID pgtype.UUID
-	if p.SubID != nil {
-		subID = pgtype.UUID{Bytes: conv.ParseUUID(*p.SubID), Valid: true}
-	}
-
-	return query.ListAccountsParams{
-		SubID:     subID,
-		Q:         conv.StringPtrToEmpty(p.Q),
-		SortBy:    p.SortBy,
-		SortOrder: p.SortOrder,
-		PageSize:  int64(p.PageSize),
-	}
 }

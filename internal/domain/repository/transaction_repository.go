@@ -243,20 +243,20 @@ func (r *TransactionRepository) List(ctx context.Context, params *models.Transac
 
 func (r *TransactionRepository) Update(ctx context.Context, id int32, req *models.UpdateTransactionRequest, currencyRate float64) (*models.Transaction, error) {
 	var (
-		accountID         int32
-		transferAccountID pgtype.Int4
-		categoryID        int32
-		transactionType   string
-		title             string
-		amount            int64
-		currency          string
-		notes             pgtype.Text
-		hasAccountID      bool
-		hasCategoryID     bool
+		accountID          int32
+		transferAccountID  pgtype.Int4
+		categoryID         int32
+		transactionType    string
+		title              string
+		amount             int64
+		currency           string
+		notes              pgtype.Text
+		hasAccountID       bool
+		hasCategoryID      bool
 		hasTransactionType bool
-		hasTitle          bool
-		hasAmount         bool
-		hasCurrency       bool
+		hasTitle           bool
+		hasAmount          bool
+		hasCurrency        bool
 	)
 
 	grp := syncerr.Group{}

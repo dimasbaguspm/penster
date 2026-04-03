@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/models"
@@ -90,7 +91,7 @@ func (r *CategoryRepository) DeleteBySubID(ctx context.Context, subID string) (*
 }
 
 func (r *CategoryRepository) List(ctx context.Context, params *models.CategorySearchParams) ([]*models.Category, int64, error) {
-	queryParams := params.ToQueryParams()
+	queryParams := entities.ToListCategoriesParams(params)
 	rows, err := r.db.ListCategories(ctx, queryParams)
 	if err != nil {
 		return nil, 0, err

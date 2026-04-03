@@ -3,10 +3,6 @@ package models
 import (
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
-
-	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
-	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
@@ -62,22 +58,4 @@ func (p *CategorySearchParams) Offset() int {
 		return 0
 	}
 	return (p.PageNumber - 1) * p.PageSize
-}
-
-func (p *CategorySearchParams) ToQueryParams() query.ListCategoriesParams {
-	var subID pgtype.UUID
-	if p.SubID != nil {
-		subID = pgtype.UUID{Bytes: conv.ParseUUID(*p.SubID), Valid: true}
-	}
-
-	return query.ListCategoriesParams{
-		Column1: subID,
-		Column2: conv.StringPtrToEmpty(p.Q),
-		Column3: p.SortBy,
-		Column4: p.SortOrder,
-		Column5: "",
-		Column6: pgtype.Timestamptz{},
-		Column7: pgtype.Timestamptz{},
-		Column8: int64(p.PageSize),
-	}
 }

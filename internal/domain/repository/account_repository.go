@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/models"
@@ -91,7 +92,7 @@ func (r *AccountRepository) DeleteBySubID(ctx context.Context, subID string) (*m
 }
 
 func (r *AccountRepository) List(ctx context.Context, params *models.AccountSearchParams) ([]*models.Account, int64, error) {
-	queryParams := params.ToQueryParams()
+	queryParams := entities.ToListAccountsParams(params)
 	rows, err := r.db.ListAccounts(ctx, queryParams)
 	if err != nil {
 		return nil, 0, err
