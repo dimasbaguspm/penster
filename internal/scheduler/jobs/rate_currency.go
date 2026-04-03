@@ -11,31 +11,32 @@ import (
 
 	"github.com/dimasbaguspm/penster/config"
 	"github.com/dimasbaguspm/penster/internal/application/service"
-	"github.com/dimasbaguspm/penster/internal/scheduler/engine"
+	"github.com/dimasbaguspm/penster/internal/scheduler"
 	"github.com/dimasbaguspm/penster/pkg/models"
 )
 
 type RateCurrencyJob struct {
 	cfg *config.Config
+	svc *service.RateCurrencyService
 }
 
-var _ engine.Job = (*RateCurrencyJob)(nil)
+var _ scheduler.Job = (*RateCurrencyJob)(nil)
 
-func NewRateCurrencyJob(cfg *config.Config) *RateCurrencyJob {
-	return &RateCurrencyJob{cfg: cfg}
+func NewRateCurrencyJob(cfg *config.Config, svc *service.RateCurrencyService) *RateCurrencyJob {
+	return &RateCurrencyJob{cfg: cfg, svc: svc}
 }
 
 func (j *RateCurrencyJob) Name() string {
 	return "rate_currency"
 }
 
-func (j *RateCurrencyJob) Schedule() engine.Schedule {
-	return engine.IntervalSchedule{
+func (j *RateCurrencyJob) Schedule() scheduler.Schedule {
+	return scheduler.IntervalSchedule{
 		Interval: j.cfg.RateCurrency.Interval,
 	}
 }
 
-func (j *RateCurrencyJob) Run(ctx context.Context, svc *service.RateCurrencyService) error {
+func (j *RateCurrencyJob) Run(ctx context.Context) error {
 	log.Println("Running rate_currency job - fetching ECB rates")
 
 	rates, err := fetchECBRates(ctx, j.cfg.RateCurrency.ECBURL)
@@ -49,7 +50,7 @@ func (j *RateCurrencyJob) Run(ctx context.Context, svc *service.RateCurrencyServ
 
 	rateDate := time.Now().Truncate(24 * time.Hour)
 
-	existing, err := svc.Get(ctx, "EUR", "USD", rateDate)
+	existing, err := j.svc.Get(ctx, "EUR", "USD", rateDate)
 	if err != nil {
 		log.Printf("Failed to check existing rate: %v", err)
 	}
@@ -68,7 +69,7 @@ func (j *RateCurrencyJob) Run(ctx context.Context, svc *service.RateCurrencyServ
 			Rate:         rate,
 			RateDate:     rateDate,
 		}
-		_, err := svc.Upsert(ctx, req)
+		_, err := j.svc.Upsert(ctx, req)
 		if err != nil {
 			log.Printf("Failed to upsert rate %s/%s: %v", "EUR", currency, err)
 		}

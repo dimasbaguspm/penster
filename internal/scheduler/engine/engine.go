@@ -8,30 +8,29 @@ import (
 
 	"github.com/dimasbaguspm/penster/config"
 	"github.com/dimasbaguspm/penster/internal/application/service"
+	"github.com/dimasbaguspm/penster/internal/scheduler"
+	"github.com/dimasbaguspm/penster/internal/scheduler/jobs"
 )
 
 type Engine struct {
-	jobs     []Job
-	nextRun  map[Job]time.Time
-	cfg      *config.Config
-	svc      *service.RateCurrencyService
-	ticker   *time.Ticker
-	done     chan struct{}
-	wg       sync.WaitGroup
-	mu       sync.RWMutex
+	jobs          []scheduler.Job
+	nextRun       map[scheduler.Job]time.Time
+	cfg           *config.Config
+	rateCurrencyS *service.RateCurrencyService
+	ticker        *time.Ticker
+	done          chan struct{}
+	wg            sync.WaitGroup
+	mu            sync.RWMutex
 }
 
-func NewEngine(cfg *config.Config, svc *service.RateCurrencyService) *Engine {
-	return &Engine{
-		cfg:     cfg,
-		svc:     svc,
-		nextRun: make(map[Job]time.Time),
+func NewEngine(cfg *config.Config, rateCurrencyS *service.RateCurrencyService) *Engine {
+	e := &Engine{
+		cfg:           cfg,
+		rateCurrencyS: rateCurrencyS,
+		nextRun:       make(map[scheduler.Job]time.Time),
 	}
-}
-
-func (e *Engine) RegisterJob(job Job) {
-	e.jobs = append(e.jobs, job)
-	e.nextRun[job] = time.Now()
+	e.jobs = append(e.jobs, jobs.NewRateCurrencyJob(cfg, rateCurrencyS))
+	return e
 }
 
 func (e *Engine) Start(ctx context.Context) {
@@ -74,8 +73,8 @@ func (e *Engine) dispatch(now time.Time) {
 		if now.After(nextRun) || now.Equal(nextRun) {
 			log.Printf("Dispatching job: %s", job.Name())
 			e.nextRun[job] = now.Add(job.Schedule().NextRun(now).Sub(now))
-			go func(j Job) {
-				if err := j.Run(context.Background(), e.svc); err != nil {
+			go func(j scheduler.Job) {
+				if err := j.Run(context.Background()); err != nil {
 					log.Printf("Job %s failed: %v", j.Name(), err)
 				}
 			}(job)

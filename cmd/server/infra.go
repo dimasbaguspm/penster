@@ -12,7 +12,6 @@ import (
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/internal/infrastructure/postgres"
 	"github.com/dimasbaguspm/penster/internal/scheduler/engine"
-	"github.com/dimasbaguspm/penster/internal/scheduler/jobs"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -69,10 +68,6 @@ func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
 		TransactionService:  transactionService,
 		Scheduler:           scheduler,
 	}, nil
-}
-
-func (i *Infra) RegisterJobs(cfg *config.Config) {
-	i.Scheduler.RegisterJob(jobs.NewRateCurrencyJob(cfg))
 }
 
 func (i *Infra) Close(ctx context.Context) {
