@@ -236,9 +236,9 @@ func (q *Queries) ListAccounts(ctx context.Context, arg ListAccountsParams) ([]L
 const updateAccount = `-- name: UpdateAccount :one
 UPDATE accounts
 SET
-    name = COALESCE($1, name),
-    type = COALESCE($2, type),
-    balance = COALESCE($3, balance),
+    name = COALESCE(NULLIF($1, ''), name),
+    type = COALESCE(NULLIF($2, ''), type),
+    balance = COALESCE(NULLIF($3, 0), balance),
     updated_at = NOW()
 WHERE id = $4 AND deleted_at IS NULL
 RETURNING id, sub_id, name, type, balance, deleted_at, created_at, updated_at

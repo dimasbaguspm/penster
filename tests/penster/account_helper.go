@@ -20,9 +20,18 @@ func doGetAccount(id string) (*models.AccountResponse, int, error) {
 	return result, status, err
 }
 
-// doUpdateAccount PATCHes an account by ID and returns AccountResponse + status.
+// doUpdateAccount PUTs an UpdateAccountRequest and returns AccountResponse + status.
 func doUpdateAccount(id string, req *models.UpdateAccountRequest) (*models.AccountResponse, int, error) {
-	result, status, err := doJSONRequest[models.AccountResponse]("PATCH", "/accounts/"+id, req)
+	result, status, err := doJSONRequest[models.AccountResponse]("PUT", "/accounts/"+id, req)
+	if result == nil {
+		return nil, status, err
+	}
+	return result, status, err
+}
+
+// doDeleteAccount DELETEs an account by ID and returns AccountResponse + status.
+func doDeleteAccount(id string) (*models.AccountResponse, int, error) {
+	result, status, err := doJSONRequest[models.AccountResponse]("DELETE", "/accounts/"+id, nil)
 	if result == nil {
 		return nil, status, err
 	}

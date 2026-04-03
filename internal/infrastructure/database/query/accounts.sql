@@ -78,9 +78,9 @@ FROM paginated_query pq, count_query cq;
 -- name: UpdateAccount :one
 UPDATE accounts
 SET
-    name = COALESCE(@name, name),
-    type = COALESCE(@type, type),
-    balance = COALESCE(@balance, balance),
+    name = COALESCE(NULLIF(@name, ''), name),
+    type = COALESCE(NULLIF(@type, ''), type),
+    balance = COALESCE(NULLIF(@balance, 0), balance),
     updated_at = NOW()
 WHERE id = @id AND deleted_at IS NULL
 RETURNING id, sub_id, name, type, balance, deleted_at, created_at, updated_at;

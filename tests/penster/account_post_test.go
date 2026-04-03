@@ -56,3 +56,45 @@ func TestCreateAccount_ValidationError_InvalidType(t *testing.T) {
 		t.Errorf("Expected status 400, got %d", status)
 	}
 }
+
+func TestCreateAccount_Success_IncomeType(t *testing.T) {
+	req := &models.CreateAccountRequest{
+		Name:    "Income Account",
+		Type:    models.AccountTypeIncome,
+		Balance: 5000,
+	}
+	result, status, err := doCreateAccount(req)
+	if err != nil {
+		t.Fatalf("Failed to create income account: %v", err)
+	}
+	if status != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", status)
+	}
+	if !result.Success {
+		t.Errorf("Expected success=true, got false with error: %s", result.Error)
+	}
+	if result.Data.Type != models.AccountTypeIncome {
+		t.Errorf("Expected type 'income', got %s", result.Data.Type)
+	}
+}
+
+func TestCreateAccount_Success_TransferType(t *testing.T) {
+	req := &models.CreateAccountRequest{
+		Name:    "Transfer Account",
+		Type:    models.AccountTypeTransfer,
+		Balance: 0,
+	}
+	result, status, err := doCreateAccount(req)
+	if err != nil {
+		t.Fatalf("Failed to create transfer account: %v", err)
+	}
+	if status != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d", status)
+	}
+	if !result.Success {
+		t.Errorf("Expected success=true, got false with error: %s", result.Error)
+	}
+	if result.Data.Type != models.AccountTypeTransfer {
+		t.Errorf("Expected type 'transfer', got %s", result.Data.Type)
+	}
+}
