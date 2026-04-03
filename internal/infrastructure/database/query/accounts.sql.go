@@ -245,9 +245,9 @@ RETURNING id, sub_id, name, type, balance, deleted_at, created_at, updated_at
 `
 
 type UpdateAccountParams struct {
-	Name    string
-	Type    string
-	Balance int64
+	Name    interface{}
+	Type    interface{}
+	Balance interface{}
 	ID      int32
 }
 

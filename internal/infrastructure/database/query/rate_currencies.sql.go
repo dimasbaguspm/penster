@@ -7,132 +7,9 @@ package query
 
 import (
 	"context"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
-
-type RateCurrency struct {
-	ID           pgtype.UUID
-	FromCurrency string
-	ToCurrency   string
-	Rate         pgtype.Numeric
-	RateDate     pgtype.Date
-	CreatedAt    pgtype.Timestamptz
-}
-
-const upsertRateCurrency = `-- name: UpsertRateCurrency :one
-INSERT INTO rate_currencies (from_currency, to_currency, rate, rate_date)
-VALUES ($1, $2, $3, $4)
-ON CONFLICT (from_currency, to_currency, rate_date)
-DO UPDATE SET rate = EXCLUDED.rate
-RETURNING id, from_currency, to_currency, rate, rate_date, created_at
-`
-
-type UpsertRateCurrencyParams struct {
-	FromCurrency string
-	ToCurrency   string
-	Rate         float64
-	RateDate     time.Time
-}
-
-func (q *Queries) UpsertRateCurrency(ctx context.Context, arg UpsertRateCurrencyParams) (RateCurrency, error) {
-	row := q.db.QueryRow(ctx, upsertRateCurrency, arg.FromCurrency, arg.ToCurrency, arg.Rate, arg.RateDate)
-	var i RateCurrency
-	err := row.Scan(
-		&i.ID,
-		&i.FromCurrency,
-		&i.ToCurrency,
-		&i.Rate,
-		&i.RateDate,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const getRateCurrency = `-- name: GetRateCurrency :one
-SELECT id, from_currency, to_currency, rate, rate_date, created_at
-FROM rate_currencies
-WHERE from_currency = $1
-  AND to_currency = $2
-  AND rate_date = $3
-`
-
-type GetRateCurrencyParams struct {
-	FromCurrency string
-	ToCurrency   string
-	RateDate     time.Time
-}
-
-func (q *Queries) GetRateCurrency(ctx context.Context, arg GetRateCurrencyParams) (RateCurrency, error) {
-	row := q.db.QueryRow(ctx, getRateCurrency, arg.FromCurrency, arg.ToCurrency, arg.RateDate)
-	var i RateCurrency
-	err := row.Scan(
-		&i.ID,
-		&i.FromCurrency,
-		&i.ToCurrency,
-		&i.Rate,
-		&i.RateDate,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const listRateCurrencies = `-- name: ListRateCurrencies :many
-SELECT id, from_currency, to_currency, rate, rate_date, created_at
-FROM rate_currencies
-WHERE
-    ($1::text IS NULL OR from_currency = $1)
-    AND ($2::text IS NULL OR to_currency = $2)
-ORDER BY rate_date DESC, from_currency, to_currency
-LIMIT NULLIF($3, 0)
-OFFSET $4
-`
-
-type ListRateCurrenciesParams struct {
-	FromCurrency string
-	ToCurrency   string
-	PageSize     interface{}
-	Offset       interface{}
-}
-
-type ListRateCurrenciesRow struct {
-	ID           pgtype.UUID
-	FromCurrency string
-	ToCurrency   string
-	Rate         pgtype.Numeric
-	RateDate     pgtype.Date
-	CreatedAt    pgtype.Timestamptz
-	Total        int64
-}
-
-func (q *Queries) ListRateCurrencies(ctx context.Context, arg ListRateCurrenciesParams) ([]ListRateCurrenciesRow, error) {
-	rows, err := q.db.Query(ctx, listRateCurrencies, arg.FromCurrency, arg.ToCurrency, arg.PageSize, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListRateCurrenciesRow
-	for rows.Next() {
-		var i ListRateCurrenciesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.FromCurrency,
-			&i.ToCurrency,
-			&i.Rate,
-			&i.RateDate,
-			&i.CreatedAt,
-			&i.Total,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
 
 const countRateCurrencies = `-- name: CountRateCurrencies :one
 SELECT count(*) as total
@@ -154,15 +31,124 @@ func (q *Queries) CountRateCurrencies(ctx context.Context, arg CountRateCurrenci
 	return total, err
 }
 
+const getRateCurrency = `-- name: GetRateCurrency :one
+SELECT id, from_currency, to_currency, rate, rate_date, created_at
+FROM rate_currencies
+WHERE from_currency = $1
+  AND to_currency = $2
+  AND rate_date = $3
+`
+
+type GetRateCurrencyParams struct {
+	FromCurrency string
+	ToCurrency   string
+	RateDate     pgtype.Date
+}
+
+func (q *Queries) GetRateCurrency(ctx context.Context, arg GetRateCurrencyParams) (RateCurrency, error) {
+	row := q.db.QueryRow(ctx, getRateCurrency, arg.FromCurrency, arg.ToCurrency, arg.RateDate)
+	var i RateCurrency
+	err := row.Scan(
+		&i.ID,
+		&i.FromCurrency,
+		&i.ToCurrency,
+		&i.Rate,
+		&i.RateDate,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listRateCurrencies = `-- name: ListRateCurrencies :many
+SELECT id, from_currency, to_currency, rate, rate_date, created_at
+FROM rate_currencies
+WHERE
+    ($1::text IS NULL OR from_currency = $1::text)
+    AND ($2::text IS NULL OR to_currency = $2::text)
+ORDER BY rate_date DESC, from_currency, to_currency
+LIMIT NULLIF($3, 0)
+OFFSET $4
+`
+
+type ListRateCurrenciesParams struct {
+	Column1 string
+	Column2 string
+	Column3 interface{}
+	Offset  int32
+}
+
+func (q *Queries) ListRateCurrencies(ctx context.Context, arg ListRateCurrenciesParams) ([]RateCurrency, error) {
+	rows, err := q.db.Query(ctx, listRateCurrencies,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RateCurrency
+	for rows.Next() {
+		var i RateCurrency
+		if err := rows.Scan(
+			&i.ID,
+			&i.FromCurrency,
+			&i.ToCurrency,
+			&i.Rate,
+			&i.RateDate,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const pruneOldRates = `-- name: PruneOldRates :exec
 DELETE FROM rate_currencies
 WHERE rate_date < $1
 `
 
-func (q *Queries) PruneOldRates(ctx context.Context, olderThan time.Time) (int64, error) {
-	result, err := q.db.Exec(ctx, pruneOldRates, olderThan)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+func (q *Queries) PruneOldRates(ctx context.Context, olderThan pgtype.Date) error {
+	_, err := q.db.Exec(ctx, pruneOldRates, olderThan)
+	return err
+}
+
+const upsertRateCurrency = `-- name: UpsertRateCurrency :one
+INSERT INTO rate_currencies (from_currency, to_currency, rate, rate_date)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (from_currency, to_currency, rate_date)
+DO UPDATE SET rate = EXCLUDED.rate
+RETURNING id, from_currency, to_currency, rate, rate_date, created_at
+`
+
+type UpsertRateCurrencyParams struct {
+	FromCurrency string
+	ToCurrency   string
+	Rate         pgtype.Numeric
+	RateDate     pgtype.Date
+}
+
+func (q *Queries) UpsertRateCurrency(ctx context.Context, arg UpsertRateCurrencyParams) (RateCurrency, error) {
+	row := q.db.QueryRow(ctx, upsertRateCurrency,
+		arg.FromCurrency,
+		arg.ToCurrency,
+		arg.Rate,
+		arg.RateDate,
+	)
+	var i RateCurrency
+	err := row.Scan(
+		&i.ID,
+		&i.FromCurrency,
+		&i.ToCurrency,
+		&i.Rate,
+		&i.RateDate,
+		&i.CreatedAt,
+	)
+	return i, err
 }

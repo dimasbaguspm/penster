@@ -28,3 +28,31 @@ type Category struct {
 	CreatedAt pgtype.Timestamptz
 	UpdatedAt pgtype.Timestamptz
 }
+
+type RateCurrency struct {
+	ID           pgtype.UUID
+	FromCurrency string
+	ToCurrency   string
+	Rate         pgtype.Numeric
+	RateDate     pgtype.Date
+	CreatedAt    pgtype.Timestamptz
+}
+
+type Transaction struct {
+	ID                int32
+	SubID             pgtype.UUID
+	AccountID         int32
+	TransferAccountID pgtype.Int4
+	CategoryID        pgtype.Int4
+	TransactionType   string
+	Title             string
+	BaseAmount        int64
+	EnhancedAmount    pgtype.Int8
+	Currency          string
+	CurrencyRate      pgtype.Numeric
+	TransactedAt      pgtype.Date
+	Notes             pgtype.Text
+	DeletedAt         pgtype.Timestamptz
+	CreatedAt         pgtype.Timestamptz
+	UpdatedAt         pgtype.Timestamptz
+}

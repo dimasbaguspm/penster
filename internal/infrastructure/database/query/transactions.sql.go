@@ -11,70 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Transaction struct {
-	ID                int32
-	SubID             pgtype.UUID
-	AccountID         int32
-	TransferAccountID pgtype.Int4
-	CategoryID        pgtype.Int4
-	TransactionType   string
-	Title             string
-	BaseAmount        int64
-	EnhancedAmount    pgtype.Int8
-	Currency          string
-	CurrencyRate      float64
-	TransactedAt      pgtype.Date
-	Notes             pgtype.Text
-	DeletedAt         pgtype.Timestamptz
-	CreatedAt         pgtype.Timestamptz
-	UpdatedAt         pgtype.Timestamptz
-}
-
-type TransactionWithRelations struct {
-	ID                   int32
-	SubID                pgtype.UUID
-	AccountID            int32
-	TransferAccountID    pgtype.Int4
-	CategoryID           pgtype.Int4
-	TransactionType      string
-	Title                string
-	BaseAmount           int64
-	EnhancedAmount       pgtype.Int8
-	Currency             string
-	CurrencyRate         float64
-	TransactedAt         pgtype.Date
-	Notes                pgtype.Text
-	DeletedAt            pgtype.Timestamptz
-	CreatedAt            pgtype.Timestamptz
-	UpdatedAt            pgtype.Timestamptz
-	AccountSubID         pgtype.UUID
-	TransferAccountSubID pgtype.UUID
-	CategorySubID        pgtype.UUID
-}
-
-type ListTransactionsRow struct {
-	ID                   int32
-	SubID                pgtype.UUID
-	AccountID            int32
-	TransferAccountID    pgtype.Int4
-	CategoryID           pgtype.Int4
-	TransactionType      string
-	Title                string
-	BaseAmount           int64
-	EnhancedAmount       pgtype.Int8
-	Currency             string
-	CurrencyRate         float64
-	TransactedAt         pgtype.Date
-	Notes                pgtype.Text
-	DeletedAt            pgtype.Timestamptz
-	CreatedAt            pgtype.Timestamptz
-	UpdatedAt            pgtype.Timestamptz
-	AccountSubID         pgtype.UUID
-	TransferAccountSubID pgtype.UUID
-	CategorySubID        pgtype.UUID
-	Total                int64
-}
-
 const createTransaction = `-- name: CreateTransaction :one
 INSERT INTO transactions (account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -90,7 +26,7 @@ type CreateTransactionParams struct {
 	BaseAmount        int64
 	EnhancedAmount    pgtype.Int8
 	Currency          string
-	CurrencyRate      float64
+	CurrencyRate      pgtype.Numeric
 	TransactedAt      pgtype.Date
 	Notes             pgtype.Text
 }
@@ -123,9 +59,8 @@ RETURNING id
 
 func (q *Queries) DeleteTransaction(ctx context.Context, id int32) (int32, error) {
 	row := q.db.QueryRow(ctx, deleteTransaction, id)
-	var resultID int32
-	err := row.Scan(&resultID)
-	return resultID, err
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getTransactionByID = `-- name: GetTransactionByID :one
@@ -144,9 +79,31 @@ LEFT JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
 WHERE t.id = $1 AND t.deleted_at IS NULL
 `
 
-func (q *Queries) GetTransactionByID(ctx context.Context, id int32) (TransactionWithRelations, error) {
+type GetTransactionByIDRow struct {
+	ID                   int32
+	SubID                pgtype.UUID
+	AccountID            int32
+	TransferAccountID    pgtype.Int4
+	CategoryID           pgtype.Int4
+	TransactionType      string
+	Title                string
+	BaseAmount           int64
+	EnhancedAmount       pgtype.Int8
+	Currency             string
+	CurrencyRate         pgtype.Numeric
+	TransactedAt         pgtype.Date
+	Notes                pgtype.Text
+	DeletedAt            pgtype.Timestamptz
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	AccountSubID         pgtype.UUID
+	TransferAccountSubID pgtype.UUID
+	CategorySubID        pgtype.UUID
+}
+
+func (q *Queries) GetTransactionByID(ctx context.Context, id int32) (GetTransactionByIDRow, error) {
 	row := q.db.QueryRow(ctx, getTransactionByID, id)
-	var i TransactionWithRelations
+	var i GetTransactionByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.SubID,
@@ -187,9 +144,31 @@ LEFT JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
 WHERE t.sub_id = $1 AND t.deleted_at IS NULL
 `
 
-func (q *Queries) GetTransactionBySubID(ctx context.Context, subID pgtype.UUID) (TransactionWithRelations, error) {
+type GetTransactionBySubIDRow struct {
+	ID                   int32
+	SubID                pgtype.UUID
+	AccountID            int32
+	TransferAccountID    pgtype.Int4
+	CategoryID           pgtype.Int4
+	TransactionType      string
+	Title                string
+	BaseAmount           int64
+	EnhancedAmount       pgtype.Int8
+	Currency             string
+	CurrencyRate         pgtype.Numeric
+	TransactedAt         pgtype.Date
+	Notes                pgtype.Text
+	DeletedAt            pgtype.Timestamptz
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	AccountSubID         pgtype.UUID
+	TransferAccountSubID pgtype.UUID
+	CategorySubID        pgtype.UUID
+}
+
+func (q *Queries) GetTransactionBySubID(ctx context.Context, subID pgtype.UUID) (GetTransactionBySubIDRow, error) {
 	row := q.db.QueryRow(ctx, getTransactionBySubID, subID)
-	var i TransactionWithRelations
+	var i GetTransactionBySubIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.SubID,
@@ -215,106 +194,125 @@ func (q *Queries) GetTransactionBySubID(ctx context.Context, subID pgtype.UUID) 
 }
 
 const listTransactions = `-- name: ListTransactions :many
-WITH base_query AS (
-    SELECT t.id, t.sub_id, t.account_id, t.transfer_account_id, t.category_id,
-        t.transaction_type, t.title, t.base_amount, t.enhanced_amount,
-        t.currency, t.currency_rate, t.transacted_at, t.notes,
-        t.deleted_at, t.created_at, t.updated_at,
-        a.sub_id as account_sub_id,
-        ta.sub_id as transfer_account_sub_id,
-        c.sub_id as category_sub_id
-    FROM transactions t
-    LEFT JOIN accounts a ON t.account_id = a.id AND a.deleted_at IS NULL
-    LEFT JOIN accounts ta ON t.transfer_account_id = ta.id AND ta.deleted_at IS NULL
-    LEFT JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
-    WHERE t.deleted_at IS NULL
-),
-search_query AS (
-    SELECT * FROM base_query
-    WHERE
-        ($1::uuid IS NULL OR sub_id = $1)
-        AND ($2::int IS NULL OR account_id = $2)
-        AND ($3::int IS NULL OR category_id = $3)
-        AND ($4::text IS NULL OR transaction_type = $4)
-        AND ($5::text IS NULL OR title ILIKE '%' || $5 || '%')
-),
-count_query AS (
-    SELECT count(*) as total FROM search_query
-),
-paginated_query AS (
-    SELECT *
-    FROM search_query
-    WHERE
+SELECT
+    t.id, t.sub_id, t.account_id, t.transfer_account_id, t.category_id,
+    t.transaction_type, t.title, t.base_amount, t.enhanced_amount,
+    t.currency, t.currency_rate, t.transacted_at, t.notes,
+    t.deleted_at, t.created_at, t.updated_at,
+    a.sub_id as account_sub_id,
+    ta.sub_id as transfer_account_sub_id,
+    c.sub_id as category_sub_id,
+    cnt.total
+FROM transactions t
+LEFT JOIN accounts a ON t.account_id = a.id AND a.deleted_at IS NULL
+LEFT JOIN accounts ta ON t.transfer_account_id = ta.id AND ta.deleted_at IS NULL
+LEFT JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
+CROSS JOIN (SELECT count(*) as total FROM transactions t2
+    WHERE t2.deleted_at IS NULL
+    AND ($1::uuid IS NULL OR t2.sub_id = $1)
+    AND ($2::int IS NULL OR t2.account_id = $2)
+    AND ($3::int IS NULL OR t2.category_id = $3)
+    AND ($4::text IS NULL OR t2.transaction_type = $4)
+    AND ($5::text IS NULL OR t2.title ILIKE '%' || $5 || '%')
+) cnt
+WHERE t.deleted_at IS NULL
+    AND ($1::uuid IS NULL OR t.sub_id = $1)
+    AND ($2::int IS NULL OR t.account_id = $2)
+    AND ($3::int IS NULL OR t.category_id = $3)
+    AND ($4::text IS NULL OR t.transaction_type = $4)
+    AND ($5::text IS NULL OR t.title ILIKE '%' || $5 || '%')
+    AND (
         ($6::text = 'title' AND (
-            ($7::text = 'asc' AND title > $8) OR
-            ($7::text = 'desc' AND title < $8) OR
+            ($7::text = 'asc' AND t.title > $8) OR
+            ($7::text = 'desc' AND t.title < $8) OR
             ($7::text = 'asc' AND $8 IS NULL) OR
             ($7::text = 'desc' AND $8 IS NULL)
         ))
         OR ($6::text = 'transacted_at' AND (
-            ($7::text = 'asc' AND transacted_at > $9) OR
-            ($7::text = 'desc' AND transacted_at < $9) OR
+            ($7::text = 'asc' AND t.transacted_at > $9) OR
+            ($7::text = 'desc' AND t.transacted_at < $9) OR
             ($7::text = 'asc' AND $9 IS NULL) OR
             ($7::text = 'desc' AND $9 IS NULL)
         ))
         OR ($6::text = 'created_at' AND (
-            ($7::text = 'asc' AND created_at > $10) OR
-            ($7::text = 'desc' AND created_at < $10) OR
+            ($7::text = 'asc' AND t.created_at > $10) OR
+            ($7::text = 'desc' AND t.created_at < $10) OR
             ($7::text = 'asc' AND $10 IS NULL) OR
             ($7::text = 'desc' AND $10 IS NULL)
         ))
         OR ($6::text = 'amount' AND (
-            ($7::text = 'asc' AND enhanced_amount > $11) OR
-            ($7::text = 'desc' AND enhanced_amount < $11) OR
+            ($7::text = 'asc' AND t.enhanced_amount > $11) OR
+            ($7::text = 'desc' AND t.enhanced_amount < $11) OR
             ($7::text = 'asc' AND $11 IS NULL) OR
             ($7::text = 'desc' AND $11 IS NULL)
         ))
-        OR $4::text = ''
-    ORDER BY
-        CASE WHEN $4::text = 'title' AND $5::text = 'asc' THEN title END ASC,
-        CASE WHEN $4::text = 'title' AND $5::text = 'desc' THEN title END DESC,
-        CASE WHEN $4::text = 'transacted_at' AND $5::text = 'asc' THEN transacted_at END ASC,
-        CASE WHEN $4::text = 'transacted_at' AND $5::text = 'desc' THEN transacted_at END DESC,
-        CASE WHEN $4::text = 'created_at' AND $5::text = 'asc' THEN created_at END ASC,
-        CASE WHEN $4::text = 'created_at' AND $5::text = 'desc' THEN created_at END DESC,
-        CASE WHEN $4::text = 'amount' AND $5::text = 'asc' THEN enhanced_amount END ASC,
-        CASE WHEN $4::text = 'amount' AND $5::text = 'desc' THEN enhanced_amount END DESC,
-        CASE WHEN $4::text = '' THEN id END ASC
-    LIMIT NULLIF($12, 0)
-)
-SELECT pq.*, cq.total
-FROM paginated_query pq, count_query cq
+        OR $6::text = ''
+    )
+ORDER BY
+    CASE WHEN $6::text = 'title' AND $7::text = 'asc' THEN t.title END ASC,
+    CASE WHEN $6::text = 'title' AND $7::text = 'desc' THEN t.title END DESC,
+    CASE WHEN $6::text = 'transacted_at' AND $7::text = 'asc' THEN t.transacted_at END ASC,
+    CASE WHEN $6::text = 'transacted_at' AND $7::text = 'desc' THEN t.transacted_at END DESC,
+    CASE WHEN $6::text = 'created_at' AND $7::text = 'asc' THEN t.created_at END ASC,
+    CASE WHEN $6::text = 'created_at' AND $7::text = 'desc' THEN t.created_at END DESC,
+    CASE WHEN $6::text = 'amount' AND $7::text = 'asc' THEN t.enhanced_amount END ASC,
+    CASE WHEN $6::text = 'amount' AND $7::text = 'desc' THEN t.enhanced_amount END DESC,
+    CASE WHEN $6::text = '' THEN t.id END ASC
+LIMIT NULLIF($12, 0)
 `
 
 type ListTransactionsParams struct {
+	Column1        pgtype.UUID
+	Column2        int32
+	Column3        int32
+	Column4        string
+	Column5        string
+	Column6        string
+	Column7        string
+	Title          string
+	TransactedAt   pgtype.Date
+	CreatedAt      pgtype.Timestamptz
+	EnhancedAmount pgtype.Int8
+	Column12       interface{}
+}
+
+type ListTransactionsRow struct {
+	ID                   int32
 	SubID                pgtype.UUID
-	AccountID            pgtype.Int4
+	AccountID            int32
+	TransferAccountID    pgtype.Int4
 	CategoryID           pgtype.Int4
 	TransactionType      string
-	Q                    string
-	SortBy               string
-	SortOrder            string
-	CursorTitle          string
-	CursorTransactedAt   pgtype.Date
-	CursorCreatedAt      pgtype.Timestamptz
-	CursorEnhancedAmount int64
-	PageSize             int64
+	Title                string
+	BaseAmount           int64
+	EnhancedAmount       pgtype.Int8
+	Currency             string
+	CurrencyRate         pgtype.Numeric
+	TransactedAt         pgtype.Date
+	Notes                pgtype.Text
+	DeletedAt            pgtype.Timestamptz
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	AccountSubID         pgtype.UUID
+	TransferAccountSubID pgtype.UUID
+	CategorySubID        pgtype.UUID
+	Total                int64
 }
 
 func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]ListTransactionsRow, error) {
 	rows, err := q.db.Query(ctx, listTransactions,
-		arg.SubID,
-		arg.AccountID,
-		arg.CategoryID,
-		arg.TransactionType,
-		arg.Q,
-		arg.SortBy,
-		arg.SortOrder,
-		arg.CursorTitle,
-		arg.CursorTransactedAt,
-		arg.CursorCreatedAt,
-		arg.CursorEnhancedAmount,
-		arg.PageSize,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+		arg.Column5,
+		arg.Column6,
+		arg.Column7,
+		arg.Title,
+		arg.TransactedAt,
+		arg.CreatedAt,
+		arg.EnhancedAmount,
+		arg.Column12,
 	)
 	if err != nil {
 		return nil, err
@@ -374,15 +372,15 @@ RETURNING id
 `
 
 type UpdateTransactionParams struct {
-	AccountID         pgtype.Int4
+	AccountID         int32
 	TransferAccountID pgtype.Int4
 	CategoryID        pgtype.Int4
-	TransactionType   pgtype.Text
-	Title             pgtype.Text
-	BaseAmount        pgtype.Int8
+	TransactionType   string
+	Title             string
+	BaseAmount        int64
 	EnhancedAmount    pgtype.Int8
-	Currency          pgtype.Text
-	CurrencyRate      float64
+	Currency          string
+	CurrencyRate      pgtype.Numeric
 	Notes             pgtype.Text
 	ID                int32
 }
