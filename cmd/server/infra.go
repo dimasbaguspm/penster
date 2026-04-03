@@ -15,9 +15,10 @@ import (
 )
 
 type Infra struct {
-	DB              *pgxpool.Pool
-	AccountService  *service.AccountService
-	CategoryService *service.CategoryService
+	DB                  *pgxpool.Pool
+	AccountService      *service.AccountService
+	CategoryService     *service.CategoryService
+	RateCurrencyService *service.RateCurrencyService
 }
 
 func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
@@ -39,16 +40,20 @@ func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
 
 	accountRepo := repository.NewAccountRepository(dbQueries)
 	categoryRepo := repository.NewCategoryRepository(dbQueries)
+	rateCurrencyRepo := repository.NewRateCurrencyRepository(dbQueries)
 
 	accountQuery := appquery.NewAccountQuery(accountRepo)
 	accountCommand := command.NewAccountCommand(accountRepo)
 	categoryQuery := appquery.NewCategoryQuery(categoryRepo)
 	categoryCommand := command.NewCategoryCommand(categoryRepo)
+	rateCurrencyQuery := appquery.NewRateCurrencyQuery(rateCurrencyRepo)
+	rateCurrencyCommand := command.NewRateCurrencyCommand(rateCurrencyRepo)
 
 	return &Infra{
-		DB:              conn,
-		AccountService:  service.NewAccountService(accountQuery, accountCommand),
-		CategoryService: service.NewCategoryService(categoryQuery, categoryCommand),
+		DB:                  conn,
+		AccountService:      service.NewAccountService(accountQuery, accountCommand),
+		CategoryService:     service.NewCategoryService(categoryQuery, categoryCommand),
+		RateCurrencyService: service.NewRateCurrencyService(rateCurrencyQuery, rateCurrencyCommand),
 	}, nil
 }
 
