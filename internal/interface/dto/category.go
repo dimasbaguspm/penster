@@ -9,7 +9,10 @@ import (
 
 func ParseCategoryListParams(r *http.Request) *models.CategorySearchParams {
 	q := r.URL.Query()
-	params := &models.CategorySearchParams{}
+	params := &models.CategorySearchParams{
+		PageNumber: 1,
+		PageSize:   10,
+	}
 
 	if v := q.Get("q"); v != "" {
 		params.Q = &v

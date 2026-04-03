@@ -102,69 +102,59 @@ func (q *Queries) GetCategoryBySubID(ctx context.Context, subID pgtype.UUID) (Ca
 }
 
 const listCategories = `-- name: ListCategories :many
-WITH base_query AS (
-    SELECT id, sub_id, name, type, deleted_at, created_at, updated_at
-    FROM categories
-    WHERE deleted_at IS NULL
-),
-search_query AS (
-    SELECT id, sub_id, name, type, deleted_at, created_at, updated_at FROM base_query
-    WHERE
-        ($1::uuid IS NULL OR sub_id = $1)
-        AND ($2::text IS NULL OR name ILIKE '%' || $2 || '%')
-),
-count_query AS (
-    SELECT count(*) as total FROM search_query
-),
-paginated_query AS (
-    SELECT
-        id, sub_id, name, type, deleted_at, created_at, updated_at
-    FROM search_query
-    WHERE
+SELECT
+    c.id, c.sub_id, c.name, c.type, c.deleted_at, c.created_at, c.updated_at,
+    cnt.total
+FROM categories c
+CROSS JOIN (SELECT count(*) as total FROM categories c2
+    WHERE c2.deleted_at IS NULL
+    AND ($1::uuid IS NULL OR c2.sub_id = $1::uuid)
+    AND ($2::text IS NULL OR c2.name ILIKE '%' || $2::text || '%')
+) cnt
+WHERE c.deleted_at IS NULL
+    AND ($1::uuid IS NULL OR c.sub_id = $1::uuid)
+    AND ($2::text IS NULL OR c.name ILIKE '%' || $2::text || '%')
+    AND (
         ($3::text = 'name' AND (
-            ($4::text = 'asc' AND name > $5) OR
-            ($4::text = 'desc' AND name < $5) OR
-            ($4::text = 'asc' AND $5 IS NULL) OR
-            ($4::text = 'desc' AND $5 IS NULL)
+            ($4::text = 'asc' AND c.name > $5::text) OR
+            ($4::text = 'desc' AND c.name < $5::text) OR
+            ($4::text = 'asc' AND $5::text IS NULL) OR
+            ($4::text = 'desc' AND $5::text IS NULL)
         ))
         OR ($3::text = 'created_at' AND (
-            ($4::text = 'asc' AND created_at > $6) OR
-            ($4::text = 'desc' AND created_at < $6) OR
-            ($4::text = 'asc' AND $6 IS NULL) OR
-            ($4::text = 'desc' AND $6 IS NULL)
+            ($4::text = 'asc' AND c.created_at > $6::timestamptz) OR
+            ($4::text = 'desc' AND c.created_at < $6::timestamptz) OR
+            ($4::text = 'asc' AND $6::timestamptz IS NULL) OR
+            ($4::text = 'desc' AND $6::timestamptz IS NULL)
         ))
         OR ($3::text = 'updated_at' AND (
-            ($4::text = 'asc' AND updated_at > $7) OR
-            ($4::text = 'desc' AND updated_at < $7) OR
-            ($4::text = 'asc' AND $7 IS NULL) OR
-            ($4::text = 'desc' AND $7 IS NULL)
+            ($4::text = 'asc' AND c.updated_at > $7::timestamptz) OR
+            ($4::text = 'desc' AND c.updated_at < $7::timestamptz) OR
+            ($4::text = 'asc' AND $7::timestamptz IS NULL) OR
+            ($4::text = 'desc' AND $7::timestamptz IS NULL)
         ))
         OR $3::text = ''
-    ORDER BY
-        CASE WHEN $3::text = 'name' AND $4::text = 'asc' THEN name END ASC,
-        CASE WHEN $3::text = 'name' AND $4::text = 'desc' THEN name END DESC,
-        CASE WHEN $3::text = 'created_at' AND $4::text = 'asc' THEN created_at END ASC,
-        CASE WHEN $3::text = 'created_at' AND $4::text = 'desc' THEN created_at END DESC,
-        CASE WHEN $3::text = 'updated_at' AND $4::text = 'asc' THEN updated_at END ASC,
-        CASE WHEN $3::text = 'updated_at' AND $4::text = 'desc' THEN updated_at END DESC,
-        CASE WHEN $3::text = '' THEN id END ASC
-    LIMIT NULLIF($8, 0)
-)
-SELECT
-    pq.id, pq.sub_id, pq.name, pq.type, pq.deleted_at, pq.created_at, pq.updated_at,
-    cq.total
-FROM paginated_query pq, count_query cq
+    )
+ORDER BY
+    CASE WHEN $3::text = 'name' AND $4::text = 'asc' THEN c.name END ASC,
+    CASE WHEN $3::text = 'name' AND $4::text = 'desc' THEN c.name END DESC,
+    CASE WHEN $3::text = 'created_at' AND $4::text = 'asc' THEN c.created_at END ASC,
+    CASE WHEN $3::text = 'created_at' AND $4::text = 'desc' THEN c.created_at END DESC,
+    CASE WHEN $3::text = 'updated_at' AND $4::text = 'asc' THEN c.updated_at END ASC,
+    CASE WHEN $3::text = 'updated_at' AND $4::text = 'desc' THEN c.updated_at END DESC,
+    CASE WHEN $3::text = '' THEN c.id END ASC
+LIMIT NULLIF($8, 0)
 `
 
 type ListCategoriesParams struct {
-	SubID           pgtype.UUID
-	Q               string
-	SortBy          string
-	SortOrder       string
-	CursorName      string
-	CursorCreatedAt pgtype.Timestamptz
-	CursorUpdatedAt pgtype.Timestamptz
-	PageSize        interface{}
+	Column1 pgtype.UUID
+	Column2 string
+	Column3 string
+	Column4 string
+	Column5 string
+	Column6 pgtype.Timestamptz
+	Column7 pgtype.Timestamptz
+	Column8 interface{}
 }
 
 type ListCategoriesRow struct {
@@ -180,14 +170,14 @@ type ListCategoriesRow struct {
 
 func (q *Queries) ListCategories(ctx context.Context, arg ListCategoriesParams) ([]ListCategoriesRow, error) {
 	rows, err := q.db.Query(ctx, listCategories,
-		arg.SubID,
-		arg.Q,
-		arg.SortBy,
-		arg.SortOrder,
-		arg.CursorName,
-		arg.CursorCreatedAt,
-		arg.CursorUpdatedAt,
-		arg.PageSize,
+		arg.Column1,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+		arg.Column5,
+		arg.Column6,
+		arg.Column7,
+		arg.Column8,
 	)
 	if err != nil {
 		return nil, err
@@ -219,16 +209,16 @@ func (q *Queries) ListCategories(ctx context.Context, arg ListCategoriesParams) 
 const updateCategory = `-- name: UpdateCategory :one
 UPDATE categories
 SET
-    name = COALESCE($1, name),
-    type = COALESCE($2, type),
+    name = COALESCE(NULLIF($1, ''), name),
+    type = COALESCE(NULLIF($2, ''), type),
     updated_at = NOW()
 WHERE id = $3 AND deleted_at IS NULL
 RETURNING id, sub_id, name, type, deleted_at, created_at, updated_at
 `
 
 type UpdateCategoryParams struct {
-	Name string
-	Type string
+	Name interface{}
+	Type interface{}
 	ID   int32
 }
 

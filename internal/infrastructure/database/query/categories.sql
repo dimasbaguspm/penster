@@ -14,64 +14,54 @@ FROM categories
 WHERE sub_id = @sub_id AND deleted_at IS NULL;
 
 -- name: ListCategories :many
-WITH base_query AS (
-    SELECT id, sub_id, name, type, deleted_at, created_at, updated_at
-    FROM categories
-    WHERE deleted_at IS NULL
-),
-search_query AS (
-    SELECT * FROM base_query
-    WHERE
-        (@sub_id::uuid IS NULL OR sub_id = @sub_id)
-        AND (@q::text IS NULL OR name ILIKE '%' || @q || '%')
-),
-count_query AS (
-    SELECT count(*) as total FROM search_query
-),
-paginated_query AS (
-    SELECT
-        id, sub_id, name, type, deleted_at, created_at, updated_at
-    FROM search_query
-    WHERE
-        (@sort_by::text = 'name' AND (
-            (@sort_order::text = 'asc' AND name > @cursor_name) OR
-            (@sort_order::text = 'desc' AND name < @cursor_name) OR
-            (@sort_order::text = 'asc' AND @cursor_name IS NULL) OR
-            (@sort_order::text = 'desc' AND @cursor_name IS NULL)
-        ))
-        OR (@sort_by::text = 'created_at' AND (
-            (@sort_order::text = 'asc' AND created_at > @cursor_created_at) OR
-            (@sort_order::text = 'desc' AND created_at < @cursor_created_at) OR
-            (@sort_order::text = 'asc' AND @cursor_created_at IS NULL) OR
-            (@sort_order::text = 'desc' AND @cursor_created_at IS NULL)
-        ))
-        OR (@sort_by::text = 'updated_at' AND (
-            (@sort_order::text = 'asc' AND updated_at > @cursor_updated_at) OR
-            (@sort_order::text = 'desc' AND updated_at < @cursor_updated_at) OR
-            (@sort_order::text = 'asc' AND @cursor_updated_at IS NULL) OR
-            (@sort_order::text = 'desc' AND @cursor_updated_at IS NULL)
-        ))
-        OR @sort_by::text = ''
-    ORDER BY
-        CASE WHEN @sort_by::text = 'name' AND @sort_order::text = 'asc' THEN name END ASC,
-        CASE WHEN @sort_by::text = 'name' AND @sort_order::text = 'desc' THEN name END DESC,
-        CASE WHEN @sort_by::text = 'created_at' AND @sort_order::text = 'asc' THEN created_at END ASC,
-        CASE WHEN @sort_by::text = 'created_at' AND @sort_order::text = 'desc' THEN created_at END DESC,
-        CASE WHEN @sort_by::text = 'updated_at' AND @sort_order::text = 'asc' THEN updated_at END ASC,
-        CASE WHEN @sort_by::text = 'updated_at' AND @sort_order::text = 'desc' THEN updated_at END DESC,
-        CASE WHEN @sort_by::text = '' THEN id END ASC
-    LIMIT NULLIF(@page_size, 0)
-)
 SELECT
-    pq.id, pq.sub_id, pq.name, pq.type, pq.deleted_at, pq.created_at, pq.updated_at,
-    cq.total
-FROM paginated_query pq, count_query cq;
+    c.id, c.sub_id, c.name, c.type, c.deleted_at, c.created_at, c.updated_at,
+    cnt.total
+FROM categories c
+CROSS JOIN (SELECT count(*) as total FROM categories c2
+    WHERE c2.deleted_at IS NULL
+    AND ($1::uuid IS NULL OR c2.sub_id = $1::uuid)
+    AND ($2::text IS NULL OR c2.name ILIKE '%' || $2::text || '%')
+) cnt
+WHERE c.deleted_at IS NULL
+    AND ($1::uuid IS NULL OR c.sub_id = $1::uuid)
+    AND ($2::text IS NULL OR c.name ILIKE '%' || $2::text || '%')
+    AND (
+        ($3::text = 'name' AND (
+            ($4::text = 'asc' AND c.name > $5::text) OR
+            ($4::text = 'desc' AND c.name < $5::text) OR
+            ($4::text = 'asc' AND $5::text IS NULL) OR
+            ($4::text = 'desc' AND $5::text IS NULL)
+        ))
+        OR ($3::text = 'created_at' AND (
+            ($4::text = 'asc' AND c.created_at > $6::timestamptz) OR
+            ($4::text = 'desc' AND c.created_at < $6::timestamptz) OR
+            ($4::text = 'asc' AND $6::timestamptz IS NULL) OR
+            ($4::text = 'desc' AND $6::timestamptz IS NULL)
+        ))
+        OR ($3::text = 'updated_at' AND (
+            ($4::text = 'asc' AND c.updated_at > $7::timestamptz) OR
+            ($4::text = 'desc' AND c.updated_at < $7::timestamptz) OR
+            ($4::text = 'asc' AND $7::timestamptz IS NULL) OR
+            ($4::text = 'desc' AND $7::timestamptz IS NULL)
+        ))
+        OR $3::text = ''
+    )
+ORDER BY
+    CASE WHEN $3::text = 'name' AND $4::text = 'asc' THEN c.name END ASC,
+    CASE WHEN $3::text = 'name' AND $4::text = 'desc' THEN c.name END DESC,
+    CASE WHEN $3::text = 'created_at' AND $4::text = 'asc' THEN c.created_at END ASC,
+    CASE WHEN $3::text = 'created_at' AND $4::text = 'desc' THEN c.created_at END DESC,
+    CASE WHEN $3::text = 'updated_at' AND $4::text = 'asc' THEN c.updated_at END ASC,
+    CASE WHEN $3::text = 'updated_at' AND $4::text = 'desc' THEN c.updated_at END DESC,
+    CASE WHEN $3::text = '' THEN c.id END ASC
+LIMIT NULLIF($8, 0);
 
 -- name: UpdateCategory :one
 UPDATE categories
 SET
-    name = COALESCE(@name, name),
-    type = COALESCE(@type, type),
+    name = COALESCE(NULLIF(@name, ''), name),
+    type = COALESCE(NULLIF(@type, ''), type),
     updated_at = NOW()
 WHERE id = @id AND deleted_at IS NULL
 RETURNING id, sub_id, name, type, deleted_at, created_at, updated_at;

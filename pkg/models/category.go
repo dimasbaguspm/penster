@@ -71,10 +71,13 @@ func (p *CategorySearchParams) ToQueryParams() query.ListCategoriesParams {
 	}
 
 	return query.ListCategoriesParams{
-		SubID:     subID,
-		Q:         conv.StringPtrToEmpty(p.Q),
-		SortBy:    p.SortBy,
-		SortOrder: p.SortOrder,
-		PageSize:  int64(p.PageSize),
+		Column1: subID,
+		Column2: conv.StringPtrToEmpty(p.Q),
+		Column3: p.SortBy,
+		Column4: p.SortOrder,
+		Column5: "",
+		Column6: pgtype.Timestamptz{},
+		Column7: pgtype.Timestamptz{},
+		Column8: int64(p.PageSize),
 	}
 }
