@@ -9,12 +9,11 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"strings"
+	"path/filepath"
 	"syscall"
 	"testing"
 	"time"
 
-	"github.com/dimasbaguspm/penster/config"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
@@ -51,16 +50,32 @@ func TestMain(m *testing.M) {
 	os.Setenv("DB_SSLMODE", "disable")
 	os.Setenv("APP_ENV", "test")
 	os.Setenv("AUTO_MIGRATE", "true")
+	os.Setenv("APP_PORT", "8081")
 
-	cfg := config.Load()
-	os.Setenv("APP_PORT", cfg.App.Port)
+	serverURL = fmt.Sprintf("http://localhost:%s", os.Getenv("APP_PORT"))
 
 	if err := waitForPostgres(dbHost, dbPort, 30*time.Second); err != nil {
 		log.Fatalf("Postgres did not become ready: %v", err)
 	}
 
-	serverURL = fmt.Sprintf("http://localhost:%s", cfg.App.Port)
-	serverProcess = exec.Command("go", "run", "github.com/dimasbaguspm/penster/cmd/server")
+	repoRoot, _ := os.Getwd()
+	repoRoot = filepath.Dir(filepath.Dir(repoRoot))
+
+	binaryPath := filepath.Join(repoRoot, "bin", "penster_test")
+	if err := os.MkdirAll(filepath.Dir(binaryPath), 0755); err != nil {
+		log.Fatalf("Failed to create bin directory: %v", err)
+	}
+	buildCmd := exec.Command("go", "build", "-o", binaryPath, "github.com/dimasbaguspm/penster/cmd/server")
+	buildCmd.Env = append(os.Environ(), "GOSUMDB=off")
+	buildCmd.Stdout = os.Stdout
+	buildCmd.Stderr = os.Stderr
+
+	if err := buildCmd.Run(); err != nil {
+		log.Fatalf("Failed to build penster server: %v", err)
+	}
+
+	serverProcess = exec.Command(binaryPath)
+	serverProcess.Dir = repoRoot
 	serverProcess.Env = os.Environ()
 	serverProcess.Stdout = os.Stdout
 	serverProcess.Stderr = os.Stderr
@@ -117,8 +132,4 @@ func waitForServer(url string, timeout time.Duration) error {
 		time.Sleep(500 * time.Millisecond)
 	}
 	return fmt.Errorf("server did not respond within %v", timeout)
-}
-
-func makeReader(s string) *strings.Reader {
-	return strings.NewReader(s)
 }
