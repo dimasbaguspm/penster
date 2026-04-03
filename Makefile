@@ -1,4 +1,4 @@
-.PHONY: init dev-backend dev-reset
+.PHONY: init dev-backend dev-reset swag
 
 init:
 	go install github.com/swaggo/swag/cmd/swag@latest
@@ -10,4 +10,6 @@ dev-backend:
 
 dev-reset:
 	docker compose -f infra/docker-compose.local.yml down -v
-	docker compose -f infra/docker-compose.local.yml up --build
+
+swag:
+	swag init -g ./cmd/server/main.go -o ./docs --packageName docs --quiet --generatedTime

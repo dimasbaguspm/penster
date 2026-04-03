@@ -4,11 +4,11 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  bin = "tmp/main"
-  cmd = "go build -o tmp/main ./cmd/server"
+  cmd = "go build -buildvcs=false -o tmp/main ./cmd/server"
+  bin     = "./tmp/main"
   delay = 1000
-  precmd = "swag init -g cmd/server/main.go -o swagger"
-  exclude_dir = ["assets", "tmp", "vendor", "infra"]
+  pre_cmd = ["make swag"]
+  exclude_dir = ["docs", "tmp", "infra"]
   exclude_file = []
   exclude_regex = ["_test.go"]
   exclude_unchanged = false

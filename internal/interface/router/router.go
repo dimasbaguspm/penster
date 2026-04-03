@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"github.com/dimasbaguspm/penster/internal/application/service"
 	"github.com/dimasbaguspm/penster/internal/interface/handler"
 	"github.com/dimasbaguspm/penster/internal/interface/middleware"
@@ -37,7 +38,7 @@ func (r *Router) Routes() http.Handler {
 	mux.HandleFunc("GET /ready", r.healthHandler.Ready)
 
 	// Swagger endpoint
-	mux.HandleFunc("GET /swagger", r.healthHandler.SwaggerHandler)
+	mux.Handle("/swagger/", httpSwagger.Handler(httpSwagger.URL("/swagger/doc.json")))
 
 	// Account endpoints
 	mux.HandleFunc("GET /accounts", r.accountHandler.List)

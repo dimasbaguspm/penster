@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/dimasbaguspm/penster/config"
+	_ "github.com/dimasbaguspm/penster/docs"
 	"github.com/dimasbaguspm/penster/internal/interface/handler"
 	"github.com/dimasbaguspm/penster/internal/interface/router"
 )

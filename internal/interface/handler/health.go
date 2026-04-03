@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
-
-	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 // @title Penster API
@@ -14,11 +12,6 @@ import (
 // @description Expense tracker API with accounts and categories management
 // @host localhost:8080
 // @BasePath /
-
-// SwaggerHandler serves the swagger documentation
-func (h *HealthHandler) SwaggerHandler(w http.ResponseWriter, r *http.Request) {
-	httpSwagger.Handler(httpSwagger.URL("/swagger/doc.json")).ServeHTTP(w, r)
-}
 
 type ReadyChecker interface {
 	Health(ctx context.Context) error
