@@ -1,8 +1,10 @@
 version: "2"
-packages:
-  - name: "query"
-    path: "internal/infrastructure/database/query"
+sql:
+  - engine: "postgresql"
     queries: "./internal/infrastructure/database/query"
     schema: "./migrations"
-    engine: "postgresql"
-    sql_package: "pgx/v5"
+    gen:
+      go:
+        package: query
+        out: "internal/infrastructure/database/query"
+        sql_package: "pgx/v5"

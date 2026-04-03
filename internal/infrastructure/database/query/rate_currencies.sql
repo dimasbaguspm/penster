@@ -16,11 +16,11 @@ WHERE from_currency = @from_currency
 SELECT id, from_currency, to_currency, rate, rate_date, created_at
 FROM rate_currencies
 WHERE
-    (@from_currency::text IS NULL OR from_currency = @from_currency)
-    AND (@to_currency::text IS NULL OR to_currency = @to_currency)
+    ($1::text IS NULL OR from_currency = $1::text)
+    AND ($2::text IS NULL OR to_currency = $2::text)
 ORDER BY rate_date DESC, from_currency, to_currency
-LIMIT NULLIF(@page_size, 0)
-OFFSET @offset;
+LIMIT NULLIF($3, 0)
+OFFSET $4;
 
 -- name: CountRateCurrencies :one
 SELECT count(*) as total

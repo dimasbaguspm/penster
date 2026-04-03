@@ -2,13 +2,14 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
-	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/models"
 )
 
@@ -21,11 +22,16 @@ func NewRateCurrencyRepository(db *query.Queries) *RateCurrencyRepository {
 }
 
 func (r *RateCurrencyRepository) Upsert(ctx context.Context, req *models.UpsertRateCurrencyRequest) (*models.RateCurrency, error) {
+	var rateNumeric pgtype.Numeric
+	if err := rateNumeric.Scan(fmt.Sprintf("%.6f", req.Rate)); err != nil {
+		return nil, err
+	}
+
 	result, err := r.db.UpsertRateCurrency(ctx, query.UpsertRateCurrencyParams{
 		FromCurrency: req.FromCurrency,
 		ToCurrency:   req.ToCurrency,
-		Rate:         req.Rate,
-		RateDate:     req.RateDate,
+		Rate:         rateNumeric,
+		RateDate:     pgtype.Date{Time: req.RateDate, Valid: true},
 	})
 	if err != nil {
 		return nil, err
@@ -37,7 +43,7 @@ func (r *RateCurrencyRepository) Get(ctx context.Context, from, to string, date 
 	result, err := r.db.GetRateCurrency(ctx, query.GetRateCurrencyParams{
 		FromCurrency: from,
 		ToCurrency:   to,
-		RateDate:     date,
+		RateDate:     pgtype.Date{Time: date, Valid: true},
 	})
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -49,35 +55,42 @@ func (r *RateCurrencyRepository) Get(ctx context.Context, from, to string, date 
 }
 
 func (r *RateCurrencyRepository) List(ctx context.Context, params *models.RateCurrencySearchParams) ([]*models.RateCurrency, int64, error) {
+	var fromCurrency, toCurrency string
+	if params.FromCurrency != nil {
+		fromCurrency = *params.FromCurrency
+	}
+	if params.ToCurrency != nil {
+		toCurrency = *params.ToCurrency
+	}
+
 	rows, err := r.db.ListRateCurrencies(ctx, query.ListRateCurrenciesParams{
-		FromCurrency: conv.StringPtrToEmpty(params.FromCurrency),
-		ToCurrency:   conv.StringPtrToEmpty(params.ToCurrency),
-		PageSize:     int64(params.PageSize),
-		Offset:       int64(params.Offset()),
+		Column1: fromCurrency,
+		Column2: toCurrency,
+		Column3: params.PageSize,
+		Offset:  int32(params.Offset()),
 	})
 	if err != nil {
 		return nil, 0, err
 	}
 
 	currencies := make([]*models.RateCurrency, 0, len(rows))
-	var total int64
 	for _, row := range rows {
-		currencies = append(currencies, toRateCurrencyModel(query.RateCurrency{
-			ID:           row.ID,
-			FromCurrency: row.FromCurrency,
-			ToCurrency:   row.ToCurrency,
-			Rate:         row.Rate,
-			RateDate:     row.RateDate,
-			CreatedAt:    row.CreatedAt,
-		}))
-		total = row.Total
+		currencies = append(currencies, toRateCurrencyModel(row))
+	}
+
+	total, err := r.db.CountRateCurrencies(ctx, query.CountRateCurrenciesParams{
+		FromCurrency: fromCurrency,
+		ToCurrency:   toCurrency,
+	})
+	if err != nil {
+		return nil, 0, err
 	}
 
 	return currencies, total, nil
 }
 
-func (r *RateCurrencyRepository) Prune(ctx context.Context, olderThan time.Time) (int64, error) {
-	return r.db.PruneOldRates(ctx, olderThan)
+func (r *RateCurrencyRepository) Prune(ctx context.Context, olderThan time.Time) error {
+	return r.db.PruneOldRates(ctx, pgtype.Date{Time: olderThan, Valid: true})
 }
 
 func toRateCurrencyModel(q query.RateCurrency) *models.RateCurrency {

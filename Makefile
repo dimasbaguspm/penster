@@ -14,5 +14,8 @@ dev-reset:
 swag:
 	swag init -g ./cmd/server/main.go -o ./docs --packageName docs --quiet
 
+sql:
+	sqlc generate
+
 test:
 	cd tests/penster && go test -v

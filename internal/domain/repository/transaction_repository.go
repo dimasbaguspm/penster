@@ -89,6 +89,11 @@ func (r *TransactionRepository) Create(ctx context.Context, req *models.CreateTr
 
 	transactedAt := time.Now()
 
+	var currencyRateNumeric pgtype.Numeric
+	if err := currencyRateNumeric.Scan(fmt.Sprintf("%.6f", currencyRate)); err != nil {
+		return nil, err
+	}
+
 	id, err := r.db.CreateTransaction(ctx, query.CreateTransactionParams{
 		AccountID:         accountID,
 		TransferAccountID: transferAccountID,
@@ -98,7 +103,7 @@ func (r *TransactionRepository) Create(ctx context.Context, req *models.CreateTr
 		BaseAmount:        req.Amount,
 		EnhancedAmount:    enhancedAmount,
 		Currency:          req.Currency,
-		CurrencyRate:      currencyRate,
+		CurrencyRate:      currencyRateNumeric,
 		TransactedAt:      pgtype.Date{Time: transactedAt, Valid: true},
 		Notes:             pgtype.Text{String: req.Notes, Valid: req.Notes != ""},
 	})
@@ -209,17 +214,17 @@ func (r *TransactionRepository) List(ctx context.Context, params *models.Transac
 
 	var queryParams query.ListTransactionsParams
 	if len(accountIDs) > 0 {
-		queryParams.AccountID = pgtype.Int4{Int32: accountIDs[0], Valid: true}
+		queryParams.Column2 = accountIDs[0]
 	}
 	if len(categoryIDs) > 0 {
-		queryParams.CategoryID = pgtype.Int4{Int32: categoryIDs[0], Valid: true}
+		queryParams.Column3 = categoryIDs[0]
 	}
 	if params.Q != nil {
-		queryParams.Q = *params.Q
+		queryParams.Column5 = *params.Q
 	}
-	queryParams.SortBy = params.SortBy
-	queryParams.SortOrder = params.SortOrder
-	queryParams.PageSize = int64(params.PageSize)
+	queryParams.Column6 = params.SortBy
+	queryParams.Column7 = params.SortOrder
+	queryParams.Column12 = params.PageSize
 
 	rows, err := r.db.ListTransactions(ctx, queryParams)
 	if err != nil {
@@ -229,27 +234,7 @@ func (r *TransactionRepository) List(ctx context.Context, params *models.Transac
 	transactions := make([]*models.Transaction, 0, len(rows))
 	var total int64
 	for _, row := range rows {
-		transactions = append(transactions, toTransactionModelWithRelations(query.TransactionWithRelations{
-			ID:                   row.ID,
-			SubID:                row.SubID,
-			AccountID:            row.AccountID,
-			TransferAccountID:    row.TransferAccountID,
-			CategoryID:           row.CategoryID,
-			TransactionType:      row.TransactionType,
-			Title:                row.Title,
-			BaseAmount:           row.BaseAmount,
-			EnhancedAmount:       row.EnhancedAmount,
-			Currency:             row.Currency,
-			CurrencyRate:         row.CurrencyRate,
-			TransactedAt:         row.TransactedAt,
-			Notes:                row.Notes,
-			DeletedAt:            row.DeletedAt,
-			CreatedAt:            row.CreatedAt,
-			UpdatedAt:            row.UpdatedAt,
-			AccountSubID:         row.AccountSubID,
-			TransferAccountSubID: row.TransferAccountSubID,
-			CategorySubID:        row.CategorySubID,
-		}))
+		transactions = append(transactions, toTransactionModelWithRelations(row))
 		total = row.Total
 	}
 
@@ -258,14 +243,20 @@ func (r *TransactionRepository) List(ctx context.Context, params *models.Transac
 
 func (r *TransactionRepository) Update(ctx context.Context, id int32, req *models.UpdateTransactionRequest, currencyRate float64) (*models.Transaction, error) {
 	var (
-		accountID         pgtype.Int4
+		accountID         int32
 		transferAccountID pgtype.Int4
-		categoryID        pgtype.Int4
-		transactionType   pgtype.Text
-		title             pgtype.Text
-		amount            pgtype.Int8
-		currency          pgtype.Text
+		categoryID        int32
+		transactionType   string
+		title             string
+		amount            int64
+		currency          string
 		notes             pgtype.Text
+		hasAccountID      bool
+		hasCategoryID     bool
+		hasTransactionType bool
+		hasTitle          bool
+		hasAmount         bool
+		hasCurrency       bool
 	)
 
 	grp := syncerr.Group{}
@@ -276,7 +267,8 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 			if err != nil {
 				return err
 			}
-			accountID = pgtype.Int4{Int32: accID, Valid: accID > 0}
+			accountID = accID
+			hasAccountID = accID > 0
 			return nil
 		})
 	}
@@ -298,7 +290,8 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 			if err != nil {
 				return err
 			}
-			categoryID = pgtype.Int4{Int32: catID, Valid: catID > 0}
+			categoryID = catID
+			hasCategoryID = catID > 0
 			return nil
 		})
 	}
@@ -308,19 +301,23 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 	}
 
 	if req.TransactionType != nil {
-		transactionType = pgtype.Text{String: string(*req.TransactionType), Valid: true}
+		transactionType = string(*req.TransactionType)
+		hasTransactionType = true
 	}
 
 	if req.Title != nil {
-		title = pgtype.Text{String: *req.Title, Valid: true}
+		title = *req.Title
+		hasTitle = true
 	}
 
 	if req.Amount != nil {
-		amount = pgtype.Int8{Int64: *req.Amount, Valid: true}
+		amount = *req.Amount
+		hasAmount = true
 	}
 
 	if req.Currency != nil {
-		currency = pgtype.Text{String: *req.Currency, Valid: true}
+		currency = *req.Currency
+		hasCurrency = true
 	}
 
 	if req.Notes != nil {
@@ -328,21 +325,53 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 	}
 
 	var enhancedAmount pgtype.Int8
-	if currencyRate > 0 && amount.Valid {
-		enhancedAmountInt := amount.Int64 * int64(currencyRate)
+	if currencyRate > 0 && hasAmount {
+		enhancedAmountInt := amount * int64(currencyRate)
 		enhancedAmount = pgtype.Int8{Int64: enhancedAmountInt, Valid: true}
 	}
 
+	var accountIDParam int32
+	if hasAccountID {
+		accountIDParam = accountID
+	}
+	var categoryIDParam pgtype.Int4
+	if hasCategoryID {
+		categoryIDParam = pgtype.Int4{Int32: categoryID, Valid: true}
+	}
+	var transactionTypeParam string
+	if hasTransactionType {
+		transactionTypeParam = transactionType
+	}
+	var titleParam string
+	if hasTitle {
+		titleParam = title
+	}
+	var amountParam int64
+	if hasAmount {
+		amountParam = amount
+	}
+	var currencyParam string
+	if hasCurrency {
+		currencyParam = currency
+	}
+
+	var currencyRateNumeric pgtype.Numeric
+	if currencyRate > 0 {
+		if err := currencyRateNumeric.Scan(fmt.Sprintf("%.6f", currencyRate)); err != nil {
+			return nil, err
+		}
+	}
+
 	_, err := r.db.UpdateTransaction(ctx, query.UpdateTransactionParams{
-		AccountID:         accountID,
+		AccountID:         accountIDParam,
 		TransferAccountID: transferAccountID,
-		CategoryID:        categoryID,
-		TransactionType:   transactionType,
-		Title:             title,
-		BaseAmount:        amount,
+		CategoryID:        categoryIDParam,
+		TransactionType:   transactionTypeParam,
+		Title:             titleParam,
+		BaseAmount:        amountParam,
 		EnhancedAmount:    enhancedAmount,
-		Currency:          currency,
-		CurrencyRate:      currencyRate,
+		Currency:          currencyParam,
+		CurrencyRate:      currencyRateNumeric,
 		Notes:             notes,
 		ID:                id,
 	})
@@ -376,34 +405,112 @@ func (r *TransactionRepository) Delete(ctx context.Context, id int32) (*models.T
 	return tx, nil
 }
 
-func toTransactionModelWithRelations(q query.TransactionWithRelations) *models.Transaction {
-	amount := q.BaseAmount
-	if q.EnhancedAmount.Valid {
-		amount = q.EnhancedAmount.Int64
+func toTransactionModelWithRelations(q interface{}) *models.Transaction {
+	var (
+		subID                pgtype.UUID
+		accountSubID         pgtype.UUID
+		categorySubID        pgtype.UUID
+		transferAccountSubID pgtype.UUID
+		transactionType      string
+		title                string
+		baseAmount           int64
+		enhancedAmount       pgtype.Int8
+		currency             string
+		currencyRate         pgtype.Numeric
+		notes                pgtype.Text
+		createdAt            pgtype.Timestamptz
+		updatedAt            pgtype.Timestamptz
+		deletedAt            pgtype.Timestamptz
+		transferAccountID    pgtype.Int4
+	)
+
+	switch v := q.(type) {
+	case query.GetTransactionByIDRow:
+		subID = v.SubID
+		accountSubID = v.AccountSubID
+		categorySubID = v.CategorySubID
+		transferAccountSubID = v.TransferAccountSubID
+		transactionType = v.TransactionType
+		title = v.Title
+		baseAmount = v.BaseAmount
+		enhancedAmount = v.EnhancedAmount
+		currency = v.Currency
+		currencyRate = v.CurrencyRate
+		notes = v.Notes
+		createdAt = v.CreatedAt
+		updatedAt = v.UpdatedAt
+		deletedAt = v.DeletedAt
+		transferAccountID = v.TransferAccountID
+	case query.GetTransactionBySubIDRow:
+		subID = v.SubID
+		accountSubID = v.AccountSubID
+		categorySubID = v.CategorySubID
+		transferAccountSubID = v.TransferAccountSubID
+		transactionType = v.TransactionType
+		title = v.Title
+		baseAmount = v.BaseAmount
+		enhancedAmount = v.EnhancedAmount
+		currency = v.Currency
+		currencyRate = v.CurrencyRate
+		notes = v.Notes
+		createdAt = v.CreatedAt
+		updatedAt = v.UpdatedAt
+		deletedAt = v.DeletedAt
+		transferAccountID = v.TransferAccountID
+	case query.ListTransactionsRow:
+		subID = v.SubID
+		accountSubID = v.AccountSubID
+		categorySubID = v.CategorySubID
+		transferAccountSubID = v.TransferAccountSubID
+		transactionType = v.TransactionType
+		title = v.Title
+		baseAmount = v.BaseAmount
+		enhancedAmount = v.EnhancedAmount
+		currency = v.Currency
+		currencyRate = v.CurrencyRate
+		notes = v.Notes
+		createdAt = v.CreatedAt
+		updatedAt = v.UpdatedAt
+		deletedAt = v.DeletedAt
+		transferAccountID = v.TransferAccountID
+	default:
+		return nil
 	}
 
-	m := &models.Transaction{
-		SubID:           uuid.UUID(q.SubID.Bytes).String(),
-		AccountID:       uuid.UUID(q.AccountSubID.Bytes).String(),
-		CategoryID:      uuid.UUID(q.CategorySubID.Bytes).String(),
-		TransactionType: models.TransactionType(q.TransactionType),
-		Title:           q.Title,
-		Amount:          amount,
-		Currency:        q.Currency,
-		CurrencyRate:    q.CurrencyRate,
-		Notes:           q.Notes.String,
-		CreatedAt:       q.CreatedAt.Time,
-		UpdatedAt:       q.UpdatedAt.Time,
+	amount := baseAmount
+	if enhancedAmount.Valid {
+		amount = enhancedAmount.Int64
 	}
 
-	if q.TransferAccountID.Valid {
-		if q.TransferAccountSubID.Valid {
-			m.TransferAccountID = uuid.UUID(q.TransferAccountSubID.Bytes).String()
+	var currencyRateFloat float64
+	if currencyRate.Valid {
+		if fv, err := currencyRate.Float64Value(); err == nil {
+			currencyRateFloat = fv.Float64
 		}
 	}
 
-	if q.DeletedAt.Valid {
-		m.DeletedAt = &q.DeletedAt.Time
+	m := &models.Transaction{
+		SubID:           uuid.UUID(subID.Bytes).String(),
+		AccountID:       uuid.UUID(accountSubID.Bytes).String(),
+		CategoryID:      uuid.UUID(categorySubID.Bytes).String(),
+		TransactionType: models.TransactionType(transactionType),
+		Title:           title,
+		Amount:          amount,
+		Currency:        currency,
+		CurrencyRate:    currencyRateFloat,
+		Notes:           notes.String,
+		CreatedAt:       createdAt.Time,
+		UpdatedAt:       updatedAt.Time,
+	}
+
+	if transferAccountID.Valid {
+		if transferAccountSubID.Valid {
+			m.TransferAccountID = uuid.UUID(transferAccountSubID.Bytes).String()
+		}
+	}
+
+	if deletedAt.Valid {
+		m.DeletedAt = &deletedAt.Time
 	}
 
 	return m

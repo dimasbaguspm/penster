@@ -28,5 +28,9 @@ func (c *RateCurrencyCommand) Upsert(ctx context.Context, req *models.UpsertRate
 }
 
 func (c *RateCurrencyCommand) Prune(ctx context.Context, olderThan time.Time) (int64, error) {
-	return c.repo.Prune(ctx, olderThan)
+	err := c.repo.Prune(ctx, olderThan)
+	if err != nil {
+		return 0, err
+	}
+	return 0, nil
 }
