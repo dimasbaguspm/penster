@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/dimasbaguspm/penster/config"
@@ -13,6 +14,7 @@ import (
 type TransactionService struct {
 	query               query.TransactionQueryInterface
 	commands            command.TransactionCommandInterface
+	accountService      *AccountService
 	rateCurrencyService *RateCurrencyService
 	cfg                 *config.Config
 }
@@ -20,12 +22,14 @@ type TransactionService struct {
 func NewTransactionService(
 	query query.TransactionQueryInterface,
 	commands command.TransactionCommandInterface,
+	accountService *AccountService,
 	rateCurrencyService *RateCurrencyService,
 	cfg *config.Config,
 ) *TransactionService {
 	return &TransactionService{
 		query:               query,
 		commands:            commands,
+		accountService:      accountService,
 		rateCurrencyService: rateCurrencyService,
 		cfg:                 cfg,
 	}
@@ -44,7 +48,16 @@ func (s *TransactionService) Create(ctx context.Context, req *models.CreateTrans
 		}
 	}
 
-	return s.commands.Create(ctx, req, currencyRate)
+	tx, err := s.commands.Create(ctx, req, currencyRate)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.accountService.UpdateAccountBalances(ctx, req.AccountID, req.TransferAccountID, tx.TransactionType, tx.Amount); err != nil {
+		return nil, fmt.Errorf("failed to update account balance: %w", err)
+	}
+
+	return tx, nil
 }
 
 func (s *TransactionService) GetByID(ctx context.Context, id string) (*models.Transaction, error) {
@@ -76,9 +89,45 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 		}
 	}
 
-	return s.commands.Update(ctx, id, req, currencyRate)
+	if err := s.accountService.ReverseAccountBalances(ctx, existing.AccountID, existing.TransferAccountID, existing.TransactionType, existing.Amount); err != nil {
+		return nil, fmt.Errorf("failed to reverse account balance: %w", err)
+	}
+
+	tx, err := s.commands.Update(ctx, id, req, currencyRate)
+	if err != nil {
+		return nil, err
+	}
+
+	accountID := existing.AccountID
+	if req.AccountID != nil {
+		accountID = *req.AccountID
+	}
+	var transferAccountID *string
+	if req.TransferAccountID != nil {
+		transferAccountID = req.TransferAccountID
+	} else {
+		transferAccountID = &existing.TransferAccountID
+	}
+
+	if err := s.accountService.UpdateAccountBalances(ctx, accountID, *transferAccountID, tx.TransactionType, tx.Amount); err != nil {
+		return nil, fmt.Errorf("failed to update account balance: %w", err)
+	}
+
+	return tx, nil
 }
 
 func (s *TransactionService) Delete(ctx context.Context, id string) (*models.Transaction, error) {
+	existing, err := s.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		return nil, nil
+	}
+
+	if err := s.accountService.ReverseAccountBalances(ctx, existing.AccountID, existing.TransferAccountID, existing.TransactionType, existing.Amount); err != nil {
+		return nil, fmt.Errorf("failed to reverse account balance: %w", err)
+	}
+
 	return s.commands.Delete(ctx, id)
 }

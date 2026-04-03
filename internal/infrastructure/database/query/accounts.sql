@@ -90,3 +90,9 @@ UPDATE accounts
 SET deleted_at = NOW(), updated_at = NOW()
 WHERE id = @id AND deleted_at IS NULL
 RETURNING id, sub_id, name, type, balance, deleted_at, created_at, updated_at;
+
+-- name: UpdateAccountBalance :one
+UPDATE accounts
+SET balance = @balance, updated_at = NOW()
+WHERE id = @id AND deleted_at IS NULL
+RETURNING id, sub_id, name, type, balance, deleted_at, created_at, updated_at;

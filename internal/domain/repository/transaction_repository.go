@@ -51,9 +51,9 @@ func (r *TransactionRepository) Create(ctx context.Context, req *models.CreateTr
 		return nil
 	})
 
-	if req.TransferAccountID != nil {
+	if req.TransferAccountID != "" {
 		grp.Go(func() error {
-			transferID, err := r.accountRepo.GetIDBySubID(ctx, *req.TransferAccountID)
+			transferID, err := r.accountRepo.GetIDBySubID(ctx, req.TransferAccountID)
 			if err != nil {
 				return err
 			}
@@ -84,13 +84,12 @@ func (r *TransactionRepository) Create(ctx context.Context, req *models.CreateTr
 		currencyRate = 1
 	}
 
-	// Calculate enhanced_amount: base_amount * currency_rate
 	enhancedAmountInt := req.Amount * int64(currencyRate)
 	enhancedAmount = pgtype.Int8{Int64: enhancedAmountInt, Valid: true}
 
 	transactedAt := time.Now()
 
-	result, err := r.db.CreateTransaction(ctx, query.CreateTransactionParams{
+	id, err := r.db.CreateTransaction(ctx, query.CreateTransactionParams{
 		AccountID:         accountID,
 		TransferAccountID: transferAccountID,
 		CategoryID:        categoryID,
@@ -101,12 +100,14 @@ func (r *TransactionRepository) Create(ctx context.Context, req *models.CreateTr
 		Currency:          req.Currency,
 		CurrencyRate:      currencyRate,
 		TransactedAt:      pgtype.Date{Time: transactedAt, Valid: true},
-		Notes:             pgtype.Text{String: conv.StringPtrToEmpty(req.Notes), Valid: req.Notes != nil},
+		Notes:             pgtype.Text{String: req.Notes, Valid: req.Notes != ""},
 	})
 	if err != nil {
 		return nil, err
 	}
-	return toTransactionModel(result), nil
+
+	// Re-query with relations
+	return r.GetByID(ctx, id)
 }
 
 func (r *TransactionRepository) GetByID(ctx context.Context, id int32) (*models.Transaction, error) {
@@ -117,7 +118,7 @@ func (r *TransactionRepository) GetByID(ctx context.Context, id int32) (*models.
 		}
 		return nil, err
 	}
-	return toTransactionModel(result), nil
+	return toTransactionModelWithRelations(result), nil
 }
 
 func (r *TransactionRepository) GetBySubID(ctx context.Context, subID string) (*models.Transaction, error) {
@@ -129,7 +130,7 @@ func (r *TransactionRepository) GetBySubID(ctx context.Context, subID string) (*
 		}
 		return nil, err
 	}
-	return toTransactionModel(result), nil
+	return toTransactionModelWithRelations(result), nil
 }
 
 func (r *TransactionRepository) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
@@ -167,7 +168,6 @@ func (r *TransactionRepository) DeleteBySubID(ctx context.Context, subID string)
 }
 
 func (r *TransactionRepository) List(ctx context.Context, params *models.TransactionSearchParams) ([]*models.Transaction, int64, error) {
-	// Resolve sub_ids to internal ids for filtering
 	var accountIDs []int32
 	var categoryIDs []int32
 
@@ -207,7 +207,6 @@ func (r *TransactionRepository) List(ctx context.Context, params *models.Transac
 		return nil, 0, errs[0]
 	}
 
-	// For now, use the first resolved ID for filtering (multi-ID support requires SQL changes)
 	var queryParams query.ListTransactionsParams
 	if len(accountIDs) > 0 {
 		queryParams.AccountID = pgtype.Int4{Int32: accountIDs[0], Valid: true}
@@ -230,23 +229,26 @@ func (r *TransactionRepository) List(ctx context.Context, params *models.Transac
 	transactions := make([]*models.Transaction, 0, len(rows))
 	var total int64
 	for _, row := range rows {
-		transactions = append(transactions, toTransactionModel(query.Transaction{
-			ID:                row.ID,
-			SubID:             row.SubID,
-			AccountID:         row.AccountID,
-			TransferAccountID: row.TransferAccountID,
-			CategoryID:        row.CategoryID,
-			TransactionType:   row.TransactionType,
-			Title:             row.Title,
-			BaseAmount:        row.BaseAmount,
-			EnhancedAmount:    row.EnhancedAmount,
-			Currency:          row.Currency,
-			CurrencyRate:      row.CurrencyRate,
-			TransactedAt:      row.TransactedAt,
-			Notes:             row.Notes,
-			DeletedAt:         row.DeletedAt,
-			CreatedAt:         row.CreatedAt,
-			UpdatedAt:         row.UpdatedAt,
+		transactions = append(transactions, toTransactionModelWithRelations(query.TransactionWithRelations{
+			ID:                   row.ID,
+			SubID:                row.SubID,
+			AccountID:            row.AccountID,
+			TransferAccountID:    row.TransferAccountID,
+			CategoryID:           row.CategoryID,
+			TransactionType:      row.TransactionType,
+			Title:                row.Title,
+			BaseAmount:           row.BaseAmount,
+			EnhancedAmount:       row.EnhancedAmount,
+			Currency:             row.Currency,
+			CurrencyRate:         row.CurrencyRate,
+			TransactedAt:         row.TransactedAt,
+			Notes:                row.Notes,
+			DeletedAt:            row.DeletedAt,
+			CreatedAt:            row.CreatedAt,
+			UpdatedAt:            row.UpdatedAt,
+			AccountSubID:         row.AccountSubID,
+			TransferAccountSubID: row.TransferAccountSubID,
+			CategorySubID:        row.CategorySubID,
 		}))
 		total = row.Total
 	}
@@ -266,7 +268,6 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 		notes             pgtype.Text
 	)
 
-	// Goroutine-based blocking checks using syncerr
 	grp := syncerr.Group{}
 
 	if req.AccountID != nil {
@@ -302,7 +303,6 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 		})
 	}
 
-	// Wait for all goroutines and check for errors
 	if errs := grp.Wait(); len(errs) > 0 {
 		return nil, errs[0]
 	}
@@ -327,14 +327,13 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 		notes = pgtype.Text{String: *req.Notes, Valid: true}
 	}
 
-	// Calculate enhancedAmount if currencyRate is provided
 	var enhancedAmount pgtype.Int8
 	if currencyRate > 0 && amount.Valid {
 		enhancedAmountInt := amount.Int64 * int64(currencyRate)
 		enhancedAmount = pgtype.Int8{Int64: enhancedAmountInt, Valid: true}
 	}
 
-	result, err := r.db.UpdateTransaction(ctx, query.UpdateTransactionParams{
+	_, err := r.db.UpdateTransaction(ctx, query.UpdateTransactionParams{
 		AccountID:         accountID,
 		TransferAccountID: transferAccountID,
 		CategoryID:        categoryID,
@@ -344,7 +343,6 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 		EnhancedAmount:    enhancedAmount,
 		Currency:          currency,
 		CurrencyRate:      currencyRate,
-		TransactedAt:      pgtype.Date{}, // Not updatable via simplified request
 		Notes:             notes,
 		ID:                id,
 	})
@@ -354,54 +352,63 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 		}
 		return nil, err
 	}
-	return toTransactionModel(result), nil
+
+	return r.GetByID(ctx, id)
 }
 
 func (r *TransactionRepository) Delete(ctx context.Context, id int32) (*models.Transaction, error) {
-	result, err := r.db.DeleteTransaction(ctx, id)
+	tx, err := r.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if tx == nil {
+		return nil, nil
+	}
+
+	_, err = r.db.DeleteTransaction(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return toTransactionModel(result), nil
+
+	return tx, nil
 }
 
-func toTransactionModel(q query.Transaction) *models.Transaction {
+func toTransactionModelWithRelations(q query.TransactionWithRelations) *models.Transaction {
+	amount := q.BaseAmount
+	if q.EnhancedAmount.Valid {
+		amount = q.EnhancedAmount.Int64
+	}
+
 	m := &models.Transaction{
 		SubID:           uuid.UUID(q.SubID.Bytes).String(),
+		AccountID:       uuid.UUID(q.AccountSubID.Bytes).String(),
+		CategoryID:      uuid.UUID(q.CategorySubID.Bytes).String(),
 		TransactionType: models.TransactionType(q.TransactionType),
 		Title:           q.Title,
-		Amount:          q.BaseAmount,
+		Amount:          amount,
 		Currency:        q.Currency,
 		CurrencyRate:    q.CurrencyRate,
-		CreatedAt:       time.Time{},
-		UpdatedAt:       time.Time{},
+		Notes:           q.Notes.String,
+		CreatedAt:       q.CreatedAt.Time,
+		UpdatedAt:       q.UpdatedAt.Time,
 	}
 
-	// Resolve account_id internal id to sub_id
-	if q.AccountID > 0 {
-		// Note: We don't have access to accountRepo here to resolve sub_id
-		// The caller should resolve this if needed
-		m.AccountID = "" // Will be filled by application layer
-	}
-
-	if q.Notes.Valid {
-		m.Notes = &q.Notes.String
+	if q.TransferAccountID.Valid {
+		if q.TransferAccountSubID.Valid {
+			m.TransferAccountID = uuid.UUID(q.TransferAccountSubID.Bytes).String()
+		}
 	}
 
 	if q.DeletedAt.Valid {
 		m.DeletedAt = &q.DeletedAt.Time
 	}
 
-	if q.CreatedAt.Valid {
-		m.CreatedAt = q.CreatedAt.Time
-	}
-
-	if q.UpdatedAt.Valid {
-		m.UpdatedAt = q.UpdatedAt.Time
-	}
-
 	return m
+}
+
+func ptrString(s string) *string {
+	return &s
 }

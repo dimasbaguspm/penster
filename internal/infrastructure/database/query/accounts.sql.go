@@ -271,3 +271,31 @@ func (q *Queries) UpdateAccount(ctx context.Context, arg UpdateAccountParams) (A
 	)
 	return i, err
 }
+
+const updateAccountBalance = `-- name: UpdateAccountBalance :one
+UPDATE accounts
+SET balance = $1, updated_at = NOW()
+WHERE id = $2 AND deleted_at IS NULL
+RETURNING id, sub_id, name, type, balance, deleted_at, created_at, updated_at
+`
+
+type UpdateAccountBalanceParams struct {
+	Balance int64
+	ID      int32
+}
+
+func (q *Queries) UpdateAccountBalance(ctx context.Context, arg UpdateAccountBalanceParams) (Account, error) {
+	row := q.db.QueryRow(ctx, updateAccountBalance, arg.Balance, arg.ID)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.SubID,
+		&i.Name,
+		&i.Type,
+		&i.Balance,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

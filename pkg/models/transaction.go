@@ -18,14 +18,14 @@ type Transaction struct {
 	ID                string          `json:"-"`
 	SubID             string          `json:"id"`
 	AccountID         string          `json:"account_id"`
-	TransferAccountID *string         `json:"transfer_account_id,omitempty"`
-	CategoryID        *string         `json:"category_id,omitempty"`
+	TransferAccountID string          `json:"transfer_account_id"`
+	CategoryID        string          `json:"category_id"`
 	TransactionType   TransactionType `json:"transaction_type"`
 	Title             string          `json:"title"`
 	Amount            int64           `json:"amount"`
 	Currency          string          `json:"currency"`
 	CurrencyRate      float64         `json:"currency_rate"`
-	Notes             *string         `json:"notes,omitempty"`
+	Notes             string          `json:"notes"`
 	DeletedAt         *time.Time      `json:"deleted_at,omitempty"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
@@ -33,13 +33,13 @@ type Transaction struct {
 
 type CreateTransactionRequest struct {
 	AccountID         string          `json:"account_id" binding:"required"`
-	TransferAccountID *string         `json:"transfer_account_id,omitempty"`
+	TransferAccountID string          `json:"transfer_account_id,omitempty"`
 	CategoryID        string          `json:"category_id" binding:"required"`
 	TransactionType   TransactionType `json:"transaction_type" binding:"required,oneof=expense income transfer"`
 	Title             string          `json:"title" binding:"required"`
 	Amount            int64           `json:"amount" binding:"required"`
 	Currency          string          `json:"currency" binding:"required"`
-	Notes             *string         `json:"notes,omitempty"`
+	Notes             string          `json:"notes,omitempty"`
 }
 
 type UpdateTransactionRequest struct {

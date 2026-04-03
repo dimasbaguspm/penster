@@ -156,6 +156,20 @@ func (r *AccountRepository) Delete(ctx context.Context, id int32) (*models.Accou
 	return toAccountModel(result), nil
 }
 
+func (r *AccountRepository) UpdateBalanceByID(ctx context.Context, id int32, newBalance int64) (*models.Account, error) {
+	result, err := r.db.UpdateAccountBalance(ctx, query.UpdateAccountBalanceParams{
+		Balance: newBalance,
+		ID:      id,
+	})
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return toAccountModel(result), nil
+}
+
 func toAccountModel(q query.Account) *models.Account {
 	m := &models.Account{
 		SubID:     uuid.UUID(q.SubID.Bytes).String(),

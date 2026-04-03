@@ -1,79 +1,107 @@
 -- name: CreateTransaction :one
 INSERT INTO transactions (account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes)
 VALUES (@account_id, @transfer_account_id, @category_id, @transaction_type, @title, @base_amount, @enhanced_amount, @currency, @currency_rate, @transacted_at, @notes)
-RETURNING id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at;
+RETURNING id;
 
 -- name: GetTransactionByID :one
-SELECT id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at
-FROM transactions
-WHERE id = @id AND deleted_at IS NULL;
+SELECT
+    t.id, t.sub_id, t.account_id, t.transfer_account_id, t.category_id,
+    t.transaction_type, t.title, t.base_amount, t.enhanced_amount,
+    t.currency, t.currency_rate, t.transacted_at, t.notes,
+    t.deleted_at, t.created_at, t.updated_at,
+    a.sub_id as account_sub_id,
+    ta.sub_id as transfer_account_sub_id,
+    c.sub_id as category_sub_id
+FROM transactions t
+LEFT JOIN accounts a ON t.account_id = a.id AND a.deleted_at IS NULL
+LEFT JOIN accounts ta ON t.transfer_account_id = ta.id AND ta.deleted_at IS NULL
+LEFT JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
+WHERE t.id = @id AND t.deleted_at IS NULL;
 
 -- name: GetTransactionBySubID :one
-SELECT id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at
-FROM transactions
-WHERE sub_id = @sub_id AND deleted_at IS NULL;
+SELECT
+    t.id, t.sub_id, t.account_id, t.transfer_account_id, t.category_id,
+    t.transaction_type, t.title, t.base_amount, t.enhanced_amount,
+    t.currency, t.currency_rate, t.transacted_at, t.notes,
+    t.deleted_at, t.created_at, t.updated_at,
+    a.sub_id as account_sub_id,
+    ta.sub_id as transfer_account_sub_id,
+    c.sub_id as category_sub_id
+FROM transactions t
+LEFT JOIN accounts a ON t.account_id = a.id AND a.deleted_at IS NULL
+LEFT JOIN accounts ta ON t.transfer_account_id = ta.id AND ta.deleted_at IS NULL
+LEFT JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
+WHERE t.sub_id = @sub_id AND t.deleted_at IS NULL;
 
 -- name: ListTransactions :many
 WITH base_query AS (
-    SELECT id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at
-    FROM transactions
-    WHERE deleted_at IS NULL
+    SELECT t.id, t.sub_id, t.account_id, t.transfer_account_id, t.category_id,
+        t.transaction_type, t.title, t.base_amount, t.enhanced_amount,
+        t.currency, t.currency_rate, t.transacted_at, t.notes,
+        t.deleted_at, t.created_at, t.updated_at,
+        a.sub_id as account_sub_id,
+        ta.sub_id as transfer_account_sub_id,
+        c.sub_id as category_sub_id
+    FROM transactions t
+    LEFT JOIN accounts a ON t.account_id = a.id AND a.deleted_at IS NULL
+    LEFT JOIN accounts ta ON t.transfer_account_id = ta.id AND ta.deleted_at IS NULL
+    LEFT JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
+    WHERE t.deleted_at IS NULL
 ),
 search_query AS (
     SELECT * FROM base_query
     WHERE
-        (@sub_id::uuid IS NULL OR sub_id = @sub_id)
-        AND (@transaction_type::text IS NULL OR transaction_type = @transaction_type)
-        AND (@q::text IS NULL OR title ILIKE '%' || @q || '%')
+        ($1::uuid IS NULL OR sub_id = $1)
+        AND ($2::int IS NULL OR account_id = $2)
+        AND ($3::int IS NULL OR category_id = $3)
+        AND ($4::text IS NULL OR transaction_type = $4)
+        AND ($5::text IS NULL OR title ILIKE '%' || $5 || '%')
 ),
 count_query AS (
     SELECT count(*) as total FROM search_query
 ),
 paginated_query AS (
-    SELECT
-        id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at
+    SELECT *
     FROM search_query
     WHERE
-        (@sort_by::text = 'title' AND (
-            (@sort_order::text = 'asc' AND title > @cursor_title) OR
-            (@sort_order::text = 'desc' AND title < @cursor_title) OR
-            (@sort_order::text = 'asc' AND @cursor_title IS NULL) OR
-            (@sort_order::text = 'desc' AND @cursor_title IS NULL)
+        ($6::text = 'title' AND (
+            ($7::text = 'asc' AND title > $8) OR
+            ($7::text = 'desc' AND title < $8) OR
+            ($7::text = 'asc' AND $8 IS NULL) OR
+            ($7::text = 'desc' AND $8 IS NULL)
         ))
-        OR (@sort_by::text = 'transacted_at' AND (
-            (@sort_order::text = 'asc' AND transacted_at > @cursor_transacted_at) OR
-            (@sort_order::text = 'desc' AND transacted_at < @cursor_transacted_at) OR
-            (@sort_order::text = 'asc' AND @cursor_transacted_at IS NULL) OR
-            (@sort_order::text = 'desc' AND @cursor_transacted_at IS NULL)
+        OR ($6::text = 'transacted_at' AND (
+            ($7::text = 'asc' AND transacted_at > $9) OR
+            ($7::text = 'desc' AND transacted_at < $9) OR
+            ($7::text = 'asc' AND $9 IS NULL) OR
+            ($7::text = 'desc' AND $9 IS NULL)
         ))
-        OR (@sort_by::text = 'created_at' AND (
-            (@sort_order::text = 'asc' AND created_at > @cursor_created_at) OR
-            (@sort_order::text = 'desc' AND created_at < @cursor_created_at) OR
-            (@sort_order::text = 'asc' AND @cursor_created_at IS NULL) OR
-            (@sort_order::text = 'desc' AND @cursor_created_at IS NULL)
+        OR ($6::text = 'created_at' AND (
+            ($7::text = 'asc' AND created_at > $10) OR
+            ($7::text = 'desc' AND created_at < $10) OR
+            ($7::text = 'asc' AND $10 IS NULL) OR
+            ($7::text = 'desc' AND $10 IS NULL)
         ))
-        OR (@sort_by::text = 'amount' AND (
-            (@sort_order::text = 'asc' AND enhanced_amount > @cursor_enhanced_amount) OR
-            (@sort_order::text = 'desc' AND enhanced_amount < @cursor_enhanced_amount) OR
-            (@sort_order::text = 'asc' AND @cursor_enhanced_amount IS NULL) OR
-            (@sort_order::text = 'desc' AND @cursor_enhanced_amount IS NULL)
+        OR ($6::text = 'amount' AND (
+            ($7::text = 'asc' AND enhanced_amount > $11) OR
+            ($7::text = 'desc' AND enhanced_amount < $11) OR
+            ($7::text = 'asc' AND $11 IS NULL) OR
+            ($7::text = 'desc' AND $11 IS NULL)
         ))
-        OR @sort_by::text = ''
+        OR $4::text = ''
     ORDER BY
-        CASE WHEN @sort_by::text = 'title' AND @sort_order::text = 'asc' THEN title END ASC,
-        CASE WHEN @sort_by::text = 'title' AND @sort_order::text = 'desc' THEN title END DESC,
-        CASE WHEN @sort_by::text = 'transacted_at' AND @sort_order::text = 'asc' THEN transacted_at END ASC,
-        CASE WHEN @sort_by::text = 'transacted_at' AND @sort_order::text = 'desc' THEN transacted_at END DESC,
-        CASE WHEN @sort_by::text = 'created_at' AND @sort_order::text = 'asc' THEN created_at END ASC,
-        CASE WHEN @sort_by::text = 'created_at' AND @sort_order::text = 'desc' THEN created_at END DESC,
-        CASE WHEN @sort_by::text = 'amount' AND @sort_order::text = 'asc' THEN enhanced_amount END ASC,
-        CASE WHEN @sort_by::text = 'amount' AND @sort_order::text = 'desc' THEN enhanced_amount END DESC,
-        CASE WHEN @sort_by::text = '' THEN id END ASC
-    LIMIT NULLIF(@page_size, 0)
+        CASE WHEN $4::text = 'title' AND $5::text = 'asc' THEN title END ASC,
+        CASE WHEN $4::text = 'title' AND $5::text = 'desc' THEN title END DESC,
+        CASE WHEN $4::text = 'transacted_at' AND $5::text = 'asc' THEN transacted_at END ASC,
+        CASE WHEN $4::text = 'transacted_at' AND $5::text = 'desc' THEN transacted_at END DESC,
+        CASE WHEN $4::text = 'created_at' AND $5::text = 'asc' THEN created_at END ASC,
+        CASE WHEN $4::text = 'created_at' AND $5::text = 'desc' THEN created_at END DESC,
+        CASE WHEN $4::text = 'amount' AND $5::text = 'asc' THEN enhanced_amount END ASC,
+        CASE WHEN $4::text = 'amount' AND $5::text = 'desc' THEN enhanced_amount END DESC,
+        CASE WHEN $4::text = '' THEN id END ASC
+    LIMIT NULLIF($10, 0)
 )
-SELECT
-    pq.id, pq.sub_id, pq.account_id, pq.transfer_account_id, pq.category_id, pq.transaction_type, pq.title, pq.base_amount, pq.enhanced_amount, pq.currency, pq.currency_rate, pq.transacted_at, pq.notes, pq.deleted_at, pq.created_at, pq.updated_at,
-    cq.total
+SELECT pq.*, cq.total
 FROM paginated_query pq, count_query cq;
 
 -- name: UpdateTransaction :one
@@ -88,14 +116,13 @@ SET
     enhanced_amount = @enhanced_amount,
     currency = COALESCE(@currency, currency),
     currency_rate = COALESCE(@currency_rate, currency_rate),
-    transacted_at = COALESCE(@transacted_at, transacted_at),
     notes = @notes,
     updated_at = NOW()
 WHERE id = @id AND deleted_at IS NULL
-RETURNING id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at;
+RETURNING id;
 
 -- name: DeleteTransaction :one
 UPDATE transactions
 SET deleted_at = NOW(), updated_at = NOW()
 WHERE id = @id AND deleted_at IS NULL
-RETURNING id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at;
+RETURNING id;

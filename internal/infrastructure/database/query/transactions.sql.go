@@ -12,28 +12,73 @@ import (
 )
 
 type Transaction struct {
-	ID                 int32
-	SubID              pgtype.UUID
-	AccountID          int32
-	TransferAccountID  pgtype.Int4
-	CategoryID         pgtype.Int4
-	TransactionType    string
-	Title              string
-	BaseAmount         int64
-	EnhancedAmount     pgtype.Int8
-	Currency           string
-	CurrencyRate       float64
-	TransactedAt       pgtype.Date
-	Notes              pgtype.Text
-	DeletedAt          pgtype.Timestamptz
-	CreatedAt          pgtype.Timestamptz
-	UpdatedAt          pgtype.Timestamptz
+	ID                int32
+	SubID             pgtype.UUID
+	AccountID         int32
+	TransferAccountID pgtype.Int4
+	CategoryID        pgtype.Int4
+	TransactionType   string
+	Title             string
+	BaseAmount        int64
+	EnhancedAmount    pgtype.Int8
+	Currency          string
+	CurrencyRate      float64
+	TransactedAt      pgtype.Date
+	Notes             pgtype.Text
+	DeletedAt         pgtype.Timestamptz
+	CreatedAt         pgtype.Timestamptz
+	UpdatedAt         pgtype.Timestamptz
+}
+
+type TransactionWithRelations struct {
+	ID                   int32
+	SubID                pgtype.UUID
+	AccountID            int32
+	TransferAccountID    pgtype.Int4
+	CategoryID           pgtype.Int4
+	TransactionType      string
+	Title                string
+	BaseAmount           int64
+	EnhancedAmount       pgtype.Int8
+	Currency             string
+	CurrencyRate         float64
+	TransactedAt         pgtype.Date
+	Notes                pgtype.Text
+	DeletedAt            pgtype.Timestamptz
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	AccountSubID         pgtype.UUID
+	TransferAccountSubID pgtype.UUID
+	CategorySubID        pgtype.UUID
+}
+
+type ListTransactionsRow struct {
+	ID                   int32
+	SubID                pgtype.UUID
+	AccountID            int32
+	TransferAccountID    pgtype.Int4
+	CategoryID           pgtype.Int4
+	TransactionType      string
+	Title                string
+	BaseAmount           int64
+	EnhancedAmount       pgtype.Int8
+	Currency             string
+	CurrencyRate         float64
+	TransactedAt         pgtype.Date
+	Notes                pgtype.Text
+	DeletedAt            pgtype.Timestamptz
+	CreatedAt            pgtype.Timestamptz
+	UpdatedAt            pgtype.Timestamptz
+	AccountSubID         pgtype.UUID
+	TransferAccountSubID pgtype.UUID
+	CategorySubID        pgtype.UUID
+	Total                int64
 }
 
 const createTransaction = `-- name: CreateTransaction :one
 INSERT INTO transactions (account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-RETURNING id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at
+RETURNING id
 `
 
 type CreateTransactionParams struct {
@@ -50,7 +95,7 @@ type CreateTransactionParams struct {
 	Notes             pgtype.Text
 }
 
-func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error) {
+func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionParams) (int32, error) {
 	row := q.db.QueryRow(ctx, createTransaction,
 		arg.AccountID,
 		arg.TransferAccountID,
@@ -64,68 +109,44 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 		arg.TransactedAt,
 		arg.Notes,
 	)
-	var i Transaction
-	err := row.Scan(
-		&i.ID,
-		&i.SubID,
-		&i.AccountID,
-		&i.TransferAccountID,
-		&i.CategoryID,
-		&i.TransactionType,
-		&i.Title,
-		&i.BaseAmount,
-		&i.EnhancedAmount,
-		&i.Currency,
-		&i.CurrencyRate,
-		&i.TransactedAt,
-		&i.Notes,
-		&i.DeletedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+	var id int32
+	err := row.Scan(&id)
+	return id, err
 }
 
 const deleteTransaction = `-- name: DeleteTransaction :one
 UPDATE transactions
 SET deleted_at = NOW(), updated_at = NOW()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at
+RETURNING id
 `
 
-func (q *Queries) DeleteTransaction(ctx context.Context, id int32) (Transaction, error) {
+func (q *Queries) DeleteTransaction(ctx context.Context, id int32) (int32, error) {
 	row := q.db.QueryRow(ctx, deleteTransaction, id)
-	var i Transaction
-	err := row.Scan(
-		&i.ID,
-		&i.SubID,
-		&i.AccountID,
-		&i.TransferAccountID,
-		&i.CategoryID,
-		&i.TransactionType,
-		&i.Title,
-		&i.BaseAmount,
-		&i.EnhancedAmount,
-		&i.Currency,
-		&i.CurrencyRate,
-		&i.TransactedAt,
-		&i.Notes,
-		&i.DeletedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+	var resultID int32
+	err := row.Scan(&resultID)
+	return resultID, err
 }
 
 const getTransactionByID = `-- name: GetTransactionByID :one
-SELECT id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at
-FROM transactions
-WHERE id = $1 AND deleted_at IS NULL
+SELECT
+    t.id, t.sub_id, t.account_id, t.transfer_account_id, t.category_id,
+    t.transaction_type, t.title, t.base_amount, t.enhanced_amount,
+    t.currency, t.currency_rate, t.transacted_at, t.notes,
+    t.deleted_at, t.created_at, t.updated_at,
+    a.sub_id as account_sub_id,
+    ta.sub_id as transfer_account_sub_id,
+    c.sub_id as category_sub_id
+FROM transactions t
+LEFT JOIN accounts a ON t.account_id = a.id AND a.deleted_at IS NULL
+LEFT JOIN accounts ta ON t.transfer_account_id = ta.id AND ta.deleted_at IS NULL
+LEFT JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
+WHERE t.id = $1 AND t.deleted_at IS NULL
 `
 
-func (q *Queries) GetTransactionByID(ctx context.Context, id int32) (Transaction, error) {
+func (q *Queries) GetTransactionByID(ctx context.Context, id int32) (TransactionWithRelations, error) {
 	row := q.db.QueryRow(ctx, getTransactionByID, id)
-	var i Transaction
+	var i TransactionWithRelations
 	err := row.Scan(
 		&i.ID,
 		&i.SubID,
@@ -143,19 +164,32 @@ func (q *Queries) GetTransactionByID(ctx context.Context, id int32) (Transaction
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AccountSubID,
+		&i.TransferAccountSubID,
+		&i.CategorySubID,
 	)
 	return i, err
 }
 
 const getTransactionBySubID = `-- name: GetTransactionBySubID :one
-SELECT id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at
-FROM transactions
-WHERE sub_id = $1 AND deleted_at IS NULL
+SELECT
+    t.id, t.sub_id, t.account_id, t.transfer_account_id, t.category_id,
+    t.transaction_type, t.title, t.base_amount, t.enhanced_amount,
+    t.currency, t.currency_rate, t.transacted_at, t.notes,
+    t.deleted_at, t.created_at, t.updated_at,
+    a.sub_id as account_sub_id,
+    ta.sub_id as transfer_account_sub_id,
+    c.sub_id as category_sub_id
+FROM transactions t
+LEFT JOIN accounts a ON t.account_id = a.id AND a.deleted_at IS NULL
+LEFT JOIN accounts ta ON t.transfer_account_id = ta.id AND ta.deleted_at IS NULL
+LEFT JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
+WHERE t.sub_id = $1 AND t.deleted_at IS NULL
 `
 
-func (q *Queries) GetTransactionBySubID(ctx context.Context, subID pgtype.UUID) (Transaction, error) {
+func (q *Queries) GetTransactionBySubID(ctx context.Context, subID pgtype.UUID) (TransactionWithRelations, error) {
 	row := q.db.QueryRow(ctx, getTransactionBySubID, subID)
-	var i Transaction
+	var i TransactionWithRelations
 	err := row.Scan(
 		&i.ID,
 		&i.SubID,
@@ -173,18 +207,30 @@ func (q *Queries) GetTransactionBySubID(ctx context.Context, subID pgtype.UUID) 
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AccountSubID,
+		&i.TransferAccountSubID,
+		&i.CategorySubID,
 	)
 	return i, err
 }
 
 const listTransactions = `-- name: ListTransactions :many
 WITH base_query AS (
-    SELECT id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at
-    FROM transactions
-    WHERE deleted_at IS NULL
+    SELECT t.id, t.sub_id, t.account_id, t.transfer_account_id, t.category_id,
+        t.transaction_type, t.title, t.base_amount, t.enhanced_amount,
+        t.currency, t.currency_rate, t.transacted_at, t.notes,
+        t.deleted_at, t.created_at, t.updated_at,
+        a.sub_id as account_sub_id,
+        ta.sub_id as transfer_account_sub_id,
+        c.sub_id as category_sub_id
+    FROM transactions t
+    LEFT JOIN accounts a ON t.account_id = a.id AND a.deleted_at IS NULL
+    LEFT JOIN accounts ta ON t.transfer_account_id = ta.id AND ta.deleted_at IS NULL
+    LEFT JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
+    WHERE t.deleted_at IS NULL
 ),
 search_query AS (
-    SELECT id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at FROM base_query
+    SELECT * FROM base_query
     WHERE
         ($1::uuid IS NULL OR sub_id = $1)
         AND ($2::int IS NULL OR account_id = $2)
@@ -196,8 +242,7 @@ count_query AS (
     SELECT count(*) as total FROM search_query
 ),
 paginated_query AS (
-    SELECT
-        id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at
+    SELECT *
     FROM search_query
     WHERE
         ($6::text = 'title' AND (
@@ -237,45 +282,23 @@ paginated_query AS (
         CASE WHEN $4::text = '' THEN id END ASC
     LIMIT NULLIF($10, 0)
 )
-SELECT
-    pq.id, pq.sub_id, pq.account_id, pq.transfer_account_id, pq.category_id, pq.transaction_type, pq.title, pq.base_amount, pq.enhanced_amount, pq.currency, pq.currency_rate, pq.transacted_at, pq.notes, pq.deleted_at, pq.created_at, pq.updated_at,
-    cq.total
+SELECT pq.*, cq.total
 FROM paginated_query pq, count_query cq
 `
 
 type ListTransactionsParams struct {
-	SubID               pgtype.UUID
-	AccountID           pgtype.Int4
-	CategoryID          pgtype.Int4
-	TransactionType     string
-	Q                   string
-	SortBy              string
-	SortOrder           string
-	CursorTitle         string
-	CursorTransactedAt  pgtype.Date
-	CursorCreatedAt     pgtype.Timestamptz
+	SubID                pgtype.UUID
+	AccountID            pgtype.Int4
+	CategoryID           pgtype.Int4
+	TransactionType      string
+	Q                    string
+	SortBy               string
+	SortOrder            string
+	CursorTitle          string
+	CursorTransactedAt   pgtype.Date
+	CursorCreatedAt      pgtype.Timestamptz
 	CursorEnhancedAmount int64
-	PageSize            interface{}
-}
-
-type ListTransactionsRow struct {
-	ID                 int32
-	SubID              pgtype.UUID
-	AccountID          int32
-	TransferAccountID  pgtype.Int4
-	CategoryID         pgtype.Int4
-	TransactionType    string
-	Title              string
-	BaseAmount         int64
-	EnhancedAmount     pgtype.Int8
-	Currency           string
-	CurrencyRate       float64
-	TransactedAt       pgtype.Date
-	Notes              pgtype.Text
-	DeletedAt          pgtype.Timestamptz
-	CreatedAt          pgtype.Timestamptz
-	UpdatedAt          pgtype.Timestamptz
-	Total              int64
+	PageSize             int64
 }
 
 func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsParams) ([]ListTransactionsRow, error) {
@@ -317,6 +340,9 @@ func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsPara
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AccountSubID,
+			&i.TransferAccountSubID,
+			&i.CategorySubID,
 			&i.Total,
 		); err != nil {
 			return nil, err
@@ -341,11 +367,10 @@ SET
     enhanced_amount = $7,
     currency = COALESCE($8, currency),
     currency_rate = COALESCE($9, currency_rate),
-    transacted_at = COALESCE($10, transacted_at),
-    notes = $11,
+    notes = $10,
     updated_at = NOW()
-WHERE id = $12 AND deleted_at IS NULL
-RETURNING id, sub_id, account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, deleted_at, created_at, updated_at
+WHERE id = $11 AND deleted_at IS NULL
+RETURNING id
 `
 
 type UpdateTransactionParams struct {
@@ -358,12 +383,11 @@ type UpdateTransactionParams struct {
 	EnhancedAmount    pgtype.Int8
 	Currency          pgtype.Text
 	CurrencyRate      float64
-	TransactedAt      pgtype.Date
 	Notes             pgtype.Text
 	ID                int32
 }
 
-func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) (Transaction, error) {
+func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) (int32, error) {
 	row := q.db.QueryRow(ctx, updateTransaction,
 		arg.AccountID,
 		arg.TransferAccountID,
@@ -374,28 +398,10 @@ func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionPa
 		arg.EnhancedAmount,
 		arg.Currency,
 		arg.CurrencyRate,
-		arg.TransactedAt,
 		arg.Notes,
 		arg.ID,
 	)
-	var i Transaction
-	err := row.Scan(
-		&i.ID,
-		&i.SubID,
-		&i.AccountID,
-		&i.TransferAccountID,
-		&i.CategoryID,
-		&i.TransactionType,
-		&i.Title,
-		&i.BaseAmount,
-		&i.EnhancedAmount,
-		&i.Currency,
-		&i.CurrencyRate,
-		&i.TransactedAt,
-		&i.Notes,
-		&i.DeletedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+	var id int32
+	err := row.Scan(&id)
+	return id, err
 }

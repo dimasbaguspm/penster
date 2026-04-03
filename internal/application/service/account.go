@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/dimasbaguspm/penster/internal/application/command"
 	"github.com/dimasbaguspm/penster/internal/application/query"
@@ -38,4 +39,86 @@ func (s *AccountService) Update(ctx context.Context, id string, req *models.Upda
 
 func (s *AccountService) Delete(ctx context.Context, id string) (*models.Account, error) {
 	return s.commands.Delete(ctx, id)
+}
+
+func (s *AccountService) UpdateAccountBalances(ctx context.Context, accountID string, transferAccountID string, transactionType models.TransactionType, amount int64) error {
+	account, err := s.GetByID(ctx, accountID)
+	if err != nil {
+		return err
+	}
+	if account == nil {
+		return fmt.Errorf("account not found: %s", accountID)
+	}
+
+	var newBalance int64
+	switch transactionType {
+	case models.TransactionTypeExpense, models.TransactionTypeTransfer:
+		newBalance = account.Balance - amount
+	case models.TransactionTypeIncome:
+		newBalance = account.Balance + amount
+	}
+
+	_, err = s.commands.UpdateBalance(ctx, accountID, newBalance)
+	if err != nil {
+		return err
+	}
+
+	if transactionType == models.TransactionTypeTransfer && transferAccountID != "" && transferAccountID != accountID {
+		destAccount, err := s.GetByID(ctx, transferAccountID)
+		if err != nil {
+			return err
+		}
+		if destAccount == nil {
+			return fmt.Errorf("transfer account not found: %s", transferAccountID)
+		}
+
+		newDestBalance := destAccount.Balance + amount
+		_, err = s.commands.UpdateBalance(ctx, transferAccountID, newDestBalance)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *AccountService) ReverseAccountBalances(ctx context.Context, accountID string, transferAccountID string, transactionType models.TransactionType, amount int64) error {
+	account, err := s.GetByID(ctx, accountID)
+	if err != nil {
+		return err
+	}
+	if account == nil {
+		return fmt.Errorf("account not found: %s", accountID)
+	}
+
+	var newBalance int64
+	switch transactionType {
+	case models.TransactionTypeExpense, models.TransactionTypeTransfer:
+		newBalance = account.Balance + amount
+	case models.TransactionTypeIncome:
+		newBalance = account.Balance - amount
+	}
+
+	_, err = s.commands.UpdateBalance(ctx, accountID, newBalance)
+	if err != nil {
+		return err
+	}
+
+	if transactionType == models.TransactionTypeTransfer && transferAccountID != "" && transferAccountID != accountID {
+		destAccount, err := s.GetByID(ctx, transferAccountID)
+		if err != nil {
+			return err
+		}
+		if destAccount == nil {
+			return fmt.Errorf("transfer account not found: %s", transferAccountID)
+		}
+
+		newDestBalance := destAccount.Balance - amount
+		_, err = s.commands.UpdateBalance(ctx, transferAccountID, newDestBalance)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
