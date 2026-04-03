@@ -99,7 +99,7 @@ paginated_query AS (
         CASE WHEN $4::text = 'amount' AND $5::text = 'asc' THEN enhanced_amount END ASC,
         CASE WHEN $4::text = 'amount' AND $5::text = 'desc' THEN enhanced_amount END DESC,
         CASE WHEN $4::text = '' THEN id END ASC
-    LIMIT NULLIF($10, 0)
+    LIMIT NULLIF($12, 0)
 )
 SELECT pq.*, cq.total
 FROM paginated_query pq, count_query cq;

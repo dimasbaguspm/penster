@@ -60,6 +60,47 @@ definitions:
     - name
     - type
     type: object
+  models.CreateTransactionRequest:
+    properties:
+      account_id:
+        type: string
+      amount:
+        type: integer
+      category_id:
+        type: string
+      currency:
+        type: string
+      notes:
+        type: string
+      title:
+        type: string
+      transaction_type:
+        allOf:
+        - $ref: '#/definitions/models.TransactionType'
+        enum:
+        - expense
+        - income
+        - transfer
+      transfer_account_id:
+        type: string
+    required:
+    - account_id
+    - amount
+    - category_id
+    - currency
+    - title
+    - transaction_type
+    type: object
+  models.TransactionType:
+    enum:
+    - expense
+    - income
+    - transfer
+    type: string
+    x-enum-varnames:
+    - TransactionTypeExpense
+    - TransactionTypeIncome
+    - TransactionTypeTransfer
   models.UpdateAccountRequest:
     properties:
       balance:
@@ -75,6 +116,25 @@ definitions:
         type: string
       type:
         $ref: '#/definitions/models.CategoryType'
+    type: object
+  models.UpdateTransactionRequest:
+    properties:
+      account_id:
+        type: string
+      amount:
+        type: integer
+      category_id:
+        type: string
+      currency:
+        type: string
+      notes:
+        type: string
+      title:
+        type: string
+      transaction_type:
+        $ref: '#/definitions/models.TransactionType'
+      transfer_account_id:
+        type: string
     type: object
   response.Meta:
     properties:
@@ -492,4 +552,191 @@ paths:
       summary: Readiness check
       tags:
       - health
+  /transactions:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated list of transactions with optional filtering
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        type: string
+      - description: Filter by account ID
+        in: query
+        name: account_id
+        type: string
+      - description: Filter by category ID
+        in: query
+        name: category_id
+        type: string
+      - description: Filter by transaction type (expense, income, transfer)
+        in: query
+        name: transaction_type
+        type: string
+      - description: Sort by field (title, transacted_at, created_at, amount)
+        in: query
+        name: sort_by
+        type: string
+      - description: Sort order (asc/desc)
+        in: query
+        name: sort_order
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.PaginatedResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: List all transactions
+      tags:
+      - transactions
+    post:
+      consumes:
+      - application/json
+      description: Create a new transaction with amount, type, and account/category
+        references
+      parameters:
+      - description: Transaction creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateTransactionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Create a new transaction
+      tags:
+      - transactions
+  /transactions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a transaction by its UUID
+      parameters:
+      - description: Transaction UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Delete a transaction
+      tags:
+      - transactions
+    get:
+      consumes:
+      - application/json
+      description: Get a single transaction by its UUID
+      parameters:
+      - description: Transaction UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Get transaction by ID
+      tags:
+      - transactions
+    put:
+      consumes:
+      - application/json
+      description: Update an existing transaction by its UUID
+      parameters:
+      - description: Transaction UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Transaction update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateTransactionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Update a transaction
+      tags:
+      - transactions
 swagger: "2.0"

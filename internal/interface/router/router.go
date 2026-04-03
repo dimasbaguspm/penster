@@ -11,9 +11,10 @@ import (
 
 // Router holds all HTTP handlers and provides route registration
 type Router struct {
-	healthHandler   *handler.HealthHandler
-	accountHandler  *handler.AccountHandler
-	categoryHandler *handler.CategoryHandler
+	healthHandler      *handler.HealthHandler
+	accountHandler     *handler.AccountHandler
+	categoryHandler    *handler.CategoryHandler
+	transactionHandler *handler.TransactionHandler
 }
 
 // NewRouter creates a new Router with all handlers
@@ -21,11 +22,13 @@ func NewRouter(
 	healthHandler *handler.HealthHandler,
 	accountSvc *service.AccountService,
 	categorySvc *service.CategoryService,
+	transactionSvc *service.TransactionService,
 ) *Router {
 	return &Router{
-		healthHandler:   healthHandler,
-		accountHandler:  handler.NewAccountHandler(accountSvc),
-		categoryHandler: handler.NewCategoryHandler(categorySvc),
+		healthHandler:      healthHandler,
+		accountHandler:     handler.NewAccountHandler(accountSvc),
+		categoryHandler:   handler.NewCategoryHandler(categorySvc),
+		transactionHandler: handler.NewTransactionHandler(transactionSvc),
 	}
 }
 
@@ -53,6 +56,13 @@ func (r *Router) Routes() http.Handler {
 	mux.HandleFunc("GET /categories/{id}", r.categoryHandler.Get)
 	mux.HandleFunc("PUT /categories/{id}", r.categoryHandler.Update)
 	mux.HandleFunc("DELETE /categories/{id}", r.categoryHandler.Delete)
+
+	// Transaction endpoints
+	mux.HandleFunc("GET /transactions", r.transactionHandler.List)
+	mux.HandleFunc("POST /transactions", r.transactionHandler.Create)
+	mux.HandleFunc("GET /transactions/{id}", r.transactionHandler.Get)
+	mux.HandleFunc("PUT /transactions/{id}", r.transactionHandler.Update)
+	mux.HandleFunc("DELETE /transactions/{id}", r.transactionHandler.Delete)
 
 	// Apply middleware chain
 	handlerChain := middleware.Logging(mux)

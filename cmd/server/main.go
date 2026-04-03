@@ -30,7 +30,7 @@ func main() {
 	infra.Scheduler.Start(ctx)
 
 	healthHandler := handler.NewHealthHandler(infra)
-	r := router.NewRouter(healthHandler, infra.AccountService, infra.CategoryService)
+	r := router.NewRouter(healthHandler, infra.AccountService, infra.CategoryService, infra.TransactionService)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", cfg.App.Port),
