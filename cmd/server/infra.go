@@ -21,6 +21,7 @@ type Infra struct {
 	AccountService      *service.AccountService
 	CategoryService     *service.CategoryService
 	RateCurrencyService *service.RateCurrencyService
+	TransactionService  *service.TransactionService
 	Scheduler           *engine.Engine
 }
 
@@ -44,6 +45,7 @@ func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
 	accountRepo := repository.NewAccountRepository(dbQueries)
 	categoryRepo := repository.NewCategoryRepository(dbQueries)
 	rateCurrencyRepo := repository.NewRateCurrencyRepository(dbQueries)
+	transactionRepo := repository.NewTransactionRepository(dbQueries, accountRepo, categoryRepo)
 
 	accountQuery := appquery.NewAccountQuery(accountRepo)
 	accountCommand := command.NewAccountCommand(accountRepo)
@@ -51,7 +53,11 @@ func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
 	categoryCommand := command.NewCategoryCommand(categoryRepo)
 	rateCurrencyQuery := appquery.NewRateCurrencyQuery(rateCurrencyRepo)
 	rateCurrencyCommand := command.NewRateCurrencyCommand(rateCurrencyRepo)
+	transactionQuery := appquery.NewTransactionQuery(transactionRepo)
+	transactionCommand := command.NewTransactionCommand(transactionRepo)
+
 	rateCurrencyService := service.NewRateCurrencyService(rateCurrencyQuery, rateCurrencyCommand)
+	transactionService := service.NewTransactionService(transactionQuery, transactionCommand, rateCurrencyService, cfg)
 
 	scheduler := engine.NewEngine(cfg, rateCurrencyService)
 
@@ -60,6 +66,7 @@ func NewInfra(ctx context.Context, cfg *config.Config) (*Infra, error) {
 		AccountService:      service.NewAccountService(accountQuery, accountCommand),
 		CategoryService:     service.NewCategoryService(categoryQuery, categoryCommand),
 		RateCurrencyService: rateCurrencyService,
+		TransactionService:  transactionService,
 		Scheduler:           scheduler,
 	}, nil
 }

@@ -144,6 +144,28 @@ func (r *TransactionRepository) GetIDBySubID(ctx context.Context, subID string) 
 	return result.ID, nil
 }
 
+func (r *TransactionRepository) UpdateBySubID(ctx context.Context, subID string, req *models.UpdateTransactionRequest, currencyRate float64) (*models.Transaction, error) {
+	id, err := r.GetIDBySubID(ctx, subID)
+	if err != nil {
+		return nil, err
+	}
+	if id == 0 {
+		return nil, nil
+	}
+	return r.Update(ctx, id, req, currencyRate)
+}
+
+func (r *TransactionRepository) DeleteBySubID(ctx context.Context, subID string) (*models.Transaction, error) {
+	id, err := r.GetIDBySubID(ctx, subID)
+	if err != nil {
+		return nil, err
+	}
+	if id == 0 {
+		return nil, nil
+	}
+	return r.Delete(ctx, id)
+}
+
 func (r *TransactionRepository) List(ctx context.Context, params *models.TransactionSearchParams) ([]*models.Transaction, int64, error) {
 	// Resolve sub_ids to internal ids for filtering
 	var accountIDs []int32
@@ -232,7 +254,7 @@ func (r *TransactionRepository) List(ctx context.Context, params *models.Transac
 	return transactions, total, nil
 }
 
-func (r *TransactionRepository) Update(ctx context.Context, id int32, req *models.UpdateTransactionRequest) (*models.Transaction, error) {
+func (r *TransactionRepository) Update(ctx context.Context, id int32, req *models.UpdateTransactionRequest, currencyRate float64) (*models.Transaction, error) {
 	var (
 		accountID         pgtype.Int4
 		transferAccountID pgtype.Int4
@@ -305,6 +327,13 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 		notes = pgtype.Text{String: *req.Notes, Valid: true}
 	}
 
+	// Calculate enhancedAmount if currencyRate is provided
+	var enhancedAmount pgtype.Int8
+	if currencyRate > 0 && amount.Valid {
+		enhancedAmountInt := amount.Int64 * int64(currencyRate)
+		enhancedAmount = pgtype.Int8{Int64: enhancedAmountInt, Valid: true}
+	}
+
 	result, err := r.db.UpdateTransaction(ctx, query.UpdateTransactionParams{
 		AccountID:         accountID,
 		TransferAccountID: transferAccountID,
@@ -312,9 +341,9 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 		TransactionType:   transactionType,
 		Title:             title,
 		BaseAmount:        amount,
-		EnhancedAmount:    pgtype.Int8{}, // Not updatable via simplified request
+		EnhancedAmount:    enhancedAmount,
 		Currency:          currency,
-		CurrencyRate:      0,             // Not updatable via simplified request
+		CurrencyRate:      currencyRate,
 		TransactedAt:      pgtype.Date{}, // Not updatable via simplified request
 		Notes:             notes,
 		ID:                id,
@@ -346,6 +375,7 @@ func toTransactionModel(q query.Transaction) *models.Transaction {
 		Title:           q.Title,
 		Amount:          q.BaseAmount,
 		Currency:        q.Currency,
+		CurrencyRate:    q.CurrencyRate,
 		CreatedAt:       time.Time{},
 		UpdatedAt:       time.Time{},
 	}

@@ -24,6 +24,7 @@ type Transaction struct {
 	Title             string          `json:"title"`
 	Amount            int64           `json:"amount"`
 	Currency          string          `json:"currency"`
+	CurrencyRate      float64         `json:"currency_rate"`
 	Notes             *string         `json:"notes,omitempty"`
 	DeletedAt         *time.Time      `json:"deleted_at,omitempty"`
 	CreatedAt         time.Time       `json:"created_at"`
