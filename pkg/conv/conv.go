@@ -26,3 +26,11 @@ func StringPtrToNull(s *string) string {
 	}
 	return *s
 }
+
+// Int64PtrToInt64 converts a nil int64 pointer to 0
+func Int64PtrToInt64(s *int64) int64 {
+	if s == nil {
+		return 0
+	}
+	return *s
+}
