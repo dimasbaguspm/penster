@@ -3,27 +3,87 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/dimasbaguspm/penster/config"
 	"github.com/dimasbaguspm/penster/internal/application/command"
-	"github.com/dimasbaguspm/penster/internal/application/query"
+	appquery "github.com/dimasbaguspm/penster/internal/application/query"
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
+	"github.com/dimasbaguspm/penster/internal/domain/valueobjects"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/syncerr"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type transactionIDs struct {
+	accountID         int32
+	transferAccountID pgtype.Int4
+	categoryID        int32
+}
+
+func (s *TransactionService) validateRelatedEntities(ctx context.Context, accountID, transferAccountID, categoryID string) (*transactionIDs, error) {
+	var ids transactionIDs
+
+	grp := syncerr.Group{}
+
+	grp.Go(func() error {
+		id, err := s.accountService.GetIDBySubID(ctx, accountID)
+		if err != nil {
+			return err
+		}
+		if id == 0 {
+			return fmt.Errorf("%w: %s", entities.ErrAccountNotFound, accountID)
+		}
+		ids.accountID = id
+		return nil
+	})
+
+	if transferAccountID != "" {
+		grp.Go(func() error {
+			id, err := s.accountService.GetIDBySubID(ctx, transferAccountID)
+			if err != nil {
+				return err
+			}
+			if id == 0 {
+				return fmt.Errorf("%w: %s", entities.ErrTransferAccountNotFound, transferAccountID)
+			}
+			ids.transferAccountID = pgtype.Int4{Int32: id, Valid: true}
+			return nil
+		})
+	}
+
+	grp.Go(func() error {
+		id, err := s.categoryService.GetIDBySubID(ctx, categoryID)
+		if err != nil {
+			return err
+		}
+		if id == 0 {
+			return fmt.Errorf("%w: %s", entities.ErrCategoryNotFound, categoryID)
+		}
+		ids.categoryID = id
+		return nil
+	})
+
+	if errs := grp.Wait(); len(errs) > 0 {
+		return nil, errs[0]
+	}
+
+	return &ids, nil
+}
+
 type TransactionService struct {
-	query               query.TransactionQueryInterface
+	query               appquery.TransactionQueryInterface
 	commands            command.TransactionCommandInterface
 	accountService      *AccountService
+	categoryService     *CategoryService
 	rateCurrencyService *RateCurrencyService
 	cfg                 *config.Config
 }
 
 func NewTransactionService(
-	query query.TransactionQueryInterface,
+	query appquery.TransactionQueryInterface,
 	commands command.TransactionCommandInterface,
 	accountService *AccountService,
+	categoryService *CategoryService,
 	rateCurrencyService *RateCurrencyService,
 	cfg *config.Config,
 ) *TransactionService {
@@ -31,25 +91,29 @@ func NewTransactionService(
 		query:               query,
 		commands:            commands,
 		accountService:      accountService,
+		categoryService:     categoryService,
 		rateCurrencyService: rateCurrencyService,
 		cfg:                 cfg,
 	}
 }
 
 func (s *TransactionService) Create(ctx context.Context, req *models.CreateTransactionRequest) (*models.Transaction, error) {
-	currencyRate := float64(1)
-	if req.Currency != s.cfg.App.BaseCurrency {
-		rateDate := time.Now().Truncate(24 * time.Hour)
-		rate, err := s.rateCurrencyService.Get(ctx, req.Currency, s.cfg.App.BaseCurrency, rateDate)
-		if err != nil {
-			return nil, err
-		}
-		if rate != nil {
-			currencyRate = rate.Rate
-		}
+	ids, err := s.validateRelatedEntities(ctx, req.AccountID, req.TransferAccountID, req.CategoryID)
+	if err != nil {
+		return nil, err
 	}
 
-	tx, err := s.commands.Create(ctx, req, currencyRate)
+	currencyRate, err := s.rateCurrencyService.GetRate(ctx, req.Currency, s.cfg.App.BaseCurrency)
+	if err != nil {
+		return nil, err
+	}
+
+	params, err := valueobjects.ToCreateTransactionParams(ids.accountID, ids.transferAccountID, ids.categoryID, currencyRate, req)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := s.commands.Create(ctx, params)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +130,8 @@ func (s *TransactionService) GetByID(ctx context.Context, id string) (*models.Tr
 }
 
 func (s *TransactionService) List(ctx context.Context, params *models.TransactionSearchParams) ([]*models.Transaction, int64, error) {
-	return s.query.List(ctx, params)
+	queryParams := valueobjects.ToListTransactionsParams(params)
+	return s.query.List(ctx, queryParams)
 }
 
 func (s *TransactionService) Update(ctx context.Context, id string, req *models.UpdateTransactionRequest) (*models.Transaction, error) {
@@ -78,8 +143,6 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 		return nil, nil
 	}
 
-	// Check for same-account transfer
-	// Check if updating TransactionType to transfer, or if already a transfer and updating transfer_account_id
 	isTransfer := existing.TransactionType == models.TransactionTypeTransfer
 	if req.TransactionType != nil {
 		isTransfer = *req.TransactionType == models.TransactionTypeTransfer
@@ -94,15 +157,30 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 		}
 	}
 
+	accountID := existing.AccountID
+	transferAccountID := existing.TransferAccountID
+	categoryID := existing.CategoryID
+
+	if req.AccountID != nil {
+		accountID = *req.AccountID
+	}
+	if req.TransferAccountID != nil {
+		transferAccountID = *req.TransferAccountID
+	}
+	if req.CategoryID != nil {
+		categoryID = *req.CategoryID
+	}
+
+	ids, err := s.validateRelatedEntities(ctx, accountID, transferAccountID, categoryID)
+	if err != nil {
+		return nil, err
+	}
+
 	currencyRate := existing.CurrencyRate
 	if req.Currency != nil && *req.Currency != existing.Currency {
-		rateDate := time.Now().Truncate(24 * time.Hour)
-		rate, err := s.rateCurrencyService.Get(ctx, *req.Currency, s.cfg.App.BaseCurrency, rateDate)
+		currencyRate, err = s.rateCurrencyService.GetRate(ctx, *req.Currency, s.cfg.App.BaseCurrency)
 		if err != nil {
 			return nil, err
-		}
-		if rate != nil {
-			currencyRate = rate.Rate
 		}
 	}
 
@@ -110,23 +188,25 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 		return nil, fmt.Errorf("failed to reverse account balance: %w", err)
 	}
 
-	tx, err := s.commands.Update(ctx, id, req, currencyRate)
+	updateParams := valueobjects.ToUpdateTransactionParams(ids.accountID, ids.transferAccountID, ids.categoryID, currencyRate, req)
+
+	tx, err := s.commands.Update(ctx, id, updateParams)
 	if err != nil {
 		return nil, err
 	}
 
-	accountID := existing.AccountID
+	accountIDStr := existing.AccountID
 	if req.AccountID != nil {
-		accountID = *req.AccountID
+		accountIDStr = *req.AccountID
 	}
-	var transferAccountID *string
+	var transferAccountIDStr string
 	if req.TransferAccountID != nil {
-		transferAccountID = req.TransferAccountID
+		transferAccountIDStr = *req.TransferAccountID
 	} else {
-		transferAccountID = &existing.TransferAccountID
+		transferAccountIDStr = existing.TransferAccountID
 	}
 
-	if err := s.accountService.UpdateAccountBalances(ctx, accountID, *transferAccountID, tx.TransactionType, tx.Amount); err != nil {
+	if err := s.accountService.UpdateAccountBalances(ctx, accountIDStr, transferAccountIDStr, tx.TransactionType, tx.Amount); err != nil {
 		return nil, fmt.Errorf("failed to update account balance: %w", err)
 	}
 

@@ -29,6 +29,10 @@ func (s *RateCurrencyService) Get(ctx context.Context, from, to string, rateDate
 	return s.query.Get(ctx, from, to, rateDate)
 }
 
+func (s *RateCurrencyService) GetRate(ctx context.Context, currency, baseCurrency string) (float64, error) {
+	return s.query.GetRate(ctx, currency, baseCurrency)
+}
+
 func (s *RateCurrencyService) List(ctx context.Context, params *models.RateCurrencySearchParams) ([]*models.RateCurrency, int64, error) {
 	return s.query.List(ctx, params)
 }

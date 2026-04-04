@@ -28,6 +28,10 @@ func (s *CategoryService) GetByID(ctx context.Context, id string) (*models.Categ
 	return s.query.GetByID(ctx, id)
 }
 
+func (s *CategoryService) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
+	return s.query.GetIDBySubID(ctx, subID)
+}
+
 func (s *CategoryService) List(ctx context.Context, params *models.CategorySearchParams) ([]*models.Category, int64, error) {
 	return s.query.List(ctx, params)
 }

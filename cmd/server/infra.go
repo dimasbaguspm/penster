@@ -39,7 +39,7 @@ func NewInfra(ctx context.Context, cfg *config.Config) *Infra {
 	accountRepo := repository.NewAccountRepository(dbQueries)
 	categoryRepo := repository.NewCategoryRepository(dbQueries)
 	rateCurrencyRepo := repository.NewRateCurrencyRepository(dbQueries)
-	transactionRepo := repository.NewTransactionRepository(dbQueries, accountRepo, categoryRepo)
+	transactionRepo := repository.NewTransactionRepository(dbQueries)
 
 	accountQuery := appquery.NewAccountQuery(accountRepo)
 	accountCommand := command.NewAccountCommand(accountRepo)
@@ -53,7 +53,7 @@ func NewInfra(ctx context.Context, cfg *config.Config) *Infra {
 	accountService := service.NewAccountService(accountQuery, accountCommand)
 	categoryService := service.NewCategoryService(categoryQuery, categoryCommand)
 	rateCurrencyService := service.NewRateCurrencyService(rateCurrencyQuery, rateCurrencyCommand)
-	transactionService := service.NewTransactionService(transactionQuery, transactionCommand, accountService, rateCurrencyService, cfg)
+	transactionService := service.NewTransactionService(transactionQuery, transactionCommand, accountService, categoryService, rateCurrencyService, cfg)
 
 	scheduler := engine.NewEngine(cfg, rateCurrencyService)
 	server := NewServer(cfg, accountService, categoryService, transactionService)

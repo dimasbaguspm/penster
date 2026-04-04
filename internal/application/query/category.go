@@ -10,6 +10,7 @@ import (
 // CategoryQueryInterface defines read operations for categories
 type CategoryQueryInterface interface {
 	GetByID(ctx context.Context, id string) (*models.Category, error)
+	GetIDBySubID(ctx context.Context, subID string) (int32, error)
 	List(ctx context.Context, params *models.CategorySearchParams) ([]*models.Category, int64, error)
 }
 
@@ -27,6 +28,10 @@ func NewCategoryQuery(repo *repository.CategoryRepository) *CategoryQuery {
 
 func (q *CategoryQuery) GetByID(ctx context.Context, id string) (*models.Category, error) {
 	return q.repo.GetBySubID(ctx, id)
+}
+
+func (q *CategoryQuery) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
+	return q.repo.GetIDBySubID(ctx, subID)
 }
 
 func (q *CategoryQuery) List(ctx context.Context, params *models.CategorySearchParams) ([]*models.Category, int64, error) {

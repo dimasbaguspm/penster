@@ -10,6 +10,7 @@ import (
 // AccountQueryInterface defines read operations for accounts
 type AccountQueryInterface interface {
 	GetByID(ctx context.Context, id string) (*models.Account, error)
+	GetIDBySubID(ctx context.Context, subID string) (int32, error)
 	List(ctx context.Context, params *models.AccountSearchParams) ([]*models.Account, int64, error)
 }
 
@@ -27,6 +28,10 @@ func NewAccountQuery(repo *repository.AccountRepository) *AccountQuery {
 
 func (q *AccountQuery) GetByID(ctx context.Context, id string) (*models.Account, error) {
 	return q.repo.GetBySubID(ctx, id)
+}
+
+func (q *AccountQuery) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
+	return q.repo.GetIDBySubID(ctx, subID)
 }
 
 func (q *AccountQuery) List(ctx context.Context, params *models.AccountSearchParams) ([]*models.Account, int64, error) {

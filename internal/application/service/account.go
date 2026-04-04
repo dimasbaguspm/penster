@@ -29,6 +29,10 @@ func (s *AccountService) GetByID(ctx context.Context, id string) (*models.Accoun
 	return s.query.GetByID(ctx, id)
 }
 
+func (s *AccountService) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
+	return s.query.GetIDBySubID(ctx, subID)
+}
+
 func (s *AccountService) List(ctx context.Context, params *models.AccountSearchParams) ([]*models.Account, int64, error) {
 	return s.query.List(ctx, params)
 }

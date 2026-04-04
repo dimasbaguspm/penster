@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"github.com/dimasbaguspm/penster/internal/domain/repository"
+	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/models"
 )
 
 type TransactionCommandInterface interface {
-	Create(ctx context.Context, req *models.CreateTransactionRequest, currencyRate float64) (*models.Transaction, error)
-	Update(ctx context.Context, id string, req *models.UpdateTransactionRequest, currencyRate float64) (*models.Transaction, error)
+	Create(ctx context.Context, params query.CreateTransactionParams) (*models.Transaction, error)
+	Update(ctx context.Context, id string, params query.UpdateTransactionParams) (*models.Transaction, error)
 	Delete(ctx context.Context, id string) (*models.Transaction, error)
 }
 
@@ -23,12 +24,12 @@ func NewTransactionCommand(repo *repository.TransactionRepository) *TransactionC
 	return &TransactionCommand{repo: repo}
 }
 
-func (c *TransactionCommand) Create(ctx context.Context, req *models.CreateTransactionRequest, currencyRate float64) (*models.Transaction, error) {
-	return c.repo.Create(ctx, req, currencyRate)
+func (c *TransactionCommand) Create(ctx context.Context, params query.CreateTransactionParams) (*models.Transaction, error) {
+	return c.repo.Create(ctx, params)
 }
 
-func (c *TransactionCommand) Update(ctx context.Context, id string, req *models.UpdateTransactionRequest, currencyRate float64) (*models.Transaction, error) {
-	return c.repo.UpdateBySubID(ctx, id, req, currencyRate)
+func (c *TransactionCommand) Update(ctx context.Context, id string, params query.UpdateTransactionParams) (*models.Transaction, error) {
+	return c.repo.UpdateBySubID(ctx, id, params)
 }
 
 func (c *TransactionCommand) Delete(ctx context.Context, id string) (*models.Transaction, error) {
