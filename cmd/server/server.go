@@ -16,9 +16,9 @@ type Server struct {
 	srv *http.Server
 }
 
-func NewServer(cfg *config.Config, accountSvc *service.AccountService, categorySvc *service.CategoryService, transactionSvc *service.TransactionService) *Server {
+func NewServer(cfg *config.Config, accountSvc *service.AccountService, categorySvc *service.CategoryService, transactionSvc *service.TransactionService, draftSvc *service.DraftService) *Server {
 	healthHandler := handler.NewHealthHandler(nil)
-	r := router.NewRouter(healthHandler, accountSvc, categorySvc, transactionSvc)
+	r := router.NewRouter(healthHandler, accountSvc, categorySvc, transactionSvc, draftSvc)
 
 	return &Server{
 		srv: &http.Server{

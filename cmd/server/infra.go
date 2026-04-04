@@ -40,6 +40,7 @@ func NewInfra(ctx context.Context, cfg *config.Config) *Infra {
 	categoryRepo := repository.NewCategoryRepository(dbQueries)
 	rateCurrencyRepo := repository.NewRateCurrencyRepository(dbQueries)
 	transactionRepo := repository.NewTransactionRepository(dbQueries)
+	draftRepo := repository.NewDraftRepository(dbQueries)
 
 	accountQuery := appquery.NewAccountQuery(accountRepo)
 	accountCommand := command.NewAccountCommand(accountRepo)
@@ -49,14 +50,17 @@ func NewInfra(ctx context.Context, cfg *config.Config) *Infra {
 	rateCurrencyCommand := command.NewRateCurrencyCommand(rateCurrencyRepo)
 	transactionQuery := appquery.NewTransactionQuery(transactionRepo)
 	transactionCommand := command.NewTransactionCommand(transactionRepo)
+	draftQuery := appquery.NewDraftQuery(draftRepo)
+	draftCommand := command.NewDraftCommand(draftRepo)
 
 	accountService := service.NewAccountService(accountQuery, accountCommand)
 	categoryService := service.NewCategoryService(categoryQuery, categoryCommand)
 	rateCurrencyService := service.NewRateCurrencyService(rateCurrencyQuery, rateCurrencyCommand)
 	transactionService := service.NewTransactionService(transactionQuery, transactionCommand, accountService, categoryService, rateCurrencyService, cfg)
+	draftService := service.NewDraftService(draftQuery, draftCommand, accountService, categoryService, rateCurrencyService, transactionService, cfg)
 
 	scheduler := engine.NewEngine(cfg, rateCurrencyService)
-	server := NewServer(cfg, accountService, categoryService, transactionService)
+	server := NewServer(cfg, accountService, categoryService, transactionService, draftService)
 
 	return &Infra{
 		Scheduler: scheduler,
