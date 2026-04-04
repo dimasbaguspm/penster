@@ -213,6 +213,13 @@ func (r *TransactionRepository) List(ctx context.Context, params *models.Transac
 	}
 
 	var queryParams query.ListTransactionsParams
+	// Column1 (sub_id filter) must be Invalid to make SQL "IS NULL" check pass when no filter
+	queryParams.Column1 = pgtype.UUID{Valid: false}
+	var zero int32
+	queryParams.Column2 = zero
+	queryParams.Column3 = zero
+	// Column4 (transaction_type) must be empty string to make SQL "$4 = ''" check pass when no filter
+	queryParams.Column4 = ""
 	if len(accountIDs) > 0 {
 		queryParams.Column2 = accountIDs[0]
 	}

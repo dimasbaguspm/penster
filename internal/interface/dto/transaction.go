@@ -9,7 +9,10 @@ import (
 
 func ParseTransactionListParams(r *http.Request) *models.TransactionSearchParams {
 	q := r.URL.Query()
-	params := &models.TransactionSearchParams{}
+	params := &models.TransactionSearchParams{
+		PageNumber: 1,
+		PageSize:   10,
+	}
 
 	if v := q.Get("q"); v != "" {
 		params.Q = &v

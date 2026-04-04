@@ -210,16 +210,16 @@ LEFT JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
 CROSS JOIN (SELECT count(*) as total FROM transactions t2
     WHERE t2.deleted_at IS NULL
     AND ($1::uuid IS NULL OR t2.sub_id = $1)
-    AND ($2::int IS NULL OR t2.account_id = $2)
-    AND ($3::int IS NULL OR t2.category_id = $3)
-    AND ($4::text IS NULL OR t2.transaction_type = $4)
+    AND ($2 = 0 OR t2.account_id = $2)
+    AND ($3 = 0 OR t2.category_id = $3)
+    AND ($4 = '' OR t2.transaction_type = $4)
     AND ($5::text IS NULL OR t2.title ILIKE '%' || $5 || '%')
 ) cnt
 WHERE t.deleted_at IS NULL
     AND ($1::uuid IS NULL OR t.sub_id = $1)
-    AND ($2::int IS NULL OR t.account_id = $2)
-    AND ($3::int IS NULL OR t.category_id = $3)
-    AND ($4::text IS NULL OR t.transaction_type = $4)
+    AND ($2 = 0 OR t.account_id = $2)
+    AND ($3 = 0 OR t.category_id = $3)
+    AND ($4 = '' OR t.transaction_type = $4)
     AND ($5::text IS NULL OR t.title ILIKE '%' || $5 || '%')
     AND (
         ($6::text = 'title' AND (
@@ -263,9 +263,9 @@ LIMIT NULLIF($12, 0)
 
 type ListTransactionsParams struct {
 	Column1        pgtype.UUID
-	Column2        int32
-	Column3        int32
-	Column4        string
+	Column2        interface{}
+	Column3        interface{}
+	Column4        interface{}
 	Column5        string
 	Column6        string
 	Column7        string
@@ -356,30 +356,30 @@ func (q *Queries) ListTransactions(ctx context.Context, arg ListTransactionsPara
 const updateTransaction = `-- name: UpdateTransaction :one
 UPDATE transactions
 SET
-    account_id = COALESCE($1, account_id),
-    transfer_account_id = $2,
-    category_id = $3,
-    transaction_type = COALESCE($4, transaction_type),
-    title = COALESCE($5, title),
-    base_amount = COALESCE($6, base_amount),
-    enhanced_amount = $7,
-    currency = COALESCE($8, currency),
+    account_id = COALESCE(NULLIF($1, 0), account_id),
+    transfer_account_id = COALESCE($2, transfer_account_id),
+    category_id = COALESCE(NULLIF($3, 0), category_id),
+    transaction_type = COALESCE(NULLIF($4, ''), transaction_type),
+    title = COALESCE(NULLIF($5, ''), title),
+    base_amount = COALESCE(NULLIF($6, 0), base_amount),
+    enhanced_amount = COALESCE($7, enhanced_amount),
+    currency = COALESCE(NULLIF($8, ''), currency),
     currency_rate = COALESCE($9, currency_rate),
-    notes = $10,
+    notes = COALESCE($10, notes),
     updated_at = NOW()
 WHERE id = $11 AND deleted_at IS NULL
 RETURNING id
 `
 
 type UpdateTransactionParams struct {
-	AccountID         int32
+	AccountID         interface{}
 	TransferAccountID pgtype.Int4
-	CategoryID        pgtype.Int4
-	TransactionType   string
-	Title             string
-	BaseAmount        int64
+	CategoryID        interface{}
+	TransactionType   interface{}
+	Title             interface{}
+	BaseAmount        interface{}
 	EnhancedAmount    pgtype.Int8
-	Currency          string
+	Currency          interface{}
 	CurrencyRate      pgtype.Numeric
 	Notes             pgtype.Text
 	ID                int32

@@ -43,6 +43,7 @@ func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	params := dto.ParseTransactionListParams(r)
 	transactions, total, err := h.svc.List(r.Context(), params)
+
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return

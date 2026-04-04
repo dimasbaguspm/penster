@@ -50,16 +50,16 @@ LEFT JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
 CROSS JOIN (SELECT count(*) as total FROM transactions t2
     WHERE t2.deleted_at IS NULL
     AND ($1::uuid IS NULL OR t2.sub_id = $1)
-    AND ($2::int IS NULL OR t2.account_id = $2)
-    AND ($3::int IS NULL OR t2.category_id = $3)
-    AND ($4::text IS NULL OR t2.transaction_type = $4)
+    AND ($2 = 0 OR t2.account_id = $2)
+    AND ($3 = 0 OR t2.category_id = $3)
+    AND ($4 = '' OR t2.transaction_type = $4)
     AND ($5::text IS NULL OR t2.title ILIKE '%' || $5 || '%')
 ) cnt
 WHERE t.deleted_at IS NULL
     AND ($1::uuid IS NULL OR t.sub_id = $1)
-    AND ($2::int IS NULL OR t.account_id = $2)
-    AND ($3::int IS NULL OR t.category_id = $3)
-    AND ($4::text IS NULL OR t.transaction_type = $4)
+    AND ($2 = 0 OR t.account_id = $2)
+    AND ($3 = 0 OR t.category_id = $3)
+    AND ($4 = '' OR t.transaction_type = $4)
     AND ($5::text IS NULL OR t.title ILIKE '%' || $5 || '%')
     AND (
         ($6::text = 'title' AND (
@@ -103,16 +103,16 @@ LIMIT NULLIF($12, 0);
 -- name: UpdateTransaction :one
 UPDATE transactions
 SET
-    account_id = COALESCE(@account_id, account_id),
-    transfer_account_id = @transfer_account_id,
-    category_id = @category_id,
-    transaction_type = COALESCE(@transaction_type, transaction_type),
-    title = COALESCE(@title, title),
-    base_amount = COALESCE(@base_amount, base_amount),
-    enhanced_amount = @enhanced_amount,
-    currency = COALESCE(@currency, currency),
+    account_id = COALESCE(NULLIF(@account_id, 0), account_id),
+    transfer_account_id = COALESCE(@transfer_account_id, transfer_account_id),
+    category_id = COALESCE(NULLIF(@category_id, 0), category_id),
+    transaction_type = COALESCE(NULLIF(@transaction_type, ''), transaction_type),
+    title = COALESCE(NULLIF(@title, ''), title),
+    base_amount = COALESCE(NULLIF(@base_amount, 0), base_amount),
+    enhanced_amount = COALESCE(@enhanced_amount, enhanced_amount),
+    currency = COALESCE(NULLIF(@currency, ''), currency),
     currency_rate = COALESCE(@currency_rate, currency_rate),
-    notes = @notes,
+    notes = COALESCE(@notes, notes),
     updated_at = NOW()
 WHERE id = @id AND deleted_at IS NULL
 RETURNING id;
