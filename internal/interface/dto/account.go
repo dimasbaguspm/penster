@@ -4,8 +4,18 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/pkg/models"
 )
+
+func isValidAccountType(t string) bool {
+	switch t {
+	case "expense", "income", "transfer":
+		return true
+	default:
+		return false
+	}
+}
 
 func ParseAccountListParams(r *http.Request) *models.AccountSearchParams {
 	q := r.URL.Query()
@@ -39,20 +49,20 @@ func ParseAccountListParams(r *http.Request) *models.AccountSearchParams {
 
 func ValidateCreateAccountRequest(req *models.CreateAccountRequest) error {
 	if req.Name == "" {
-		return ErrNameRequired
+		return entities.ErrNameRequired
 	}
 	if req.Type == "" {
-		return ErrTypeRequired
+		return entities.ErrTypeRequired
 	}
 	if !isValidAccountType(string(req.Type)) {
-		return ErrInvalidAccountType
+		return entities.ErrInvalidType
 	}
 	return nil
 }
 
 func ValidateUpdateAccountRequest(req *models.UpdateAccountRequest) error {
 	if req.Type != nil && !isValidAccountType(string(*req.Type)) {
-		return ErrInvalidAccountType
+		return entities.ErrInvalidType
 	}
 	return nil
 }

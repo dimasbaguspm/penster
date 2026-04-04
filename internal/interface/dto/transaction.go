@@ -6,12 +6,22 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/pkg/models"
 )
 
 func isValidUUID(s string) bool {
 	_, err := uuid.Parse(s)
 	return err == nil
+}
+
+func isValidTransactionType(t string) bool {
+	switch t {
+	case "expense", "income", "transfer":
+		return true
+	default:
+		return false
+	}
 }
 
 func ParseTransactionListParams(r *http.Request) *models.TransactionSearchParams {
@@ -55,65 +65,65 @@ func ParseTransactionListParams(r *http.Request) *models.TransactionSearchParams
 
 func ValidateCreateTransactionRequest(req *models.CreateTransactionRequest) error {
 	if req.AccountID == "" {
-		return ErrAccountIDRequired
+		return entities.ErrIDRequired
 	}
 	if !isValidUUID(req.AccountID) {
-		return ErrInvalidAccountID
+		return entities.ErrInvalidID
 	}
 	if req.CategoryID == "" {
-		return ErrCategoryIDRequired
+		return entities.ErrIDRequired
 	}
 	if !isValidUUID(req.CategoryID) {
-		return ErrInvalidCategoryID
+		return entities.ErrInvalidID
 	}
 	if req.TransactionType == "" {
-		return ErrTransactionTypeRequired
+		return entities.ErrTransactionTypeRequired
 	}
 	if req.Title == "" {
-		return ErrTitleRequired
+		return entities.ErrTitleRequired
 	}
 	if req.Amount <= 0 {
-		return ErrInvalidAmount
+		return entities.ErrInvalidAmount
 	}
 	if req.Currency == "" {
-		return ErrCurrencyRequired
+		return entities.ErrCurrencyRequired
 	}
 	if !isValidTransactionType(string(req.TransactionType)) {
-		return ErrInvalidTransactionType
+		return entities.ErrInvalidTransactionType
 	}
 	if req.TransferAccountID != "" && !isValidUUID(req.TransferAccountID) {
-		return ErrInvalidTransferAccountID
+		return entities.ErrInvalidID
 	}
 	if req.TransactionType == models.TransactionTypeTransfer && req.TransferAccountID == req.AccountID {
-		return ErrTransferToSameAccount
+		return entities.ErrTransferToSameAccount
 	}
 	return nil
 }
 
 func ValidateUpdateTransactionRequest(req *models.UpdateTransactionRequest) error {
 	if req.TransactionType != nil && !isValidTransactionType(string(*req.TransactionType)) {
-		return ErrInvalidTransactionType
+		return entities.ErrInvalidTransactionType
 	}
 	if req.Amount != nil && *req.Amount <= 0 {
-		return ErrInvalidAmount
+		return entities.ErrInvalidAmount
 	}
 	if req.AccountID != nil && *req.AccountID == "" {
-		return ErrEmptyAccountID
+		return entities.ErrEmptyID
 	}
 	if req.AccountID != nil && !isValidUUID(*req.AccountID) {
-		return ErrInvalidAccountID
+		return entities.ErrInvalidID
 	}
 	if req.CategoryID != nil && *req.CategoryID == "" {
-		return ErrEmptyCategoryID
+		return entities.ErrEmptyID
 	}
 	if req.CategoryID != nil && !isValidUUID(*req.CategoryID) {
-		return ErrInvalidCategoryID
+		return entities.ErrInvalidID
 	}
 	if req.TransferAccountID != nil && *req.TransferAccountID == "" {
-		return ErrEmptyTransferAccountID
+		return entities.ErrEmptyID
 	}
 	if req.TransferAccountID != nil && !isValidUUID(*req.TransferAccountID) {
-		return ErrInvalidTransferAccountID
+		return entities.ErrInvalidID
 	}
 	return nil
 }

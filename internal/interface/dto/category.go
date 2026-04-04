@@ -4,8 +4,18 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/pkg/models"
 )
+
+func isValidCategoryType(t string) bool {
+	switch t {
+	case "expense", "income", "transfer":
+		return true
+	default:
+		return false
+	}
+}
 
 func ParseCategoryListParams(r *http.Request) *models.CategorySearchParams {
 	q := r.URL.Query()
@@ -39,20 +49,20 @@ func ParseCategoryListParams(r *http.Request) *models.CategorySearchParams {
 
 func ValidateCreateCategoryRequest(req *models.CreateCategoryRequest) error {
 	if req.Name == "" {
-		return ErrNameRequired
+		return entities.ErrNameRequired
 	}
 	if req.Type == "" {
-		return ErrTypeRequired
+		return entities.ErrTypeRequired
 	}
 	if !isValidCategoryType(string(req.Type)) {
-		return ErrInvalidCategoryType
+		return entities.ErrInvalidType
 	}
 	return nil
 }
 
 func ValidateUpdateCategoryRequest(req *models.UpdateCategoryRequest) error {
 	if req.Type != nil && !isValidCategoryType(string(*req.Type)) {
-		return ErrInvalidCategoryType
+		return entities.ErrInvalidType
 	}
 	return nil
 }

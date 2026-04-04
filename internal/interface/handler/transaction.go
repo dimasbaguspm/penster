@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/dimasbaguspm/penster/internal/application/service"
-	"github.com/dimasbaguspm/penster/internal/domain/repository"
+	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/internal/interface/dto"
 	"github.com/dimasbaguspm/penster/pkg/models"
 	"github.com/dimasbaguspm/penster/pkg/response"
@@ -128,9 +128,9 @@ func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.svc.Create(r.Context(), &req)
 	if err != nil {
-		if errors.Is(err, repository.ErrAccountNotFound) ||
-			errors.Is(err, repository.ErrCategoryNotFound) ||
-			errors.Is(err, repository.ErrTransferAccountNotFound) {
+		if errors.Is(err, entities.ErrAccountNotFound) ||
+			errors.Is(err, entities.ErrCategoryNotFound) ||
+			errors.Is(err, entities.ErrTransferAccountNotFound) {
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -180,10 +180,10 @@ func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	tx, err := h.svc.Update(r.Context(), id, &req)
 	if err != nil {
-		if errors.Is(err, repository.ErrAccountNotFound) ||
-			errors.Is(err, repository.ErrCategoryNotFound) ||
-			errors.Is(err, repository.ErrTransferAccountNotFound) ||
-			errors.Is(err, repository.ErrTransferToSameAccount) {
+		if errors.Is(err, entities.ErrAccountNotFound) ||
+			errors.Is(err, entities.ErrCategoryNotFound) ||
+			errors.Is(err, entities.ErrTransferAccountNotFound) ||
+			errors.Is(err, entities.ErrTransferToSameAccount) {
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}

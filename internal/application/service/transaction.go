@@ -8,7 +8,7 @@ import (
 	"github.com/dimasbaguspm/penster/config"
 	"github.com/dimasbaguspm/penster/internal/application/command"
 	"github.com/dimasbaguspm/penster/internal/application/query"
-	"github.com/dimasbaguspm/penster/internal/domain/repository"
+	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/pkg/models"
 )
 
@@ -90,7 +90,7 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 			accountID = *req.AccountID
 		}
 		if accountID == *req.TransferAccountID {
-			return nil, repository.ErrTransferToSameAccount
+			return nil, entities.ErrTransferToSameAccount
 		}
 	}
 

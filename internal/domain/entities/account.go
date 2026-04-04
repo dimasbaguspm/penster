@@ -1,10 +1,17 @@
 package entities
 
 import (
+	"errors"
+
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/models"
 	"github.com/jackc/pgx/v5/pgtype"
+)
+
+// Account-specific errors
+var (
+	ErrAccountNotFound = errors.New("account not found")
 )
 
 // ToListAccountsParams converts AccountSearchParams to query params

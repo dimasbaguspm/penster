@@ -1,10 +1,17 @@
 package entities
 
 import (
+	"errors"
+
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/models"
 	"github.com/jackc/pgx/v5/pgtype"
+)
+
+// Category-specific errors
+var (
+	ErrCategoryNotFound = errors.New("category not found")
 )
 
 // ToListCategoriesParams converts CategorySearchParams to query params

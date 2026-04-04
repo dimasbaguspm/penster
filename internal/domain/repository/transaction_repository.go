@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/models"
@@ -45,7 +46,7 @@ func (r *TransactionRepository) Create(ctx context.Context, req *models.CreateTr
 			return err
 		}
 		if accID == 0 {
-			return fmt.Errorf("%w: %s", ErrAccountNotFound, req.AccountID)
+			return fmt.Errorf("%w: %s", entities.ErrAccountNotFound, req.AccountID)
 		}
 		accountID = accID
 		return nil
@@ -58,7 +59,7 @@ func (r *TransactionRepository) Create(ctx context.Context, req *models.CreateTr
 				return err
 			}
 			if transferID == 0 {
-				return fmt.Errorf("%w: %s", ErrTransferAccountNotFound, req.TransferAccountID)
+				return fmt.Errorf("%w: %s", entities.ErrTransferAccountNotFound, req.TransferAccountID)
 			}
 			transferAccountID = pgtype.Int4{Int32: transferID, Valid: true}
 			return nil
@@ -71,7 +72,7 @@ func (r *TransactionRepository) Create(ctx context.Context, req *models.CreateTr
 			return err
 		}
 		if catID == 0 {
-			return fmt.Errorf("%w: %s", ErrCategoryNotFound, req.CategoryID)
+			return fmt.Errorf("%w: %s", entities.ErrCategoryNotFound, req.CategoryID)
 		}
 		categoryID = pgtype.Int4{Int32: catID, Valid: true}
 		return nil
@@ -276,7 +277,7 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 				return err
 			}
 			if accID == 0 {
-				return fmt.Errorf("%w: %s", ErrAccountNotFound, *req.AccountID)
+				return fmt.Errorf("%w: %s", entities.ErrAccountNotFound, *req.AccountID)
 			}
 			accountID = accID
 			hasAccountID = true
@@ -291,7 +292,7 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 				return err
 			}
 			if accID == 0 {
-				return fmt.Errorf("%w: %s", ErrTransferAccountNotFound, *req.TransferAccountID)
+				return fmt.Errorf("%w: %s", entities.ErrTransferAccountNotFound, *req.TransferAccountID)
 			}
 			transferAccountID = pgtype.Int4{Int32: accID, Valid: true}
 			return nil
@@ -305,7 +306,7 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 				return err
 			}
 			if catID == 0 {
-				return fmt.Errorf("%w: %s", ErrCategoryNotFound, *req.CategoryID)
+				return fmt.Errorf("%w: %s", entities.ErrCategoryNotFound, *req.CategoryID)
 			}
 			categoryID = catID
 			hasCategoryID = true
