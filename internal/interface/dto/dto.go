@@ -14,6 +14,13 @@ var (
 	ErrInvalidAmount            = errors.New("amount must be greater than 0")
 	ErrCurrencyRequired         = errors.New("currency is required")
 	ErrInvalidTransactionType   = errors.New("invalid transaction type, must be one of: expense, income, transfer")
+	ErrInvalidAccountID         = errors.New("account_id must be a valid UUID")
+	ErrInvalidCategoryID        = errors.New("category_id must be a valid UUID")
+	ErrInvalidTransferAccountID = errors.New("transfer_account_id must be a valid UUID")
+	ErrEmptyAccountID           = errors.New("account_id cannot be empty")
+	ErrEmptyCategoryID          = errors.New("category_id cannot be empty")
+	ErrEmptyTransferAccountID   = errors.New("transfer_account_id cannot be empty")
+	ErrTransferToSameAccount    = errors.New("transfer_account_id cannot be the same as account_id")
 )
 
 func isValidAccountType(t string) bool {

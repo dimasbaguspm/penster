@@ -8,6 +8,7 @@ import (
 	"github.com/dimasbaguspm/penster/config"
 	"github.com/dimasbaguspm/penster/internal/application/command"
 	"github.com/dimasbaguspm/penster/internal/application/query"
+	"github.com/dimasbaguspm/penster/internal/domain/repository"
 	"github.com/dimasbaguspm/penster/pkg/models"
 )
 
@@ -75,6 +76,22 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 	}
 	if existing == nil {
 		return nil, nil
+	}
+
+	// Check for same-account transfer
+	// Check if updating TransactionType to transfer, or if already a transfer and updating transfer_account_id
+	isTransfer := existing.TransactionType == models.TransactionTypeTransfer
+	if req.TransactionType != nil {
+		isTransfer = *req.TransactionType == models.TransactionTypeTransfer
+	}
+	if isTransfer && req.TransferAccountID != nil {
+		accountID := existing.AccountID
+		if req.AccountID != nil {
+			accountID = *req.AccountID
+		}
+		if accountID == *req.TransferAccountID {
+			return nil, repository.ErrTransferToSameAccount
+		}
 	}
 
 	currencyRate := existing.CurrencyRate

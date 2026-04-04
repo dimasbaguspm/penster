@@ -4,8 +4,15 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/google/uuid"
+
 	"github.com/dimasbaguspm/penster/pkg/models"
 )
+
+func isValidUUID(s string) bool {
+	_, err := uuid.Parse(s)
+	return err == nil
+}
 
 func ParseTransactionListParams(r *http.Request) *models.TransactionSearchParams {
 	q := r.URL.Query()
@@ -50,8 +57,14 @@ func ValidateCreateTransactionRequest(req *models.CreateTransactionRequest) erro
 	if req.AccountID == "" {
 		return ErrAccountIDRequired
 	}
+	if !isValidUUID(req.AccountID) {
+		return ErrInvalidAccountID
+	}
 	if req.CategoryID == "" {
 		return ErrCategoryIDRequired
+	}
+	if !isValidUUID(req.CategoryID) {
+		return ErrInvalidCategoryID
 	}
 	if req.TransactionType == "" {
 		return ErrTransactionTypeRequired
@@ -68,12 +81,39 @@ func ValidateCreateTransactionRequest(req *models.CreateTransactionRequest) erro
 	if !isValidTransactionType(string(req.TransactionType)) {
 		return ErrInvalidTransactionType
 	}
+	if req.TransferAccountID != "" && !isValidUUID(req.TransferAccountID) {
+		return ErrInvalidTransferAccountID
+	}
+	if req.TransactionType == models.TransactionTypeTransfer && req.TransferAccountID == req.AccountID {
+		return ErrTransferToSameAccount
+	}
 	return nil
 }
 
 func ValidateUpdateTransactionRequest(req *models.UpdateTransactionRequest) error {
 	if req.TransactionType != nil && !isValidTransactionType(string(*req.TransactionType)) {
 		return ErrInvalidTransactionType
+	}
+	if req.Amount != nil && *req.Amount <= 0 {
+		return ErrInvalidAmount
+	}
+	if req.AccountID != nil && *req.AccountID == "" {
+		return ErrEmptyAccountID
+	}
+	if req.AccountID != nil && !isValidUUID(*req.AccountID) {
+		return ErrInvalidAccountID
+	}
+	if req.CategoryID != nil && *req.CategoryID == "" {
+		return ErrEmptyCategoryID
+	}
+	if req.CategoryID != nil && !isValidUUID(*req.CategoryID) {
+		return ErrInvalidCategoryID
+	}
+	if req.TransferAccountID != nil && *req.TransferAccountID == "" {
+		return ErrEmptyTransferAccountID
+	}
+	if req.TransferAccountID != nil && !isValidUUID(*req.TransferAccountID) {
+		return ErrInvalidTransferAccountID
 	}
 	return nil
 }

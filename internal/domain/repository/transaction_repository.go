@@ -45,7 +45,7 @@ func (r *TransactionRepository) Create(ctx context.Context, req *models.CreateTr
 			return err
 		}
 		if accID == 0 {
-			return fmt.Errorf("account not found: %s", req.AccountID)
+			return fmt.Errorf("%w: %s", ErrAccountNotFound, req.AccountID)
 		}
 		accountID = accID
 		return nil
@@ -57,9 +57,10 @@ func (r *TransactionRepository) Create(ctx context.Context, req *models.CreateTr
 			if err != nil {
 				return err
 			}
-			if transferID > 0 {
-				transferAccountID = pgtype.Int4{Int32: transferID, Valid: true}
+			if transferID == 0 {
+				return fmt.Errorf("%w: %s", ErrTransferAccountNotFound, req.TransferAccountID)
 			}
+			transferAccountID = pgtype.Int4{Int32: transferID, Valid: true}
 			return nil
 		})
 	}
@@ -70,7 +71,7 @@ func (r *TransactionRepository) Create(ctx context.Context, req *models.CreateTr
 			return err
 		}
 		if catID == 0 {
-			return fmt.Errorf("category not found: %s", req.CategoryID)
+			return fmt.Errorf("%w: %s", ErrCategoryNotFound, req.CategoryID)
 		}
 		categoryID = pgtype.Int4{Int32: catID, Valid: true}
 		return nil
@@ -274,8 +275,11 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 			if err != nil {
 				return err
 			}
+			if accID == 0 {
+				return fmt.Errorf("%w: %s", ErrAccountNotFound, *req.AccountID)
+			}
 			accountID = accID
-			hasAccountID = accID > 0
+			hasAccountID = true
 			return nil
 		})
 	}
@@ -286,7 +290,10 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 			if err != nil {
 				return err
 			}
-			transferAccountID = pgtype.Int4{Int32: accID, Valid: accID > 0}
+			if accID == 0 {
+				return fmt.Errorf("%w: %s", ErrTransferAccountNotFound, *req.TransferAccountID)
+			}
+			transferAccountID = pgtype.Int4{Int32: accID, Valid: true}
 			return nil
 		})
 	}
@@ -297,8 +304,11 @@ func (r *TransactionRepository) Update(ctx context.Context, id int32, req *model
 			if err != nil {
 				return err
 			}
+			if catID == 0 {
+				return fmt.Errorf("%w: %s", ErrCategoryNotFound, *req.CategoryID)
+			}
 			categoryID = catID
-			hasCategoryID = catID > 0
+			hasCategoryID = true
 			return nil
 		})
 	}
