@@ -52,12 +52,12 @@ LEFT JOIN accounts ta ON d.transfer_account_id = ta.id AND ta.deleted_at IS NULL
 LEFT JOIN categories c ON d.category_id = c.id AND c.deleted_at IS NULL
 CROSS JOIN (SELECT count(*) as total FROM drafts d2
     WHERE d2.deleted_at IS NULL
-    AND ($1::text IS NULL OR d2.source = $1)
-    AND ($2::text IS NULL OR d2.status = $2)
+    AND (''::text = $1 OR d2.source = $1)
+    AND (''::text = $2 OR d2.status = $2)
 ) cnt
 WHERE d.deleted_at IS NULL
-    AND ($1::text IS NULL OR d.source = $1)
-    AND ($2::text IS NULL OR d.status = $2)
+    AND (''::text = $1 OR d.source = $1)
+    AND (''::text = $2 OR d.status = $2)
 ORDER BY d.created_at DESC
 LIMIT NULLIF(@page_size, 0);
 
@@ -80,14 +80,21 @@ WHERE sub_id = @sub_id AND deleted_at IS NULL
 RETURNING id;
 
 -- name: UpdateDraftStatus :one
-UPDATE drafts
+WITH input AS (
+    SELECT
+        @status::VARCHAR as new_status,
+        CASE WHEN @status = 'confirmed' THEN NOW() ELSE NULL END as new_confirmed,
+        CASE WHEN @status = 'rejected' THEN NOW() ELSE NULL END as new_rejected
+)
+UPDATE drafts d
 SET
-    status = @status,
-    confirmed_at = CASE WHEN @status = 'confirmed' THEN NOW() ELSE confirmed_at END,
-    rejected_at = CASE WHEN @status = 'rejected' THEN NOW() ELSE rejected_at END,
+    status = i.new_status,
+    confirmed_at = COALESCE(i.new_confirmed, d.confirmed_at),
+    rejected_at = COALESCE(i.new_rejected, d.rejected_at),
     updated_at = NOW()
-WHERE sub_id = @sub_id AND deleted_at IS NULL
-RETURNING id;
+FROM input i
+WHERE d.sub_id = @sub_id AND d.deleted_at IS NULL
+RETURNING d.id;
 
 -- name: SoftDeleteDraft :one
 UPDATE drafts

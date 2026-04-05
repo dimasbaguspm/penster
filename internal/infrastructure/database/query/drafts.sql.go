@@ -219,19 +219,19 @@ LEFT JOIN accounts ta ON d.transfer_account_id = ta.id AND ta.deleted_at IS NULL
 LEFT JOIN categories c ON d.category_id = c.id AND c.deleted_at IS NULL
 CROSS JOIN (SELECT count(*) as total FROM drafts d2
     WHERE d2.deleted_at IS NULL
-    AND ($1::text IS NULL OR d2.source = $1)
-    AND ($2::text IS NULL OR d2.status = $2)
+    AND (''::text = $1 OR d2.source = $1)
+    AND (''::text = $2 OR d2.status = $2)
 ) cnt
 WHERE d.deleted_at IS NULL
-    AND ($1::text IS NULL OR d.source = $1)
-    AND ($2::text IS NULL OR d.status = $2)
+    AND (''::text = $1 OR d.source = $1)
+    AND (''::text = $2 OR d.status = $2)
 ORDER BY d.created_at DESC
 LIMIT NULLIF($3, 0)
 `
 
 type ListDraftsParams struct {
-	Column1  string
-	Column2  string
+	Column1  interface{}
+	Column2  interface{}
 	PageSize interface{}
 }
 
@@ -376,23 +376,30 @@ func (q *Queries) UpdateDraft(ctx context.Context, arg UpdateDraftParams) (int32
 }
 
 const updateDraftStatus = `-- name: UpdateDraftStatus :one
-UPDATE drafts
+WITH input AS (
+    SELECT
+        $2::VARCHAR as new_status,
+        CASE WHEN $2 = 'confirmed' THEN NOW() ELSE NULL END as new_confirmed,
+        CASE WHEN $2 = 'rejected' THEN NOW() ELSE NULL END as new_rejected
+)
+UPDATE drafts d
 SET
-    status = $1,
-    confirmed_at = CASE WHEN $1 = 'confirmed' THEN NOW() ELSE confirmed_at END,
-    rejected_at = CASE WHEN $1 = 'rejected' THEN NOW() ELSE rejected_at END,
+    status = i.new_status,
+    confirmed_at = COALESCE(i.new_confirmed, d.confirmed_at),
+    rejected_at = COALESCE(i.new_rejected, d.rejected_at),
     updated_at = NOW()
-WHERE sub_id = $2 AND deleted_at IS NULL
-RETURNING id
+FROM input i
+WHERE d.sub_id = $1 AND d.deleted_at IS NULL
+RETURNING d.id
 `
 
 type UpdateDraftStatusParams struct {
-	Status string
 	SubID  pgtype.UUID
+	Status string
 }
 
 func (q *Queries) UpdateDraftStatus(ctx context.Context, arg UpdateDraftStatusParams) (int32, error) {
-	row := q.db.QueryRow(ctx, updateDraftStatus, arg.Status, arg.SubID)
+	row := q.db.QueryRow(ctx, updateDraftStatus, arg.SubID, arg.Status)
 	var id int32
 	err := row.Scan(&id)
 	return id, err

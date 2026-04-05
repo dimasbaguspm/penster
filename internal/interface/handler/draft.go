@@ -7,8 +7,10 @@ import (
 
 	"github.com/dimasbaguspm/penster/internal/application/service"
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
+	"github.com/dimasbaguspm/penster/internal/interface/dto"
 	"github.com/dimasbaguspm/penster/pkg/models"
 	"github.com/dimasbaguspm/penster/pkg/response"
+	"github.com/google/uuid"
 )
 
 type DraftHandler struct {
@@ -37,20 +39,9 @@ func (h *DraftHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var params models.DraftSearchParams
-	source := r.URL.Query().Get("source")
-	status := r.URL.Query().Get("status")
-	pageSize := 10
+	params := dto.ParseDraftListParams(r)
 
-	if source != "" {
-		params.Source = &source
-	}
-	if status != "" {
-		params.Status = &status
-	}
-	params.PageSize = pageSize
-
-	drafts, total, err := h.svc.List(r.Context(), &params)
+	drafts, total, err := h.svc.List(r.Context(), params)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -89,8 +80,17 @@ func (h *DraftHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, err := uuid.Parse(id); err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid draft id format")
+		return
+	}
+
 	draft, err := h.svc.GetByID(r.Context(), id)
 	if err != nil {
+		if errors.Is(err, entities.ErrDraftNotFound) {
+			h.writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -126,36 +126,8 @@ func (h *DraftHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.AccountID == "" {
-		h.writeError(w, http.StatusBadRequest, "account_id is required")
-		return
-	}
-	if req.CategoryID == "" {
-		h.writeError(w, http.StatusBadRequest, "category_id is required")
-		return
-	}
-	if req.TransactionType == "" {
-		h.writeError(w, http.StatusBadRequest, "transaction_type is required")
-		return
-	}
-	if req.Title == "" {
-		h.writeError(w, http.StatusBadRequest, "title is required")
-		return
-	}
-	if req.Amount <= 0 {
-		h.writeError(w, http.StatusBadRequest, "amount must be greater than 0")
-		return
-	}
-	if req.Currency == "" {
-		h.writeError(w, http.StatusBadRequest, "currency is required")
-		return
-	}
-	if req.TransactedAt == "" {
-		h.writeError(w, http.StatusBadRequest, "transacted_at is required")
-		return
-	}
-	if req.Source == "" {
-		h.writeError(w, http.StatusBadRequest, "source is required")
+	if err := dto.ValidateCreateDraftRequest(&req); err != nil {
+		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -200,22 +172,42 @@ func (h *DraftHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, err := uuid.Parse(id); err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid draft id format")
+		return
+	}
+
 	var req models.UpdateDraftRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
+	if err := dto.ValidateUpdateDraftRequest(&req); err != nil {
+		h.writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	draft, err := h.svc.Update(r.Context(), id, &req)
 	if err != nil {
-		if errors.Is(err, entities.ErrDraftNotFound) ||
-			errors.Is(err, entities.ErrAccountNotFound) ||
+		if errors.Is(err, entities.ErrDraftNotFound) {
+			h.writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		if errors.Is(err, entities.ErrAccountNotFound) ||
 			errors.Is(err, entities.ErrCategoryNotFound) ||
 			errors.Is(err, entities.ErrTransferAccountNotFound) {
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		h.writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Validate same-account transfer after getting current draft
+	if req.TransferAccountID != nil && req.AccountID != nil &&
+		*req.TransferAccountID == *req.AccountID {
+		h.writeError(w, http.StatusBadRequest, "transfer account cannot be the same as source account")
 		return
 	}
 
@@ -247,10 +239,18 @@ func (h *DraftHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, err := uuid.Parse(id); err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid draft id format")
+		return
+	}
+
 	tx, err := h.svc.Confirm(r.Context(), id)
 	if err != nil {
-		if errors.Is(err, entities.ErrDraftNotFound) ||
-			errors.Is(err, entities.ErrDraftNotPending) {
+		if errors.Is(err, entities.ErrDraftNotFound) {
+			h.writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		if errors.Is(err, entities.ErrDraftNotPending) {
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -286,10 +286,18 @@ func (h *DraftHandler) Reject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, err := uuid.Parse(id); err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid draft id format")
+		return
+	}
+
 	err := h.svc.Reject(r.Context(), id)
 	if err != nil {
-		if errors.Is(err, entities.ErrDraftNotFound) ||
-			errors.Is(err, entities.ErrDraftNotPending) {
+		if errors.Is(err, entities.ErrDraftNotFound) {
+			h.writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		if errors.Is(err, entities.ErrDraftNotPending) {
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -324,10 +332,18 @@ func (h *DraftHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, err := uuid.Parse(id); err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid draft id format")
+		return
+	}
+
 	err := h.svc.Delete(r.Context(), id)
 	if err != nil {
-		if errors.Is(err, entities.ErrDraftNotFound) ||
-			errors.Is(err, entities.ErrDraftNotRejected) {
+		if errors.Is(err, entities.ErrDraftNotFound) {
+			h.writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		if errors.Is(err, entities.ErrDraftNotRejected) {
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}

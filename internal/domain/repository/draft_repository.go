@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/models"
@@ -85,6 +86,9 @@ func (r *DraftRepository) UpdateStatus(ctx context.Context, subID string, status
 		Status: status,
 	}
 	_, err := r.db.UpdateDraftStatus(ctx, params)
+	if err == pgx.ErrNoRows {
+		return entities.ErrDraftNotFound
+	}
 	return err
 }
 

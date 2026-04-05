@@ -101,6 +101,10 @@ func NewDraftService(
 }
 
 func (s *DraftService) Create(ctx context.Context, req *models.CreateDraftRequest) (*models.Draft, error) {
+	if req.TransactionType == string(models.TransactionTypeTransfer) && req.AccountID == req.TransferAccountID {
+		return nil, entities.ErrTransferAccountNotFound
+	}
+
 	ids, err := s.validateRelatedEntities(ctx, req.AccountID, req.TransferAccountID, req.CategoryID)
 	if err != nil {
 		return nil, err
@@ -149,6 +153,15 @@ func (s *DraftService) Update(ctx context.Context, id string, req *models.Update
 	}
 	if req.CategoryID != nil {
 		categoryID = *req.CategoryID
+	}
+
+	// Validate same-account transfer
+	transactionType := existing.TransactionType
+	if req.TransactionType != nil {
+		transactionType = *req.TransactionType
+	}
+	if transactionType == string(models.TransactionTypeTransfer) && accountID == transferAccountID {
+		return nil, entities.ErrTransferAccountNotFound
 	}
 
 	ids, err := s.validateRelatedEntities(ctx, accountID, transferAccountID, categoryID)
