@@ -7,53 +7,54 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/models"
 )
 
-type TransactionRepository struct {
+type DraftRepository struct {
 	db *query.Queries
 }
 
-func NewTransactionRepository(db *query.Queries) *TransactionRepository {
-	return &TransactionRepository{db: db}
+func NewDraftRepository(db *query.Queries) *DraftRepository {
+	return &DraftRepository{db: db}
 }
 
-func (r *TransactionRepository) Create(ctx context.Context, params query.CreateTransactionParams) (*models.Transaction, error) {
-	id, err := r.db.CreateTransaction(ctx, params)
+func (r *DraftRepository) Create(ctx context.Context, params query.CreateDraftParams) (*models.Draft, error) {
+	id, err := r.db.CreateDraft(ctx, params)
 	if err != nil {
 		return nil, err
 	}
 	return r.GetByID(ctx, id)
 }
 
-func (r *TransactionRepository) GetByID(ctx context.Context, id int32) (*models.Transaction, error) {
-	result, err := r.db.GetTransactionByID(ctx, id)
+func (r *DraftRepository) GetByID(ctx context.Context, id int32) (*models.Draft, error) {
+	result, err := r.db.GetDraftByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return toTransactionModelWithRelations(result), nil
+	return toDraftModelWithRelations(result), nil
 }
 
-func (r *TransactionRepository) GetBySubID(ctx context.Context, subID string) (*models.Transaction, error) {
+func (r *DraftRepository) GetBySubID(ctx context.Context, subID string) (*models.Draft, error) {
 	uid := pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true}
-	result, err := r.db.GetTransactionBySubID(ctx, uid)
+	result, err := r.db.GetDraftBySubID(ctx, uid)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return toTransactionModelWithRelations(result), nil
+	return toDraftModelWithRelations(result), nil
 }
 
-func (r *TransactionRepository) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
+func (r *DraftRepository) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
 	uid := pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true}
-	result, err := r.db.GetTransactionBySubID(ctx, uid)
+	result, err := r.db.GetDraftBySubID(ctx, uid)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return 0, nil
@@ -63,79 +64,56 @@ func (r *TransactionRepository) GetIDBySubID(ctx context.Context, subID string) 
 	return result.ID, nil
 }
 
-func (r *TransactionRepository) UpdateBySubID(ctx context.Context, subID string, params query.UpdateTransactionParams) (*models.Transaction, error) {
+func (r *DraftRepository) UpdateBySubID(ctx context.Context, subID string, params query.UpdateDraftParams) (*models.Draft, error) {
+	params.SubID = pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true}
+	_, err := r.db.UpdateDraft(ctx, params)
+	if err != nil {
+		return nil, err
+	}
 	id, err := r.GetIDBySubID(ctx, subID)
 	if err != nil {
 		return nil, err
 	}
 	if id == 0 {
 		return nil, nil
-	}
-	params.ID = id
-	_, err = r.db.UpdateTransaction(ctx, params)
-	if err != nil {
-		return nil, err
 	}
 	return r.GetByID(ctx, id)
 }
 
-func (r *TransactionRepository) DeleteBySubID(ctx context.Context, subID string) (*models.Transaction, error) {
-	id, err := r.GetIDBySubID(ctx, subID)
-	if err != nil {
-		return nil, err
+func (r *DraftRepository) UpdateStatus(ctx context.Context, subID string, status string) error {
+	params := query.UpdateDraftStatusParams{
+		SubID:  pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true},
+		Status: status,
 	}
-	if id == 0 {
-		return nil, nil
+	_, err := r.db.UpdateDraftStatus(ctx, params)
+	if err == pgx.ErrNoRows {
+		return entities.ErrDraftNotFound
 	}
-	return r.Delete(ctx, id)
+	return err
 }
 
-func (r *TransactionRepository) List(ctx context.Context, params query.ListTransactionsParams) ([]*models.Transaction, int64, error) {
-	rows, err := r.db.ListTransactions(ctx, params)
+func (r *DraftRepository) List(ctx context.Context, params query.ListDraftsParams) ([]*models.Draft, int64, error) {
+	rows, err := r.db.ListDrafts(ctx, params)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	transactions := make([]*models.Transaction, 0, len(rows))
+	drafts := make([]*models.Draft, 0, len(rows))
 	var total int64
 	for _, row := range rows {
-		transactions = append(transactions, toTransactionModelWithRelations(row))
+		drafts = append(drafts, toDraftModelWithRelations(row))
 		total = row.Total
 	}
 
-	return transactions, total, nil
+	return drafts, total, nil
 }
 
-func (r *TransactionRepository) Update(ctx context.Context, id int32, params query.UpdateTransactionParams) (*models.Transaction, error) {
-	params.ID = id
-	_, err := r.db.UpdateTransaction(ctx, params)
-	if err != nil {
-		return nil, err
-	}
-	return r.GetByID(ctx, id)
+func (r *DraftRepository) SoftDelete(ctx context.Context, subID string) error {
+	_, err := r.db.SoftDeleteDraft(ctx, pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true})
+	return err
 }
 
-func (r *TransactionRepository) Delete(ctx context.Context, id int32) (*models.Transaction, error) {
-	tx, err := r.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if tx == nil {
-		return nil, nil
-	}
-
-	_, err = r.db.DeleteTransaction(ctx, id)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return tx, nil
-}
-
-func toTransactionModelWithRelations(q interface{}) *models.Transaction {
+func toDraftModelWithRelations(q interface{}) *models.Draft {
 	var (
 		subID                pgtype.UUID
 		accountSubID         pgtype.UUID
@@ -148,6 +126,10 @@ func toTransactionModelWithRelations(q interface{}) *models.Transaction {
 		currency             string
 		currencyRate         pgtype.Numeric
 		notes                pgtype.Text
+		source               string
+		status               string
+		confirmedAt          pgtype.Timestamptz
+		rejectedAt           pgtype.Timestamptz
 		createdAt            pgtype.Timestamptz
 		updatedAt            pgtype.Timestamptz
 		deletedAt            pgtype.Timestamptz
@@ -155,7 +137,7 @@ func toTransactionModelWithRelations(q interface{}) *models.Transaction {
 	)
 
 	switch v := q.(type) {
-	case query.GetTransactionByIDRow:
+	case query.GetDraftByIDRow:
 		subID = v.SubID
 		accountSubID = v.AccountSubID
 		categorySubID = v.CategorySubID
@@ -167,11 +149,15 @@ func toTransactionModelWithRelations(q interface{}) *models.Transaction {
 		currency = v.Currency
 		currencyRate = v.CurrencyRate
 		notes = v.Notes
+		source = v.Source
+		status = v.Status
+		confirmedAt = v.ConfirmedAt
+		rejectedAt = v.RejectedAt
 		createdAt = v.CreatedAt
 		updatedAt = v.UpdatedAt
 		deletedAt = v.DeletedAt
 		transferAccountID = v.TransferAccountID
-	case query.GetTransactionBySubIDRow:
+	case query.GetDraftBySubIDRow:
 		subID = v.SubID
 		accountSubID = v.AccountSubID
 		categorySubID = v.CategorySubID
@@ -183,11 +169,15 @@ func toTransactionModelWithRelations(q interface{}) *models.Transaction {
 		currency = v.Currency
 		currencyRate = v.CurrencyRate
 		notes = v.Notes
+		source = v.Source
+		status = v.Status
+		confirmedAt = v.ConfirmedAt
+		rejectedAt = v.RejectedAt
 		createdAt = v.CreatedAt
 		updatedAt = v.UpdatedAt
 		deletedAt = v.DeletedAt
 		transferAccountID = v.TransferAccountID
-	case query.ListTransactionsRow:
+	case query.ListDraftsRow:
 		subID = v.SubID
 		accountSubID = v.AccountSubID
 		categorySubID = v.CategorySubID
@@ -199,6 +189,10 @@ func toTransactionModelWithRelations(q interface{}) *models.Transaction {
 		currency = v.Currency
 		currencyRate = v.CurrencyRate
 		notes = v.Notes
+		source = v.Source
+		status = v.Status
+		confirmedAt = v.ConfirmedAt
+		rejectedAt = v.RejectedAt
 		createdAt = v.CreatedAt
 		updatedAt = v.UpdatedAt
 		deletedAt = v.DeletedAt
@@ -219,16 +213,18 @@ func toTransactionModelWithRelations(q interface{}) *models.Transaction {
 		}
 	}
 
-	m := &models.Transaction{
+	m := &models.Draft{
 		SubID:           uuid.UUID(subID.Bytes).String(),
 		AccountID:       uuid.UUID(accountSubID.Bytes).String(),
 		CategoryID:      uuid.UUID(categorySubID.Bytes).String(),
-		TransactionType: models.TransactionType(transactionType),
+		TransactionType: transactionType,
 		Title:           title,
 		Amount:          amount,
 		Currency:        currency,
 		CurrencyRate:    currencyRateFloat,
 		Notes:           notes.String,
+		Source:          source,
+		Status:          status,
 		CreatedAt:       createdAt.Time,
 		UpdatedAt:       updatedAt.Time,
 	}
@@ -237,6 +233,14 @@ func toTransactionModelWithRelations(q interface{}) *models.Transaction {
 		if transferAccountSubID.Valid {
 			m.TransferAccountID = uuid.UUID(transferAccountSubID.Bytes).String()
 		}
+	}
+
+	if confirmedAt.Valid {
+		m.ConfirmedAt = &confirmedAt.Time
+	}
+
+	if rejectedAt.Valid {
+		m.RejectedAt = &rejectedAt.Time
 	}
 
 	if deletedAt.Valid {

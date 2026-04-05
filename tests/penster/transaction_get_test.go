@@ -132,7 +132,9 @@ func TestListTransactions_ReturnsCreatedTransactions(t *testing.T) {
 	}
 
 	// List should return at least the transaction we created
-	result, status, err := doListTransactions()
+	// Use large page_size to ensure our transaction appears even when
+	// other tests have created many transactions before this test runs
+	result, status, err := doJSONRequest[models.TransactionsResponse]("GET", "/transactions?page_size=1000", nil)
 	if err != nil {
 		t.Fatalf("Failed to list transactions: %v", err)
 	}

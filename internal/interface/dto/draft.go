@@ -8,44 +8,26 @@ import (
 	"github.com/dimasbaguspm/penster/pkg/models"
 )
 
-func isValidTransactionType(t string) bool {
-	switch t {
-	case "expense", "income", "transfer":
+func isValidDraftSource(s string) bool {
+	switch s {
+	case "manual", "ingestion":
 		return true
 	default:
 		return false
 	}
 }
 
-func ParseTransactionListParams(r *http.Request) *models.TransactionSearchParams {
+func ParseDraftListParams(r *http.Request) *models.DraftSearchParams {
 	q := r.URL.Query()
-	params := &models.TransactionSearchParams{
-		PageNumber: 1,
-		PageSize:   10,
+	params := &models.DraftSearchParams{
+		PageSize: 10,
 	}
 
-	if v := q.Get("q"); v != "" {
-		params.Q = &v
+	if v := q.Get("source"); v != "" {
+		params.Source = &v
 	}
-	if v := q.Get("account_id"); v != "" {
-		params.AccountIDs = []string{v}
-	}
-	if v := q.Get("category_id"); v != "" {
-		params.CategoryIDs = []string{v}
-	}
-	if v := q.Get("transaction_type"); v != "" {
-		params.TransactionTypes = []string{v}
-	}
-	if v := q.Get("sort_by"); v != "" {
-		params.SortBy = v
-	}
-	if v := q.Get("sort_order"); v != "" {
-		params.SortOrder = v
-	}
-	if v := q.Get("page"); v != "" {
-		if page, err := strconv.Atoi(v); err == nil {
-			params.PageNumber = page
-		}
+	if v := q.Get("status"); v != "" {
+		params.Status = &v
 	}
 	if v := q.Get("page_size"); v != "" {
 		if pageSize, err := strconv.Atoi(v); err == nil {
@@ -56,7 +38,7 @@ func ParseTransactionListParams(r *http.Request) *models.TransactionSearchParams
 	return params
 }
 
-func ValidateCreateTransactionRequest(req *models.CreateTransactionRequest) error {
+func ValidateCreateDraftRequest(req *models.CreateDraftRequest) error {
 	if req.AccountID == "" {
 		return entities.ErrIDRequired
 	}
@@ -72,6 +54,9 @@ func ValidateCreateTransactionRequest(req *models.CreateTransactionRequest) erro
 	if req.TransactionType == "" {
 		return entities.ErrTransactionTypeRequired
 	}
+	if !isValidTransactionType(req.TransactionType) {
+		return entities.ErrInvalidTransactionType
+	}
 	if req.Title == "" {
 		return entities.ErrTitleRequired
 	}
@@ -81,20 +66,23 @@ func ValidateCreateTransactionRequest(req *models.CreateTransactionRequest) erro
 	if req.Currency == "" {
 		return entities.ErrCurrencyRequired
 	}
-	if !isValidTransactionType(string(req.TransactionType)) {
-		return entities.ErrInvalidTransactionType
+	if req.Source == "" {
+		return entities.ErrSourceRequired
+	}
+	if !isValidDraftSource(req.Source) {
+		return entities.ErrInvalidDraftSource
+	}
+	if req.TransactionType == string(models.TransactionTypeTransfer) && req.TransferAccountID != "" && req.AccountID == req.TransferAccountID {
+		return entities.ErrTransferToSameAccount
 	}
 	if req.TransferAccountID != "" && !isValidUUID(req.TransferAccountID) {
 		return entities.ErrInvalidID
 	}
-	if req.TransactionType == models.TransactionTypeTransfer && req.TransferAccountID == req.AccountID {
-		return entities.ErrTransferToSameAccount
-	}
 	return nil
 }
 
-func ValidateUpdateTransactionRequest(req *models.UpdateTransactionRequest) error {
-	if req.TransactionType != nil && !isValidTransactionType(string(*req.TransactionType)) {
+func ValidateUpdateDraftRequest(req *models.UpdateDraftRequest) error {
+	if req.TransactionType != nil && !isValidTransactionType(*req.TransactionType) {
 		return entities.ErrInvalidTransactionType
 	}
 	if req.Amount != nil && *req.Amount <= 0 {
