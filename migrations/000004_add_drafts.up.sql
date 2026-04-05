@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS drafts (
     enhanced_amount BIGINT,
     currency TEXT NOT NULL,
     currency_rate NUMERIC(18,8) DEFAULT 1,
-    transacted_at DATE NOT NULL,
     notes TEXT,
     source VARCHAR(50) NOT NULL DEFAULT 'manual',
     status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'rejected')),

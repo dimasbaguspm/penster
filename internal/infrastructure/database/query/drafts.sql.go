@@ -12,8 +12,8 @@ import (
 )
 
 const createDraft = `-- name: CreateDraft :one
-INSERT INTO drafts (account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, source, status)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+INSERT INTO drafts (account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, notes, source, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING id
 `
 
@@ -27,7 +27,6 @@ type CreateDraftParams struct {
 	EnhancedAmount    pgtype.Int8
 	Currency          string
 	CurrencyRate      pgtype.Numeric
-	TransactedAt      pgtype.Date
 	Notes             pgtype.Text
 	Source            string
 	Status            string
@@ -44,7 +43,6 @@ func (q *Queries) CreateDraft(ctx context.Context, arg CreateDraftParams) (int32
 		arg.EnhancedAmount,
 		arg.Currency,
 		arg.CurrencyRate,
-		arg.TransactedAt,
 		arg.Notes,
 		arg.Source,
 		arg.Status,
@@ -58,7 +56,7 @@ const getDraftByID = `-- name: GetDraftByID :one
 SELECT
     d.id, d.sub_id, d.account_id, d.transfer_account_id, d.category_id,
     d.transaction_type, d.title, d.base_amount, d.enhanced_amount,
-    d.currency, d.currency_rate, d.transacted_at, d.notes,
+    d.currency, d.currency_rate, d.notes,
     d.source, d.status, d.confirmed_at, d.rejected_at,
     d.deleted_at, d.created_at, d.updated_at,
     a.sub_id as account_sub_id,
@@ -83,7 +81,6 @@ type GetDraftByIDRow struct {
 	EnhancedAmount       pgtype.Int8
 	Currency             string
 	CurrencyRate         pgtype.Numeric
-	TransactedAt         pgtype.Date
 	Notes                pgtype.Text
 	Source               string
 	Status               string
@@ -112,7 +109,6 @@ func (q *Queries) GetDraftByID(ctx context.Context, id int32) (GetDraftByIDRow, 
 		&i.EnhancedAmount,
 		&i.Currency,
 		&i.CurrencyRate,
-		&i.TransactedAt,
 		&i.Notes,
 		&i.Source,
 		&i.Status,
@@ -132,7 +128,7 @@ const getDraftBySubID = `-- name: GetDraftBySubID :one
 SELECT
     d.id, d.sub_id, d.account_id, d.transfer_account_id, d.category_id,
     d.transaction_type, d.title, d.base_amount, d.enhanced_amount,
-    d.currency, d.currency_rate, d.transacted_at, d.notes,
+    d.currency, d.currency_rate, d.notes,
     d.source, d.status, d.confirmed_at, d.rejected_at,
     d.deleted_at, d.created_at, d.updated_at,
     a.sub_id as account_sub_id,
@@ -157,7 +153,6 @@ type GetDraftBySubIDRow struct {
 	EnhancedAmount       pgtype.Int8
 	Currency             string
 	CurrencyRate         pgtype.Numeric
-	TransactedAt         pgtype.Date
 	Notes                pgtype.Text
 	Source               string
 	Status               string
@@ -186,7 +181,6 @@ func (q *Queries) GetDraftBySubID(ctx context.Context, subID pgtype.UUID) (GetDr
 		&i.EnhancedAmount,
 		&i.Currency,
 		&i.CurrencyRate,
-		&i.TransactedAt,
 		&i.Notes,
 		&i.Source,
 		&i.Status,
@@ -206,7 +200,7 @@ const listDrafts = `-- name: ListDrafts :many
 SELECT
     d.id, d.sub_id, d.account_id, d.transfer_account_id, d.category_id,
     d.transaction_type, d.title, d.base_amount, d.enhanced_amount,
-    d.currency, d.currency_rate, d.transacted_at, d.notes,
+    d.currency, d.currency_rate, d.notes,
     d.source, d.status, d.confirmed_at, d.rejected_at,
     d.deleted_at, d.created_at, d.updated_at,
     a.sub_id as account_sub_id,
@@ -247,7 +241,6 @@ type ListDraftsRow struct {
 	EnhancedAmount       pgtype.Int8
 	Currency             string
 	CurrencyRate         pgtype.Numeric
-	TransactedAt         pgtype.Date
 	Notes                pgtype.Text
 	Source               string
 	Status               string
@@ -283,7 +276,6 @@ func (q *Queries) ListDrafts(ctx context.Context, arg ListDraftsParams) ([]ListD
 			&i.EnhancedAmount,
 			&i.Currency,
 			&i.CurrencyRate,
-			&i.TransactedAt,
 			&i.Notes,
 			&i.Source,
 			&i.Status,
@@ -333,10 +325,9 @@ SET
     enhanced_amount = COALESCE($7, enhanced_amount),
     currency = COALESCE(NULLIF($8, ''), currency),
     currency_rate = COALESCE($9, currency_rate),
-    transacted_at = COALESCE($10, transacted_at),
-    notes = COALESCE($11, notes),
+    notes = COALESCE($10, notes),
     updated_at = NOW()
-WHERE sub_id = $12 AND deleted_at IS NULL
+WHERE sub_id = $11 AND deleted_at IS NULL
 RETURNING id
 `
 
@@ -350,7 +341,6 @@ type UpdateDraftParams struct {
 	EnhancedAmount    pgtype.Int8
 	Currency          interface{}
 	CurrencyRate      pgtype.Numeric
-	TransactedAt      pgtype.Date
 	Notes             pgtype.Text
 	SubID             pgtype.UUID
 }
@@ -366,7 +356,6 @@ func (q *Queries) UpdateDraft(ctx context.Context, arg UpdateDraftParams) (int32
 		arg.EnhancedAmount,
 		arg.Currency,
 		arg.CurrencyRate,
-		arg.TransactedAt,
 		arg.Notes,
 		arg.SubID,
 	)

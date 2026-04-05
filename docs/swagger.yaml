@@ -79,8 +79,6 @@ definitions:
         type: string
       title:
         type: string
-      transacted_at:
-        type: string
       transaction_type:
         enum:
         - expense
@@ -96,7 +94,6 @@ definitions:
     - currency
     - source
     - title
-    - transacted_at
     - transaction_type
     type: object
   models.CreateTransactionRequest:
@@ -169,8 +166,6 @@ definitions:
       notes:
         type: string
       title:
-        type: string
-      transacted_at:
         type: string
       transaction_type:
         type: string

@@ -32,7 +32,6 @@ type Draft struct {
 	Amount            int64      `json:"amount"`
 	Currency          string     `json:"currency"`
 	CurrencyRate      float64    `json:"currency_rate"`
-	TransactedAt      time.Time  `json:"transacted_at"`
 	Notes             string     `json:"notes"`
 	Source            string     `json:"source"`
 	Status            string     `json:"status"`
@@ -51,7 +50,6 @@ type CreateDraftRequest struct {
 	Title             string `json:"title" binding:"required"`
 	Amount            int64  `json:"amount" binding:"required,gt=0"`
 	Currency          string `json:"currency" binding:"required"`
-	TransactedAt      string `json:"transacted_at" binding:"required"`
 	Notes             string `json:"notes,omitempty"`
 	Source            string `json:"source" binding:"required,oneof=manual ingestion"`
 }
@@ -64,7 +62,6 @@ type UpdateDraftRequest struct {
 	Title             *string `json:"title,omitempty"`
 	Amount            *int64  `json:"amount,omitempty"`
 	Currency          *string `json:"currency,omitempty"`
-	TransactedAt      *string `json:"transacted_at,omitempty"`
 	Notes             *string `json:"notes,omitempty"`
 }
 

@@ -41,7 +41,6 @@ type Draft struct {
 	EnhancedAmount    pgtype.Int8
 	Currency          string
 	CurrencyRate      pgtype.Numeric
-	TransactedAt      pgtype.Date
 	Notes             pgtype.Text
 	Source            string
 	Status            string

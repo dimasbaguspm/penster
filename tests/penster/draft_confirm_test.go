@@ -50,7 +50,6 @@ func TestConfirmDraft_Success_Income(t *testing.T) {
 		Title:           "Income Draft",
 		Amount:          1000,
 		Currency:        "USD",
-		TransactedAt:    "2024-03-01",
 		Source:          string(models.DraftSourceManual),
 	}
 	draft, _, _ := doCreateDraft(req)
@@ -81,7 +80,6 @@ func TestConfirmDraft_Success_Transfer(t *testing.T) {
 		Title:             "Transfer Draft",
 		Amount:            250,
 		Currency:          "USD",
-		TransactedAt:      "2024-03-02",
 		Source:            string(models.DraftSourceManual),
 	}
 	draft, _, _ := doCreateDraft(req)

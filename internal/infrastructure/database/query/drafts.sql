@@ -1,13 +1,13 @@
 -- name: CreateDraft :one
-INSERT INTO drafts (account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, transacted_at, notes, source, status)
-VALUES (@account_id, @transfer_account_id, @category_id, @transaction_type, @title, @base_amount, @enhanced_amount, @currency, @currency_rate, @transacted_at, @notes, @source, @status)
+INSERT INTO drafts (account_id, transfer_account_id, category_id, transaction_type, title, base_amount, enhanced_amount, currency, currency_rate, notes, source, status)
+VALUES (@account_id, @transfer_account_id, @category_id, @transaction_type, @title, @base_amount, @enhanced_amount, @currency, @currency_rate, @notes, @source, @status)
 RETURNING id;
 
 -- name: GetDraftByID :one
 SELECT
     d.id, d.sub_id, d.account_id, d.transfer_account_id, d.category_id,
     d.transaction_type, d.title, d.base_amount, d.enhanced_amount,
-    d.currency, d.currency_rate, d.transacted_at, d.notes,
+    d.currency, d.currency_rate, d.notes,
     d.source, d.status, d.confirmed_at, d.rejected_at,
     d.deleted_at, d.created_at, d.updated_at,
     a.sub_id as account_sub_id,
@@ -23,7 +23,7 @@ WHERE d.id = @id AND d.deleted_at IS NULL;
 SELECT
     d.id, d.sub_id, d.account_id, d.transfer_account_id, d.category_id,
     d.transaction_type, d.title, d.base_amount, d.enhanced_amount,
-    d.currency, d.currency_rate, d.transacted_at, d.notes,
+    d.currency, d.currency_rate, d.notes,
     d.source, d.status, d.confirmed_at, d.rejected_at,
     d.deleted_at, d.created_at, d.updated_at,
     a.sub_id as account_sub_id,
@@ -39,7 +39,7 @@ WHERE d.sub_id = @sub_id AND d.deleted_at IS NULL;
 SELECT
     d.id, d.sub_id, d.account_id, d.transfer_account_id, d.category_id,
     d.transaction_type, d.title, d.base_amount, d.enhanced_amount,
-    d.currency, d.currency_rate, d.transacted_at, d.notes,
+    d.currency, d.currency_rate, d.notes,
     d.source, d.status, d.confirmed_at, d.rejected_at,
     d.deleted_at, d.created_at, d.updated_at,
     a.sub_id as account_sub_id,
@@ -73,7 +73,6 @@ SET
     enhanced_amount = COALESCE(@enhanced_amount, enhanced_amount),
     currency = COALESCE(NULLIF(@currency, ''), currency),
     currency_rate = COALESCE(@currency_rate, currency_rate),
-    transacted_at = COALESCE(@transacted_at, transacted_at),
     notes = COALESCE(@notes, notes),
     updated_at = NOW()
 WHERE sub_id = @sub_id AND deleted_at IS NULL

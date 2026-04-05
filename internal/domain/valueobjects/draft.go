@@ -2,7 +2,6 @@ package valueobjects
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -24,11 +23,6 @@ func ToCreateDraftParams(
 		return query.CreateDraftParams{}, err
 	}
 
-	transactedAt, err := time.Parse("2006-01-02", req.TransactedAt)
-	if err != nil {
-		return query.CreateDraftParams{}, err
-	}
-
 	return query.CreateDraftParams{
 		AccountID:         accountID,
 		TransferAccountID: transferAccountID,
@@ -39,7 +33,6 @@ func ToCreateDraftParams(
 		EnhancedAmount:    pgtype.Int8{Int64: enhancedAmountInt, Valid: true},
 		Currency:          req.Currency,
 		CurrencyRate:      currencyRateNumeric,
-		TransactedAt:      pgtype.Date{Time: transactedAt, Valid: true},
 		Notes:             pgtype.Text{String: req.Notes, Valid: req.Notes != ""},
 		Source:            req.Source,
 		Status:            string(models.DraftStatusPending),
@@ -101,11 +94,6 @@ func ToUpdateDraftParams(
 	}
 	if currencyRateNumeric.Valid {
 		params.CurrencyRate = currencyRateNumeric
-	}
-	if req.TransactedAt != nil {
-		if transactedAt, err := time.Parse("2006-01-02", *req.TransactedAt); err == nil {
-			params.TransactedAt = pgtype.Date{Time: transactedAt, Valid: true}
-		}
 	}
 
 	return params

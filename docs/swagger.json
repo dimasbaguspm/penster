@@ -1311,7 +1311,6 @@
                 "currency",
                 "source",
                 "title",
-                "transacted_at",
                 "transaction_type"
             ],
             "properties": {
@@ -1338,9 +1337,6 @@
                     ]
                 },
                 "title": {
-                    "type": "string"
-                },
-                "transacted_at": {
                     "type": "string"
                 },
                 "transaction_type": {
@@ -1459,9 +1455,6 @@
                     "type": "string"
                 },
                 "title": {
-                    "type": "string"
-                },
-                "transacted_at": {
                     "type": "string"
                 },
                 "transaction_type": {

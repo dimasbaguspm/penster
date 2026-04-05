@@ -66,9 +66,6 @@ func ValidateCreateDraftRequest(req *models.CreateDraftRequest) error {
 	if req.Currency == "" {
 		return entities.ErrCurrencyRequired
 	}
-	if req.TransactedAt == "" {
-		return entities.ErrTransactedAtRequired
-	}
 	if req.Source == "" {
 		return entities.ErrSourceRequired
 	}

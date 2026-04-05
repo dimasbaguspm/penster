@@ -20,7 +20,6 @@ func TestConfirmDraft_Expense_DecreasesBalance(t *testing.T) {
 		Title:           "Balance Test Expense Draft",
 		Amount:          300,
 		Currency:        "USD",
-		TransactedAt:    "2024-04-01",
 		Source:          string(models.DraftSourceManual),
 	}
 	draft, _, _ := doCreateDraft(req)
@@ -58,7 +57,6 @@ func TestConfirmDraft_Income_IncreasesBalance(t *testing.T) {
 		Title:           "Balance Test Income Draft",
 		Amount:          200,
 		Currency:        "USD",
-		TransactedAt:    "2024-04-02",
 		Source:          string(models.DraftSourceManual),
 	}
 	draft, _, _ := doCreateDraft(req)
@@ -98,7 +96,6 @@ func TestConfirmDraft_Transfer_UpdatesBothAccounts(t *testing.T) {
 		Title:             "Balance Test Transfer Draft",
 		Amount:            250,
 		Currency:          "USD",
-		TransactedAt:      "2024-04-03",
 		Source:            string(models.DraftSourceManual),
 	}
 	draft, _, _ := doCreateDraft(req)
@@ -150,7 +147,6 @@ func TestConfirmDraft_ThenDeleteTransaction_RestoresBalance(t *testing.T) {
 		Title:           "Delete After Confirm Draft",
 		Amount:          400,
 		Currency:        "USD",
-		TransactedAt:    "2024-04-04",
 		Source:          string(models.DraftSourceManual),
 	}
 	draft, _, _ := doCreateDraft(req)
@@ -196,7 +192,6 @@ func TestConfirmDraft_Transfer_ThenDeleteTransaction_RestoresBothBalances(t *tes
 		Title:             "Delete Transfer After Confirm Draft",
 		Amount:            300,
 		Currency:          "USD",
-		TransactedAt:      "2024-04-05",
 		Source:            string(models.DraftSourceManual),
 	}
 	draft, _, _ := doCreateDraft(req)
@@ -246,7 +241,6 @@ func TestRejectDraft_NoBalanceChange(t *testing.T) {
 		Title:           "Reject No Balance Change Draft",
 		Amount:          500,
 		Currency:        "USD",
-		TransactedAt:    "2024-04-06",
 		Source:          string(models.DraftSourceManual),
 	}
 	draft, _, _ := doCreateDraft(req)
@@ -284,7 +278,6 @@ func TestConfirmDraft_MultipleExpenses_AccumulatesBalance(t *testing.T) {
 		Title:           "First Expense Draft",
 		Amount:          200,
 		Currency:        "USD",
-		TransactedAt:    "2024-04-07",
 		Source:          string(models.DraftSourceManual),
 	}
 	draft1, _, _ := doCreateDraft(req1)
@@ -301,7 +294,6 @@ func TestConfirmDraft_MultipleExpenses_AccumulatesBalance(t *testing.T) {
 		Title:           "Second Expense Draft",
 		Amount:          300,
 		Currency:        "USD",
-		TransactedAt:    "2024-04-08",
 		Source:          string(models.DraftSourceManual),
 	}
 	draft2, _, _ := doCreateDraft(req2)

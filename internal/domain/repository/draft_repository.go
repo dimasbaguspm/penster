@@ -134,7 +134,6 @@ func toDraftModelWithRelations(q interface{}) *models.Draft {
 		updatedAt            pgtype.Timestamptz
 		deletedAt            pgtype.Timestamptz
 		transferAccountID    pgtype.Int4
-		transactedAt         pgtype.Date
 	)
 
 	switch v := q.(type) {
@@ -158,7 +157,6 @@ func toDraftModelWithRelations(q interface{}) *models.Draft {
 		updatedAt = v.UpdatedAt
 		deletedAt = v.DeletedAt
 		transferAccountID = v.TransferAccountID
-		transactedAt = v.TransactedAt
 	case query.GetDraftBySubIDRow:
 		subID = v.SubID
 		accountSubID = v.AccountSubID
@@ -179,7 +177,6 @@ func toDraftModelWithRelations(q interface{}) *models.Draft {
 		updatedAt = v.UpdatedAt
 		deletedAt = v.DeletedAt
 		transferAccountID = v.TransferAccountID
-		transactedAt = v.TransactedAt
 	case query.ListDraftsRow:
 		subID = v.SubID
 		accountSubID = v.AccountSubID
@@ -200,7 +197,6 @@ func toDraftModelWithRelations(q interface{}) *models.Draft {
 		updatedAt = v.UpdatedAt
 		deletedAt = v.DeletedAt
 		transferAccountID = v.TransferAccountID
-		transactedAt = v.TransactedAt
 	default:
 		return nil
 	}
@@ -231,7 +227,6 @@ func toDraftModelWithRelations(q interface{}) *models.Draft {
 		Status:          status,
 		CreatedAt:       createdAt.Time,
 		UpdatedAt:       updatedAt.Time,
-		TransactedAt:    transactedAt.Time,
 	}
 
 	if transferAccountID.Valid {

@@ -98,7 +98,6 @@ func TestListDrafts_FilterBySource(t *testing.T) {
 		Title:           "Manual Source Draft",
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-02-01",
 		Source:          string(models.DraftSourceManual),
 	}
 	doCreateDraft(manualReq)
@@ -111,7 +110,6 @@ func TestListDrafts_FilterBySource(t *testing.T) {
 		Title:           "Ingestion Source Draft",
 		Amount:          200,
 		Currency:        "USD",
-		TransactedAt:    "2024-02-02",
 		Source:          string(models.DraftSourceIngestion),
 	}
 	doCreateDraft(ingestionReq)
@@ -164,7 +162,6 @@ func TestListDrafts_FilterBySourceAndStatus(t *testing.T) {
 		Title:           "Manual Pending Draft",
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-02-03",
 		Source:          string(models.DraftSourceManual),
 	}
 	doCreateDraft(manualReq)

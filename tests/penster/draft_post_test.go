@@ -19,7 +19,6 @@ func TestCreateDraft_Success_Expense(t *testing.T) {
 		Title:           "Test Expense Draft",
 		Amount:          500,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-15",
 		Source:          string(models.DraftSourceManual),
 	}
 	result, status, err := doCreateDraft(req)
@@ -61,7 +60,6 @@ func TestCreateDraft_Success_Income(t *testing.T) {
 		Title:           "Test Income Draft",
 		Amount:          1000,
 		Currency:        "EUR",
-		TransactedAt:    "2024-01-16",
 		Source:          string(models.DraftSourceManual),
 	}
 	result, status, err := doCreateDraft(req)
@@ -93,7 +91,6 @@ func TestCreateDraft_Success_Transfer(t *testing.T) {
 		Title:             "Test Transfer Draft",
 		Amount:            250,
 		Currency:          "USD",
-		TransactedAt:      "2024-01-17",
 		Source:            string(models.DraftSourceManual),
 	}
 	result, status, err := doCreateDraft(req)
@@ -126,7 +123,6 @@ func TestCreateDraft_Success_Ingestion(t *testing.T) {
 		Title:           "Ingested Draft",
 		Amount:          300,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-18",
 		Source:          string(models.DraftSourceIngestion),
 	}
 	result, status, err := doCreateDraft(req)
@@ -153,7 +149,6 @@ func TestCreateDraft_WithNotes(t *testing.T) {
 		Title:           "Draft With Notes",
 		Amount:          750,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-19",
 		Source:          string(models.DraftSourceManual),
 		Notes:           "This is a test note",
 	}
@@ -182,7 +177,6 @@ func TestCreateDraft_ValidationError_MissingAccountID(t *testing.T) {
 		Title:           "Missing Account",
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-20",
 		Source:          string(models.DraftSourceManual),
 	}
 	_, status, _ := doCreateDraft(req)
@@ -201,7 +195,6 @@ func TestCreateDraft_ValidationError_MissingCategoryID(t *testing.T) {
 		Title:           "Missing Category",
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-21",
 		Source:          string(models.DraftSourceManual),
 	}
 	_, status, _ := doCreateDraft(req)
@@ -221,7 +214,6 @@ func TestCreateDraft_ValidationError_MissingTitle(t *testing.T) {
 		TransactionType: string(models.TransactionTypeExpense),
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-22",
 		Source:          string(models.DraftSourceManual),
 	}
 	_, status, _ := doCreateDraft(req)
@@ -241,7 +233,6 @@ func TestCreateDraft_ValidationError_MissingAmount(t *testing.T) {
 		TransactionType: string(models.TransactionTypeExpense),
 		Title:           "Missing Amount",
 		Currency:        "USD",
-		TransactedAt:    "2024-01-23",
 		Source:          string(models.DraftSourceManual),
 	}
 	_, status, _ := doCreateDraft(req)
@@ -261,27 +252,6 @@ func TestCreateDraft_ValidationError_MissingCurrency(t *testing.T) {
 		TransactionType: string(models.TransactionTypeExpense),
 		Title:           "Missing Currency",
 		Amount:          100,
-		TransactedAt:    "2024-01-24",
-		Source:          string(models.DraftSourceManual),
-	}
-	_, status, _ := doCreateDraft(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-// TestCreateDraft_ValidationError_MissingTransactedAt verifies validation when transacted_at is missing.
-func TestCreateDraft_ValidationError_MissingTransactedAt(t *testing.T) {
-	account := createTestDraftAccount(t)
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Missing TransactedAt",
-		Amount:          100,
-		Currency:        "USD",
 		Source:          string(models.DraftSourceManual),
 	}
 	_, status, _ := doCreateDraft(req)
@@ -302,7 +272,6 @@ func TestCreateDraft_ValidationError_MissingSource(t *testing.T) {
 		Title:           "Missing Source",
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-25",
 	}
 	_, status, _ := doCreateDraft(req)
 	if status != http.StatusBadRequest {
@@ -322,7 +291,6 @@ func TestCreateDraft_ValidationError_ZeroAmount(t *testing.T) {
 		Title:           "Zero Amount Draft",
 		Amount:          0,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-26",
 		Source:          string(models.DraftSourceManual),
 	}
 	result, status, err := doCreateDraft(req)
@@ -349,7 +317,6 @@ func TestCreateDraft_ValidationError_NegativeAmount(t *testing.T) {
 		Title:           "Negative Amount Draft",
 		Amount:          -100,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-27",
 		Source:          string(models.DraftSourceManual),
 	}
 	result, status, err := doCreateDraft(req)
@@ -376,7 +343,6 @@ func TestCreateDraft_ValidationError_InvalidTransactionType(t *testing.T) {
 		Title:           "Invalid Type",
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-28",
 		Source:          string(models.DraftSourceManual),
 	}
 	status, err := doRequest("POST", "/drafts", req)
@@ -400,7 +366,6 @@ func TestCreateDraft_ValidationError_InvalidSource(t *testing.T) {
 		Title:           "Invalid Source",
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-29",
 		Source:          "invalid_source",
 	}
 	status, err := doRequest("POST", "/drafts", req)
@@ -423,7 +388,6 @@ func TestCreateDraft_ValidationError_InvalidAccountID(t *testing.T) {
 		Title:           "Invalid Account Draft",
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-30",
 		Source:          string(models.DraftSourceManual),
 	}
 	result, status, err := doCreateDraft(req)
@@ -449,7 +413,6 @@ func TestCreateDraft_ValidationError_InvalidCategoryID(t *testing.T) {
 		Title:           "Invalid Category Draft",
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-31",
 		Source:          string(models.DraftSourceManual),
 	}
 	result, status, err := doCreateDraft(req)
@@ -477,7 +440,6 @@ func TestCreateDraft_ValidationError_InvalidTransferAccountID(t *testing.T) {
 		Title:             "Invalid Transfer Account Draft",
 		Amount:            100,
 		Currency:          "USD",
-		TransactedAt:      "2024-02-01",
 		Source:            string(models.DraftSourceManual),
 	}
 	result, status, err := doCreateDraft(req)
@@ -503,7 +465,6 @@ func TestCreateDraft_ValidationError_MalformedAccountUUID(t *testing.T) {
 		Title:           "Malformed UUID Draft",
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-02-02",
 		Source:          string(models.DraftSourceManual),
 	}
 	result, status, err := doCreateDraft(req)
@@ -529,7 +490,6 @@ func TestCreateDraft_ValidationError_MalformedCategoryUUID(t *testing.T) {
 		Title:           "Malformed Category UUID Draft",
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-02-03",
 		Source:          string(models.DraftSourceManual),
 	}
 	result, status, err := doCreateDraft(req)
@@ -557,7 +517,6 @@ func TestCreateDraft_TransferToSameAccount(t *testing.T) {
 		Title:             "Transfer to Same Account",
 		Amount:            100,
 		Currency:          "USD",
-		TransactedAt:      "2024-02-04",
 		Source:            string(models.DraftSourceManual),
 	}
 	result, status, err := doCreateDraft(req)
@@ -583,7 +542,6 @@ func TestCreateDraft_EmptyAccountID(t *testing.T) {
 		Title:           "Empty Account ID Draft",
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-02-05",
 		Source:          string(models.DraftSourceManual),
 	}
 	_, status, _ := doCreateDraft(req)
@@ -603,7 +561,6 @@ func TestCreateDraft_EmptyCategoryID(t *testing.T) {
 		Title:           "Empty Category ID Draft",
 		Amount:          100,
 		Currency:        "USD",
-		TransactedAt:    "2024-02-06",
 		Source:          string(models.DraftSourceManual),
 	}
 	_, status, _ := doCreateDraft(req)

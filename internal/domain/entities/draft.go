@@ -8,7 +8,6 @@ var (
 	ErrDraftAlreadyConfirmed = errors.New("draft is already confirmed")
 	ErrDraftAlreadyRejected  = errors.New("draft is already rejected")
 	ErrDraftNotRejected      = errors.New("draft must be rejected before deletion")
-	ErrTransactedAtRequired  = errors.New("transacted_at is required")
 	ErrSourceRequired        = errors.New("source is required")
 	ErrInvalidDraftSource    = errors.New("invalid source, must be one of: manual, ingestion")
 )

@@ -1322,7 +1322,6 @@ const docTemplate = `{
                 "currency",
                 "source",
                 "title",
-                "transacted_at",
                 "transaction_type"
             ],
             "properties": {
@@ -1349,9 +1348,6 @@ const docTemplate = `{
                     ]
                 },
                 "title": {
-                    "type": "string"
-                },
-                "transacted_at": {
                     "type": "string"
                 },
                 "transaction_type": {
@@ -1470,9 +1466,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "title": {
-                    "type": "string"
-                },
-                "transacted_at": {
                     "type": "string"
                 },
                 "transaction_type": {

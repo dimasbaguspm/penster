@@ -127,7 +127,6 @@ func createTestDraftWithAccountAndCategory(t *testing.T) (*models.DraftResponse,
 		Title:           uniqueTitle,
 		Amount:          500,
 		Currency:        "USD",
-		TransactedAt:    "2024-01-15",
 		Source:          string(models.DraftSourceManual),
 	}
 	draft, _, err := doCreateDraft(req)
