@@ -16,6 +16,7 @@ type Router struct {
 	categoryHandler    *handler.CategoryHandler
 	transactionHandler *handler.TransactionHandler
 	draftHandler       *handler.DraftHandler
+	reportHandler      *handler.ReportHandler
 }
 
 // NewRouter creates a new Router with all handlers
@@ -25,6 +26,7 @@ func NewRouter(
 	categorySvc *service.CategoryService,
 	transactionSvc *service.TransactionService,
 	draftSvc *service.DraftService,
+	reportSvc *service.ReportService,
 ) *Router {
 	return &Router{
 		healthHandler:      healthHandler,
@@ -32,6 +34,7 @@ func NewRouter(
 		categoryHandler:   handler.NewCategoryHandler(categorySvc),
 		transactionHandler: handler.NewTransactionHandler(transactionSvc),
 		draftHandler:       handler.NewDraftHandler(draftSvc),
+		reportHandler:      handler.NewReportHandler(reportSvc),
 	}
 }
 
@@ -75,6 +78,12 @@ func (r *Router) Routes() http.Handler {
 	mux.HandleFunc("POST /drafts/{id}/confirm", r.draftHandler.Confirm)
 	mux.HandleFunc("POST /drafts/{id}/reject", r.draftHandler.Reject)
 	mux.HandleFunc("DELETE /drafts/{id}", r.draftHandler.Delete)
+
+	// Report endpoints
+	mux.HandleFunc("GET /reports/summary", r.reportHandler.Summary)
+	mux.HandleFunc("GET /reports/by-account", r.reportHandler.ByAccount)
+	mux.HandleFunc("GET /reports/by-category", r.reportHandler.ByCategory)
+	mux.HandleFunc("GET /reports/trends", r.reportHandler.Trends)
 
 	// Apply middleware chain
 	handlerChain := middleware.Logging(mux)
