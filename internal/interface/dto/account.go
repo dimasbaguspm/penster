@@ -57,12 +57,18 @@ func ValidateCreateAccountRequest(req *models.CreateAccountRequest) error {
 	if !isValidAccountType(string(req.Type)) {
 		return entities.ErrInvalidType
 	}
+	if req.Balance < 0 {
+		return entities.ErrNegativeBalance
+	}
 	return nil
 }
 
 func ValidateUpdateAccountRequest(req *models.UpdateAccountRequest) error {
 	if req.Type != nil && !isValidAccountType(string(*req.Type)) {
 		return entities.ErrInvalidType
+	}
+	if req.Balance != nil && *req.Balance < 0 {
+		return entities.ErrNegativeBalance
 	}
 	return nil
 }

@@ -48,12 +48,51 @@ func TestCreateAccount_ValidationError_InvalidType(t *testing.T) {
 		Type:    "invalid_type",
 		Balance: 1000,
 	}
-	status, err := doRequest("POST", "/accounts", req)
+	result, status, err := doCreateAccount(req)
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
 	}
 	if status != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", status)
+	}
+	if result != nil && result.Success {
+		t.Errorf("Expected success=false for invalid type")
+	}
+}
+
+func TestCreateAccount_ValidationError_EmptyName(t *testing.T) {
+	req := &models.CreateAccountRequest{
+		Name:    "",
+		Type:    models.AccountTypeExpense,
+		Balance: 1000,
+	}
+	result, status, err := doCreateAccount(req)
+	if err != nil {
+		t.Fatalf("Request failed: %v", err)
+	}
+	if status != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for empty name, got %d", status)
+	}
+	if result != nil && result.Success {
+		t.Errorf("Expected success=false for empty name")
+	}
+}
+
+func TestCreateAccount_ValidationError_NegativeBalance(t *testing.T) {
+	req := &models.CreateAccountRequest{
+		Name:    "Negative Balance Account",
+		Type:    models.AccountTypeExpense,
+		Balance: -100,
+	}
+	result, status, err := doCreateAccount(req)
+	if err != nil {
+		t.Fatalf("Request failed: %v", err)
+	}
+	if status != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for negative balance, got %d", status)
+	}
+	if result != nil && result.Success {
+		t.Errorf("Expected success=false for negative balance")
 	}
 }
 

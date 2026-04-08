@@ -176,6 +176,31 @@ func TestReplaceAccount_AllFieldsNil(t *testing.T) {
 	}
 }
 
+func TestReplaceAccount_ValidationError_NegativeBalance(t *testing.T) {
+	createReq := &models.CreateAccountRequest{
+		Name:    "Negative Balance Test",
+		Type:    models.AccountTypeExpense,
+		Balance: 1000,
+	}
+	created, _, _ := doCreateAccount(createReq)
+	id := created.Data.SubID
+
+	negativeBalance := int64(-500)
+	replaceReq := &models.UpdateAccountRequest{
+		Balance: &negativeBalance,
+	}
+	result, status, err := doUpdateAccount(id, replaceReq)
+	if err != nil {
+		t.Fatalf("Request failed: %v", err)
+	}
+	if status != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for negative balance, got %d", status)
+	}
+	if result != nil && result.Success {
+		t.Errorf("Expected success=false for negative balance")
+	}
+}
+
 func TestReplaceAccount_Idempotent(t *testing.T) {
 	createReq := &models.CreateAccountRequest{
 		Name:    "Idempotent Test",

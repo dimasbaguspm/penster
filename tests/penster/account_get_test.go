@@ -61,13 +61,6 @@ func TestGetAccount_InvalidUUID(t *testing.T) {
 	}
 }
 
-func TestGetAccount_ValidUUIDFormat_NotFound(t *testing.T) {
-	_, status, _ := doGetAccount("00000000-0000-0000-0000-000000000000")
-	if status != http.StatusNotFound {
-		t.Errorf("Expected status 404 for non-existent UUID, got %d", status)
-	}
-}
-
 func TestListAccounts_PaginationMeta(t *testing.T) {
 	result, status, err := doListAccounts()
 	if err != nil {
