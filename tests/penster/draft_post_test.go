@@ -167,404 +167,276 @@ func TestCreateDraft_WithNotes(t *testing.T) {
 	}
 }
 
-// TestCreateDraft_ValidationError_MissingAccountID verifies validation when account_id is missing.
-func TestCreateDraft_ValidationError_MissingAccountID(t *testing.T) {
-	category := createTestDraftCategory(t)
+// TestCreateDraft_ValidationError_TableDriven verifies validation errors using table-driven subtests.
+func TestCreateDraft_ValidationError_TableDriven(t *testing.T) {
+	tests := []struct {
+		name       string
+		req        *models.CreateDraftRequest
+		wantStatus int
+		wantErr    bool
+	}{
+		{
+			name: "missing_account_id",
+			req: &models.CreateDraftRequest{
+				CategoryID:      "00000000-0000-0000-0000-000000000001",
+				TransactionType:  string(models.TransactionTypeExpense),
+				Title:           "Missing Account",
+				Amount:          100,
+				Currency:        "USD",
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "missing_category_id",
+			req: &models.CreateDraftRequest{
+				AccountID:       "00000000-0000-0000-0000-000000000001",
+				TransactionType: string(models.TransactionTypeExpense),
+				Title:           "Missing Category",
+				Amount:          100,
+				Currency:        "USD",
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "missing_title",
+			req: &models.CreateDraftRequest{
+				AccountID:       "00000000-0000-0000-0000-000000000001",
+				CategoryID:      "00000000-0000-0000-0000-000000000001",
+				TransactionType: string(models.TransactionTypeExpense),
+				Amount:          100,
+				Currency:        "USD",
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "missing_amount",
+			req: &models.CreateDraftRequest{
+				AccountID:       "00000000-0000-0000-0000-000000000001",
+				CategoryID:      "00000000-0000-0000-0000-000000000001",
+				TransactionType: string(models.TransactionTypeExpense),
+				Title:           "Missing Amount",
+				Currency:        "USD",
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "missing_currency",
+			req: &models.CreateDraftRequest{
+				AccountID:       "00000000-0000-0000-0000-000000000001",
+				CategoryID:      "00000000-0000-0000-0000-000000000001",
+				TransactionType: string(models.TransactionTypeExpense),
+				Title:           "Missing Currency",
+				Amount:          100,
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "missing_source",
+			req: &models.CreateDraftRequest{
+				AccountID:       "00000000-0000-0000-0000-000000000001",
+				CategoryID:      "00000000-0000-0000-0000-000000000001",
+				TransactionType: string(models.TransactionTypeExpense),
+				Title:           "Missing Source",
+				Amount:          100,
+				Currency:        "USD",
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "zero_amount",
+			req: &models.CreateDraftRequest{
+				AccountID:       "00000000-0000-0000-0000-000000000001",
+				CategoryID:      "00000000-0000-0000-0000-000000000001",
+				TransactionType: string(models.TransactionTypeExpense),
+				Title:           "Zero Amount Draft",
+				Amount:          0,
+				Currency:        "USD",
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "negative_amount",
+			req: &models.CreateDraftRequest{
+				AccountID:       "00000000-0000-0000-0000-000000000001",
+				CategoryID:      "00000000-0000-0000-0000-000000000001",
+				TransactionType: string(models.TransactionTypeExpense),
+				Title:           "Negative Amount Draft",
+				Amount:          -100,
+				Currency:        "USD",
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "invalid_transaction_type",
+			req: &models.CreateDraftRequest{
+				AccountID:       "00000000-0000-0000-0000-000000000001",
+				CategoryID:      "00000000-0000-0000-0000-000000000001",
+				TransactionType: "invalid_type",
+				Title:           "Invalid Type",
+				Amount:          100,
+				Currency:        "USD",
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "invalid_source",
+			req: &models.CreateDraftRequest{
+				AccountID:       "00000000-0000-0000-0000-000000000001",
+				CategoryID:      "00000000-0000-0000-0000-000000000001",
+				TransactionType: string(models.TransactionTypeExpense),
+				Title:           "Invalid Source",
+				Amount:          100,
+				Currency:        "USD",
+				Source:          "invalid_source",
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "invalid_account_id",
+			req: &models.CreateDraftRequest{
+				AccountID:       "00000000-0000-0000-0000-000000000000",
+				CategoryID:      "00000000-0000-0000-0000-000000000001",
+				TransactionType: string(models.TransactionTypeExpense),
+				Title:           "Invalid Account Draft",
+				Amount:          100,
+				Currency:        "USD",
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "invalid_category_id",
+			req: &models.CreateDraftRequest{
+				AccountID:       "00000000-0000-0000-0000-000000000001",
+				CategoryID:      "00000000-0000-0000-0000-000000000000",
+				TransactionType: string(models.TransactionTypeExpense),
+				Title:           "Invalid Category Draft",
+				Amount:          100,
+				Currency:        "USD",
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "invalid_transfer_account_id",
+			req: &models.CreateDraftRequest{
+				AccountID:         "00000000-0000-0000-0000-000000000001",
+				TransferAccountID: "00000000-0000-0000-0000-000000000000",
+				CategoryID:        "00000000-0000-0000-0000-000000000001",
+				TransactionType:   string(models.TransactionTypeTransfer),
+				Title:             "Invalid Transfer Account Draft",
+				Amount:            100,
+				Currency:          "USD",
+				Source:            string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "malformed_account_uuid",
+			req: &models.CreateDraftRequest{
+				AccountID:       "not-a-valid-uuid",
+				CategoryID:      "00000000-0000-0000-0000-000000000001",
+				TransactionType: string(models.TransactionTypeExpense),
+				Title:           "Malformed UUID Draft",
+				Amount:          100,
+				Currency:        "USD",
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "malformed_category_uuid",
+			req: &models.CreateDraftRequest{
+				AccountID:       "00000000-0000-0000-0000-000000000001",
+				CategoryID:      "not-a-valid-uuid",
+				TransactionType: string(models.TransactionTypeExpense),
+				Title:           "Malformed Category UUID Draft",
+				Amount:          100,
+				Currency:        "USD",
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "transfer_to_same_account",
+			req: &models.CreateDraftRequest{
+				AccountID:         "00000000-0000-0000-0000-000000000001",
+				TransferAccountID: "00000000-0000-0000-0000-000000000001",
+				CategoryID:        "00000000-0000-0000-0000-000000000001",
+				TransactionType:   string(models.TransactionTypeTransfer),
+				Title:             "Transfer to Same Account",
+				Amount:            100,
+				Currency:          "USD",
+				Source:            string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "empty_account_id",
+			req: &models.CreateDraftRequest{
+				AccountID:       "",
+				CategoryID:      "00000000-0000-0000-0000-000000000001",
+				TransactionType: string(models.TransactionTypeExpense),
+				Title:           "Empty Account ID Draft",
+				Amount:          100,
+				Currency:        "USD",
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+		{
+			name: "empty_category_id",
+			req: &models.CreateDraftRequest{
+				AccountID:       "00000000-0000-0000-0000-000000000001",
+				CategoryID:      "",
+				TransactionType: string(models.TransactionTypeExpense),
+				Title:           "Empty Category ID Draft",
+				Amount:          100,
+				Currency:        "USD",
+				Source:          string(models.DraftSourceManual),
+			},
+			wantStatus: http.StatusBadRequest,
+			wantErr:    true,
+		},
+	}
 
-	req := &models.CreateDraftRequest{
-		CategoryID:      category.Data.SubID,
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Missing Account",
-		Amount:          100,
-		Currency:        "USD",
-		Source:          string(models.DraftSourceManual),
-	}
-	_, status, _ := doCreateDraft(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-// TestCreateDraft_ValidationError_MissingCategoryID verifies validation when category_id is missing.
-func TestCreateDraft_ValidationError_MissingCategoryID(t *testing.T) {
-	account := createTestDraftAccount(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       account.Data.SubID,
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Missing Category",
-		Amount:          100,
-		Currency:        "USD",
-		Source:          string(models.DraftSourceManual),
-	}
-	_, status, _ := doCreateDraft(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-// TestCreateDraft_ValidationError_MissingTitle verifies validation when title is missing.
-func TestCreateDraft_ValidationError_MissingTitle(t *testing.T) {
-	account := createTestDraftAccount(t)
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: string(models.TransactionTypeExpense),
-		Amount:          100,
-		Currency:        "USD",
-		Source:          string(models.DraftSourceManual),
-	}
-	_, status, _ := doCreateDraft(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-// TestCreateDraft_ValidationError_MissingAmount verifies validation when amount is missing.
-func TestCreateDraft_ValidationError_MissingAmount(t *testing.T) {
-	account := createTestDraftAccount(t)
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Missing Amount",
-		Currency:        "USD",
-		Source:          string(models.DraftSourceManual),
-	}
-	_, status, _ := doCreateDraft(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-// TestCreateDraft_ValidationError_MissingCurrency verifies validation when currency is missing.
-func TestCreateDraft_ValidationError_MissingCurrency(t *testing.T) {
-	account := createTestDraftAccount(t)
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Missing Currency",
-		Amount:          100,
-		Source:          string(models.DraftSourceManual),
-	}
-	_, status, _ := doCreateDraft(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-// TestCreateDraft_ValidationError_MissingSource verifies validation when source is missing.
-func TestCreateDraft_ValidationError_MissingSource(t *testing.T) {
-	account := createTestDraftAccount(t)
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Missing Source",
-		Amount:          100,
-		Currency:        "USD",
-	}
-	_, status, _ := doCreateDraft(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-// TestCreateDraft_ValidationError_ZeroAmount verifies validation when amount is zero.
-func TestCreateDraft_ValidationError_ZeroAmount(t *testing.T) {
-	account := createTestDraftAccount(t)
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Zero Amount Draft",
-		Amount:          0,
-		Currency:        "USD",
-		Source:          string(models.DraftSourceManual),
-	}
-	result, status, err := doCreateDraft(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
-	}
-}
-
-// TestCreateDraft_ValidationError_NegativeAmount verifies validation when amount is negative.
-func TestCreateDraft_ValidationError_NegativeAmount(t *testing.T) {
-	account := createTestDraftAccount(t)
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Negative Amount Draft",
-		Amount:          -100,
-		Currency:        "USD",
-		Source:          string(models.DraftSourceManual),
-	}
-	result, status, err := doCreateDraft(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
-	}
-}
-
-// TestCreateDraft_ValidationError_InvalidTransactionType verifies validation for invalid transaction type.
-func TestCreateDraft_ValidationError_InvalidTransactionType(t *testing.T) {
-	account := createTestDraftAccount(t)
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: "invalid_type",
-		Title:           "Invalid Type",
-		Amount:          100,
-		Currency:        "USD",
-		Source:          string(models.DraftSourceManual),
-	}
-	status, err := doRequest("POST", "/drafts", req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-// TestCreateDraft_ValidationError_InvalidSource verifies validation for invalid source.
-func TestCreateDraft_ValidationError_InvalidSource(t *testing.T) {
-	account := createTestDraftAccount(t)
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Invalid Source",
-		Amount:          100,
-		Currency:        "USD",
-		Source:          "invalid_source",
-	}
-	status, err := doRequest("POST", "/drafts", req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-// TestCreateDraft_ValidationError_InvalidAccountID verifies validation for non-existent account.
-func TestCreateDraft_ValidationError_InvalidAccountID(t *testing.T) {
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       "00000000-0000-0000-0000-000000000000",
-		CategoryID:      category.Data.SubID,
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Invalid Account Draft",
-		Amount:          100,
-		Currency:        "USD",
-		Source:          string(models.DraftSourceManual),
-	}
-	result, status, err := doCreateDraft(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
-	}
-}
-
-// TestCreateDraft_ValidationError_InvalidCategoryID verifies validation for non-existent category.
-func TestCreateDraft_ValidationError_InvalidCategoryID(t *testing.T) {
-	account := createTestDraftAccount(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      "00000000-0000-0000-0000-000000000000",
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Invalid Category Draft",
-		Amount:          100,
-		Currency:        "USD",
-		Source:          string(models.DraftSourceManual),
-	}
-	result, status, err := doCreateDraft(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
-	}
-}
-
-// TestCreateDraft_ValidationError_InvalidTransferAccountID verifies validation for non-existent transfer account.
-func TestCreateDraft_ValidationError_InvalidTransferAccountID(t *testing.T) {
-	account := createTestDraftAccount(t)
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:         account.Data.SubID,
-		TransferAccountID: "00000000-0000-0000-0000-000000000000",
-		CategoryID:        category.Data.SubID,
-		TransactionType:   string(models.TransactionTypeTransfer),
-		Title:             "Invalid Transfer Account Draft",
-		Amount:            100,
-		Currency:          "USD",
-		Source:            string(models.DraftSourceManual),
-	}
-	result, status, err := doCreateDraft(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
-	}
-}
-
-// TestCreateDraft_ValidationError_MalformedAccountUUID verifies validation for malformed account UUID.
-func TestCreateDraft_ValidationError_MalformedAccountUUID(t *testing.T) {
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       "not-a-valid-uuid",
-		CategoryID:      category.Data.SubID,
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Malformed UUID Draft",
-		Amount:          100,
-		Currency:        "USD",
-		Source:          string(models.DraftSourceManual),
-	}
-	result, status, err := doCreateDraft(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
-	}
-}
-
-// TestCreateDraft_ValidationError_MalformedCategoryUUID verifies validation for malformed category UUID.
-func TestCreateDraft_ValidationError_MalformedCategoryUUID(t *testing.T) {
-	account := createTestDraftAccount(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      "not-a-valid-uuid",
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Malformed Category UUID Draft",
-		Amount:          100,
-		Currency:        "USD",
-		Source:          string(models.DraftSourceManual),
-	}
-	result, status, err := doCreateDraft(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
-	}
-}
-
-// TestCreateDraft_TransferToSameAccount verifies validation for transfer to same account.
-func TestCreateDraft_TransferToSameAccount(t *testing.T) {
-	account := createTestDraftAccount(t)
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:         account.Data.SubID,
-		TransferAccountID: account.Data.SubID, // same account
-		CategoryID:        category.Data.SubID,
-		TransactionType:   string(models.TransactionTypeTransfer),
-		Title:             "Transfer to Same Account",
-		Amount:            100,
-		Currency:          "USD",
-		Source:            string(models.DraftSourceManual),
-	}
-	result, status, err := doCreateDraft(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
-	}
-}
-
-// TestCreateDraft_EmptyAccountID verifies validation for empty account_id.
-func TestCreateDraft_EmptyAccountID(t *testing.T) {
-	category := createTestDraftCategory(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       "",
-		CategoryID:      category.Data.SubID,
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Empty Account ID Draft",
-		Amount:          100,
-		Currency:        "USD",
-		Source:          string(models.DraftSourceManual),
-	}
-	_, status, _ := doCreateDraft(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-// TestCreateDraft_EmptyCategoryID verifies validation for empty category_id.
-func TestCreateDraft_EmptyCategoryID(t *testing.T) {
-	account := createTestDraftAccount(t)
-
-	req := &models.CreateDraftRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      "",
-		TransactionType: string(models.TransactionTypeExpense),
-		Title:           "Empty Category ID Draft",
-		Amount:          100,
-		Currency:        "USD",
-		Source:          string(models.DraftSourceManual),
-	}
-	_, status, _ := doCreateDraft(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, status, err := doCreateDraft(tt.req)
+			if err != nil {
+				t.Fatalf("Request failed: %v", err)
+			}
+			if status != tt.wantStatus {
+				t.Errorf("Expected status %d, got %d", tt.wantStatus, status)
+			}
+			if tt.wantErr && result.Success {
+				t.Errorf("Expected success=false, got true")
+			}
+		})
 	}
 }

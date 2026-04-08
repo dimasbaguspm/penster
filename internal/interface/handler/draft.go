@@ -254,6 +254,10 @@ func (h *DraftHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		if errors.Is(err, entities.ErrInsufficientBalance) {
+			h.writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}

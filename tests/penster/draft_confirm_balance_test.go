@@ -264,6 +264,46 @@ func TestRejectDraft_NoBalanceChange(t *testing.T) {
 	}
 }
 
+// TestConfirmDraft_Transfer_InsufficientBalance verifies that confirming a transfer
+// draft fails when the source account has insufficient balance.
+func TestConfirmDraft_Transfer_InsufficientBalance(t *testing.T) {
+	sourceAccount := createTestAccountWithBalance(t, 100)
+	destAccount := createTestAccountWithBalance(t, 500)
+	category := createTestDraftCategory(t)
+
+	// Create a transfer draft that exceeds source balance
+	req := &models.CreateDraftRequest{
+		AccountID:         sourceAccount.Data.SubID,
+		TransferAccountID: destAccount.Data.SubID,
+		CategoryID:        category.Data.SubID,
+		TransactionType:   string(models.TransactionTypeTransfer),
+		Title:             "Insufficient Balance Transfer Draft",
+		Amount:            500, // More than available 100
+		Currency:          "USD",
+		Source:            string(models.DraftSourceManual),
+	}
+	draft, _, _ := doCreateDraft(req)
+
+	// Confirm should fail with 400 Bad Request
+	result, status, _ := doConfirmDraft(draft.Data.SubID)
+	if status != http.StatusBadRequest {
+		t.Fatalf("Expected status 400 Bad Request, got %d", status)
+	}
+	if result != nil && result.Success {
+		t.Errorf("Expected success=false for insufficient balance")
+	}
+
+	// Balances should be unchanged
+	sourceAfter, _, _ := doGetAccount(sourceAccount.Data.SubID)
+	if sourceAfter.Data.Balance != 100 {
+		t.Errorf("Expected source balance 100 (unchanged), got %d", sourceAfter.Data.Balance)
+	}
+	destAfter, _, _ := doGetAccount(destAccount.Data.SubID)
+	if destAfter.Data.Balance != 500 {
+		t.Errorf("Expected dest balance 500 (unchanged), got %d", destAfter.Data.Balance)
+	}
+}
+
 // TestConfirmDraft_MultipleExpenses_AccumulatesBalance verifies confirming multiple
 // expense drafts correctly accumulates balance changes.
 func TestConfirmDraft_MultipleExpenses_AccumulatesBalance(t *testing.T) {

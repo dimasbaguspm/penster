@@ -99,64 +99,8 @@ func TestConfirmDraft_Success_Transfer(t *testing.T) {
 	}
 }
 
-// TestConfirmDraft_NotFound verifies confirming a non-existent draft returns 404.
-func TestConfirmDraft_NotFound(t *testing.T) {
-	_, status, _ := doConfirmDraft("00000000-0000-0000-0000-000000000000")
-	if status != http.StatusNotFound {
-		t.Errorf("Expected status 404, got %d", status)
-	}
-}
-
-// TestConfirmDraft_MalformedUUID verifies confirming with malformed UUID returns 400.
-func TestConfirmDraft_MalformedUUID(t *testing.T) {
-	_, status, _ := doConfirmDraft("not-a-valid-uuid")
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-// TestConfirmDraft_AlreadyConfirmed verifies confirming an already confirmed draft returns 400.
-func TestConfirmDraft_AlreadyConfirmed(t *testing.T) {
-	draft, _, _ := createTestDraftWithAccountAndCategory(t)
-
-	// First confirm
-	_, _, err := doConfirmDraft(draft.Data.SubID)
-	if err != nil {
-		t.Fatalf("Failed to confirm draft first time: %v", err)
-	}
-
-	// Second confirm should fail
-	result, status, _ := doConfirmDraft(draft.Data.SubID)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
-	}
-}
-
-// TestConfirmDraft_AlreadyRejected verifies confirming an already rejected draft returns 400.
-func TestConfirmDraft_AlreadyRejected(t *testing.T) {
-	draft, _, _ := createTestDraftWithAccountAndCategory(t)
-
-	// First reject
-	_, _, err := doRejectDraft(draft.Data.SubID)
-	if err != nil {
-		t.Fatalf("Failed to reject draft: %v", err)
-	}
-
-	// Confirm should fail
-	result, status, _ := doConfirmDraft(draft.Data.SubID)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
-	}
-}
-
-// TestConfirmDraft_UpdatesDraftStatus verifies confirming updates draft status to confirmed.
-func TestConfirmDraft_UpdatesDraftStatus(t *testing.T) {
+// TestConfirmDraft_StatusUpdate_UpdatesDraftStatus verifies confirming updates draft status to confirmed.
+func TestConfirmDraft_StatusUpdate_UpdatesDraftStatus(t *testing.T) {
 	draft, _, _ := createTestDraftWithAccountAndCategory(t)
 
 	_, _, err := doConfirmDraft(draft.Data.SubID)
@@ -174,5 +118,61 @@ func TestConfirmDraft_UpdatesDraftStatus(t *testing.T) {
 	}
 	if updatedDraft.Data.Status != string(models.DraftStatusConfirmed) {
 		t.Errorf("Expected draft status 'confirmed', got '%s'", updatedDraft.Data.Status)
+	}
+}
+
+// TestConfirmDraft_Error_TableDriven verifies error cases using table-driven subtests.
+func TestConfirmDraft_Error_TableDriven(t *testing.T) {
+	tests := []struct {
+		name       string
+		setup      func() string
+		draftID    string
+		wantStatus int
+	}{
+		{
+			name:       "not_found",
+			setup:      func() string { return "00000000-0000-0000-0000-000000000000" },
+			draftID:    "",
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name:       "malformed_uuid",
+			setup:      func() string { return "not-a-valid-uuid" },
+			draftID:    "",
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "already_confirmed",
+			setup: func() string {
+				draft, _, _ := createTestDraftWithAccountAndCategory(t)
+				doConfirmDraft(draft.Data.SubID)
+				return draft.Data.SubID
+			},
+			draftID:    "",
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "already_rejected",
+			setup: func() string {
+				draft, _, _ := createTestDraftWithAccountAndCategory(t)
+				doRejectDraft(draft.Data.SubID)
+				return draft.Data.SubID
+			},
+			draftID:    "",
+			wantStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			draftID := tt.setup()
+			result, status, _ := doConfirmDraft(draftID)
+			if status != tt.wantStatus {
+				t.Errorf("Expected status %d, got %d", tt.wantStatus, status)
+			}
+			if result != nil && result.Success {
+				t.Errorf("Expected success=false, got true")
+			}
+		})
 	}
 }
