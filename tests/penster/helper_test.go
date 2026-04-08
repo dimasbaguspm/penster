@@ -7,6 +7,14 @@ import (
 	"net/http"
 )
 
+func strPtr(s string) *string {
+	return &s
+}
+
+func ptr[T any](v T) *T {
+	return &v
+}
+
 // doJSONRequest performs an HTTP request with a JSON body and parses the response.
 func doJSONRequest[T any](method, path string, body any) (*T, int, error) {
 	var reqBody io.Reader

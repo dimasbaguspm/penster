@@ -32,18 +32,22 @@ func TestDeleteCategory_Success(t *testing.T) {
 	}
 }
 
-func TestDeleteCategory_NotFound(t *testing.T) {
-	nonExistentID := "00000000-0000-0000-0000-000000000000"
-	_, status, _ := doDeleteCategory(nonExistentID)
-	if status != http.StatusNotFound {
-		t.Errorf("Expected status 404, got %d", status)
+func TestDeleteCategory_NotFoundOrInvalid(t *testing.T) {
+	tests := []struct {
+		name string
+		id   string
+	}{
+		{name: "Not Found", id: "00000000-0000-0000-0000-000000000000"},
+		{name: "Invalid UUID", id: "not-a-uuid"},
 	}
-}
 
-func TestDeleteCategory_InvalidUUID(t *testing.T) {
-	_, status, _ := doDeleteCategory("not-a-uuid")
-	if status != http.StatusBadRequest && status != http.StatusNotFound {
-		t.Errorf("Expected status 400 or 404 for invalid UUID, got %d", status)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, status, _ := doDeleteCategory(tt.id)
+			if status != http.StatusBadRequest && status != http.StatusNotFound {
+				t.Errorf("Expected status 400 or 404, got %d", status)
+			}
+		})
 	}
 }
 

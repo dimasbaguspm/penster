@@ -3,6 +3,7 @@ package dto
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/pkg/models"
@@ -48,7 +49,7 @@ func ParseCategoryListParams(r *http.Request) *models.CategorySearchParams {
 }
 
 func ValidateCreateCategoryRequest(req *models.CreateCategoryRequest) error {
-	if req.Name == "" {
+	if strings.TrimSpace(req.Name) == "" {
 		return entities.ErrNameRequired
 	}
 	if req.Type == "" {
@@ -61,6 +62,9 @@ func ValidateCreateCategoryRequest(req *models.CreateCategoryRequest) error {
 }
 
 func ValidateUpdateCategoryRequest(req *models.UpdateCategoryRequest) error {
+	if req.Name != nil && strings.TrimSpace(*req.Name) == "" {
+		return entities.ErrNameRequired
+	}
 	if req.Type != nil && !isValidCategoryType(string(*req.Type)) {
 		return entities.ErrInvalidType
 	}

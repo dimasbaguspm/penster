@@ -40,107 +40,135 @@ func TestReplaceCategory_Success(t *testing.T) {
 	}
 }
 
-func TestReplaceCategory_PartialUpdate_Name(t *testing.T) {
+func TestReplaceCategory_PartialUpdate(t *testing.T) {
+	tests := []struct {
+		name          string
+		newName       *string
+		newType       *models.CategoryType
+		expectedName  string
+		expectedType  models.CategoryType
+		unchangedName string
+		unchangedType models.CategoryType
+	}{
+		{
+			name:          "Update Name Only",
+			newName:       strPtr("New Name Only"),
+			expectedName:  "New Name Only",
+			unchangedName: "Partial Update Test",
+			unchangedType: models.CategoryTypeExpense,
+		},
+		{
+			name:          "Update Type Only",
+			newType:       ptr(models.CategoryTypeTransfer),
+			unchangedName: "Partial Update Test",
+			unchangedType: models.CategoryTypeTransfer,
+		},
+		{
+			name:          "All Fields Nil",
+			unchangedName: "Nil Update Test",
+			unchangedType: models.CategoryTypeIncome,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			createReq := &models.CreateCategoryRequest{
+				Name: tt.unchangedName,
+				Type: tt.unchangedType,
+			}
+			created, _, _ := doCreateCategory(createReq)
+			id := created.Data.SubID
+
+			replaceReq := &models.UpdateCategoryRequest{}
+			if tt.newName != nil {
+				replaceReq.Name = tt.newName
+			}
+			if tt.newType != nil {
+				replaceReq.Type = tt.newType
+			}
+
+			result, status, err := doUpdateCategory(id, replaceReq)
+			if err != nil {
+				t.Fatalf("Failed to update category: %v", err)
+			}
+			if status != http.StatusOK {
+				t.Errorf("Expected status 200, got %d", status)
+			}
+
+			expectedName := tt.expectedName
+			if expectedName == "" {
+				expectedName = tt.unchangedName
+			}
+			if result.Data.Name != expectedName {
+				t.Errorf("Expected name '%s', got '%s'", expectedName, result.Data.Name)
+			}
+			if result.Data.Type != tt.unchangedType {
+				t.Errorf("Expected type '%s', got '%s'", tt.unchangedType, result.Data.Type)
+			}
+		})
+	}
+}
+
+func TestReplaceCategory_NotFoundOrInvalid(t *testing.T) {
+	tests := []struct {
+		name       string
+		id         string
+	}{
+		{name: "Not Found", id: "00000000-0000-0000-0000-000000000000"},
+		{name: "Invalid UUID", id: "not-a-valid-uuid"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			newName := "Should Not Work"
+			replaceReq := &models.UpdateCategoryRequest{Name: &newName}
+			_, status, _ := doUpdateCategory(tt.id, replaceReq)
+			if status != http.StatusBadRequest && status != http.StatusNotFound {
+				t.Errorf("Expected status 400 or 404, got %d", status)
+			}
+		})
+	}
+}
+
+func TestReplaceCategory_ValidationError(t *testing.T) {
 	createReq := &models.CreateCategoryRequest{
-		Name: "Original Name",
+		Name: "Valid Name",
 		Type: models.CategoryTypeExpense,
 	}
 	created, _, _ := doCreateCategory(createReq)
 	id := created.Data.SubID
 
-	newName := "New Name Only"
-	replaceReq := &models.UpdateCategoryRequest{
-		Name: &newName,
+	tests := []struct {
+		name string
+		req  *models.UpdateCategoryRequest
+	}{
+		{
+			name: "Empty Name",
+			req:  &models.UpdateCategoryRequest{Name: strPtr("")},
+		},
+		{
+			name: "Whitespace Name",
+			req:  &models.UpdateCategoryRequest{Name: strPtr("   ")},
+		},
+		{
+			name: "Invalid Type",
+			req:  &models.UpdateCategoryRequest{Type: ptr(models.CategoryType("invalid_type"))},
+		},
 	}
 
-	result, status, err := doUpdateCategory(id, replaceReq)
-	if err != nil {
-		t.Fatalf("Failed to update category name: %v", err)
-	}
-	if status != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", status)
-	}
-	if result.Data.Name != "New Name Only" {
-		t.Errorf("Expected name 'New Name Only', got '%s'", result.Data.Name)
-	}
-	if result.Data.Type != models.CategoryTypeExpense {
-		t.Errorf("Expected type unchanged 'expense', got '%s'", result.Data.Type)
-	}
-}
-
-func TestReplaceCategory_PartialUpdate_Type(t *testing.T) {
-	createReq := &models.CreateCategoryRequest{
-		Name: "Type Test Category",
-		Type: models.CategoryTypeExpense,
-	}
-	created, _, _ := doCreateCategory(createReq)
-	id := created.Data.SubID
-
-	newType := models.CategoryTypeTransfer
-	replaceReq := &models.UpdateCategoryRequest{
-		Type: &newType,
-	}
-
-	result, status, err := doUpdateCategory(id, replaceReq)
-	if err != nil {
-		t.Fatalf("Failed to update category type: %v", err)
-	}
-	if status != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", status)
-	}
-	if result.Data.Type != models.CategoryTypeTransfer {
-		t.Errorf("Expected type 'transfer', got '%s'", result.Data.Type)
-	}
-	if result.Data.Name != "Type Test Category" {
-		t.Errorf("Expected name unchanged 'Type Test Category', got '%s'", result.Data.Name)
-	}
-}
-
-func TestReplaceCategory_NotFound(t *testing.T) {
-	nonExistentID := "00000000-0000-0000-0000-000000000000"
-	newName := "Should Not Work"
-	replaceReq := &models.UpdateCategoryRequest{
-		Name: &newName,
-	}
-	_, status, _ := doUpdateCategory(nonExistentID, replaceReq)
-	if status != http.StatusNotFound {
-		t.Errorf("Expected status 404, got %d", status)
-	}
-}
-
-func TestReplaceCategory_InvalidUUID(t *testing.T) {
-	newName := "Should Not Work"
-	replaceReq := &models.UpdateCategoryRequest{
-		Name: &newName,
-	}
-	_, status, _ := doUpdateCategory("not-a-valid-uuid", replaceReq)
-	if status != http.StatusBadRequest && status != http.StatusNotFound {
-		t.Errorf("Expected status 400 or 404 for invalid UUID, got %d", status)
-	}
-}
-
-func TestReplaceCategory_AllFieldsNil(t *testing.T) {
-	createReq := &models.CreateCategoryRequest{
-		Name: "Nil Update Test",
-		Type: models.CategoryTypeIncome,
-	}
-	created, _, _ := doCreateCategory(createReq)
-	id := created.Data.SubID
-
-	replaceReq := &models.UpdateCategoryRequest{}
-
-	result, status, err := doUpdateCategory(id, replaceReq)
-	if err != nil {
-		t.Fatalf("Failed to update category with nil fields: %v", err)
-	}
-	if status != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", status)
-	}
-	if result.Data.Name != "Nil Update Test" {
-		t.Errorf("Expected name unchanged 'Nil Update Test', got '%s'", result.Data.Name)
-	}
-	if result.Data.Type != models.CategoryTypeIncome {
-		t.Errorf("Expected type unchanged 'income', got '%s'", result.Data.Type)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, status, err := doUpdateCategory(id, tt.req)
+			if err != nil {
+				t.Fatalf("Request failed: %v", err)
+			}
+			if status != http.StatusBadRequest {
+				t.Errorf("Expected status 400, got %d", status)
+			}
+			if result != nil && result.Success {
+				t.Errorf("Expected success=false")
+			}
+		})
 	}
 }
 

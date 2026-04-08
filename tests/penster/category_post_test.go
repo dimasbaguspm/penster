@@ -30,96 +30,78 @@ func TestCreateCategory_Success(t *testing.T) {
 	}
 }
 
-func TestCreateCategory_ValidationError_MissingName(t *testing.T) {
-	req := &models.CreateCategoryRequest{
-		Type: models.CategoryTypeExpense,
+func TestCreateCategory_ValidationError(t *testing.T) {
+	tests := []struct {
+		name    string
+		req     *models.CreateCategoryRequest
+	}{
+		{
+			name: "Missing Name",
+			req:  &models.CreateCategoryRequest{Type: models.CategoryTypeExpense},
+		},
+		{
+			name: "Missing Type",
+			req:  &models.CreateCategoryRequest{Name: "Missing Type Category"},
+		},
+		{
+			name: "Invalid Type",
+			req:  &models.CreateCategoryRequest{Name: "Invalid Type Category", Type: "invalid_type"},
+		},
+		{
+			name: "Empty Name",
+			req:  &models.CreateCategoryRequest{Name: "", Type: models.CategoryTypeExpense},
+		},
+		{
+			name: "Whitespace Name",
+			req:  &models.CreateCategoryRequest{Name: "   ", Type: models.CategoryTypeExpense},
+		},
 	}
-	_, status, _ := doCreateCategory(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, status, err := doCreateCategory(tt.req)
+			if err != nil {
+				t.Fatalf("Request failed: %v", err)
+			}
+			if status != http.StatusBadRequest {
+				t.Errorf("Expected status 400, got %d", status)
+			}
+			if result != nil && result.Success {
+				t.Errorf("Expected success=false")
+			}
+		})
 	}
 }
 
-func TestCreateCategory_ValidationError_MissingType(t *testing.T) {
-	req := &models.CreateCategoryRequest{
-		Name: "Missing Type Category",
+func TestCreateCategory_Success_AllTypes(t *testing.T) {
+	tests := []struct {
+		name         string
+		CategoryType models.CategoryType
+	}{
+		{name: "Expense", CategoryType: models.CategoryTypeExpense},
+		{name: "Income", CategoryType: models.CategoryTypeIncome},
+		{name: "Transfer", CategoryType: models.CategoryTypeTransfer},
 	}
-	_, status, _ := doCreateCategory(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
 
-func TestCreateCategory_ValidationError_InvalidType(t *testing.T) {
-	req := &models.CreateCategoryRequest{
-		Name: "Invalid Type Category",
-		Type: "invalid_type",
-	}
-	status, err := doRequest("POST", "/categories", req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-func TestCreateCategory_Success_ExpenseType(t *testing.T) {
-	req := &models.CreateCategoryRequest{
-		Name: "Expense Category",
-		Type: models.CategoryTypeExpense,
-	}
-	result, status, err := doCreateCategory(req)
-	if err != nil {
-		t.Fatalf("Failed to create expense category: %v", err)
-	}
-	if status != http.StatusCreated {
-		t.Errorf("Expected status 201, got %d", status)
-	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
-	}
-	if result.Data.Type != models.CategoryTypeExpense {
-		t.Errorf("Expected type 'expense', got '%s'", result.Data.Type)
-	}
-}
-
-func TestCreateCategory_Success_IncomeType(t *testing.T) {
-	req := &models.CreateCategoryRequest{
-		Name: "Income Category",
-		Type: models.CategoryTypeIncome,
-	}
-	result, status, err := doCreateCategory(req)
-	if err != nil {
-		t.Fatalf("Failed to create income category: %v", err)
-	}
-	if status != http.StatusCreated {
-		t.Errorf("Expected status 201, got %d", status)
-	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
-	}
-	if result.Data.Type != models.CategoryTypeIncome {
-		t.Errorf("Expected type 'income', got '%s'", result.Data.Type)
-	}
-}
-
-func TestCreateCategory_Success_TransferType(t *testing.T) {
-	req := &models.CreateCategoryRequest{
-		Name: "Transfer Category",
-		Type: models.CategoryTypeTransfer,
-	}
-	result, status, err := doCreateCategory(req)
-	if err != nil {
-		t.Fatalf("Failed to create transfer category: %v", err)
-	}
-	if status != http.StatusCreated {
-		t.Errorf("Expected status 201, got %d", status)
-	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
-	}
-	if result.Data.Type != models.CategoryTypeTransfer {
-		t.Errorf("Expected type 'transfer', got '%s'", result.Data.Type)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &models.CreateCategoryRequest{
+				Name: tt.name + " Category",
+				Type: tt.CategoryType,
+			}
+			result, status, err := doCreateCategory(req)
+			if err != nil {
+				t.Fatalf("Failed to create %s category: %v", tt.name, err)
+			}
+			if status != http.StatusCreated {
+				t.Errorf("Expected status 201, got %d", status)
+			}
+			if !result.Success {
+				t.Errorf("Expected success=true, got false with error: %s", result.Error)
+			}
+			if result.Data.Type != tt.CategoryType {
+				t.Errorf("Expected type '%s', got '%s'", tt.CategoryType, result.Data.Type)
+			}
+		})
 	}
 }

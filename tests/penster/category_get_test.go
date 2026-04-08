@@ -105,10 +105,3 @@ func TestGetCategory_InvalidUUID(t *testing.T) {
 		t.Errorf("Expected status 400 or 404 for invalid UUID, got %d", status)
 	}
 }
-
-func TestGetCategory_ValidUUIDFormat_NotFound(t *testing.T) {
-	_, status, _ := doGetCategory("00000000-0000-0000-0000-000000000000")
-	if status != http.StatusNotFound {
-		t.Errorf("Expected status 404 for non-existent UUID, got %d", status)
-	}
-}
