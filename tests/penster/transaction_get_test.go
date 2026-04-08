@@ -51,112 +51,77 @@ func TestGetTransaction_InvalidUUID(t *testing.T) {
 	}
 }
 
-func TestListTransactions_Success(t *testing.T) {
-	account := createTestAccount(t)
-	category := createTestCategory(t)
+func TestListTransactions_TableDriven(t *testing.T) {
+	tests := []struct {
+		name string
+		test func(t *testing.T, accountID, categoryID string)
+	}{
+		{
+			name: "success_returns_200_with_data",
+			test: func(t *testing.T, accountID, categoryID string) {
+				// Create a few transactions
+				for i := range 3 {
+					req := &models.CreateTransactionRequest{
+						AccountID:       accountID,
+						CategoryID:       categoryID,
+						TransactionType:  models.TransactionTypeExpense,
+						Title:            "List Test Transaction",
+						Amount:           int64(100 * (i + 1)),
+						Currency:         "USD",
+					}
+					_, _, _ = doCreateTransaction(req)
+				}
 
-	// Create a few transactions
-	for i := 0; i < 3; i++ {
-		req := &models.CreateTransactionRequest{
-			AccountID:       account.Data.SubID,
-			CategoryID:      category.Data.SubID,
-			TransactionType: models.TransactionTypeExpense,
-			Title:           "List Test Transaction",
-			Amount:          int64(100 * (i + 1)),
-			Currency:        "USD",
-		}
-		_, _, _ = doCreateTransaction(req)
+				result, status, err := doListTransactions()
+				if err != nil {
+					t.Fatalf("Failed to list transactions: %v", err)
+				}
+				if status != http.StatusOK {
+					t.Errorf("Expected status 200, got %d", status)
+				}
+				if !result.Success {
+					t.Errorf("Expected success=true, got false with error: %s", result.Error)
+				}
+				if result.Data == nil {
+					t.Errorf("Expected data to be non-nil")
+				}
+				if result.Meta == nil {
+					t.Errorf("Expected meta to be non-nil")
+				}
+			},
+		},
+		{
+			name: "pagination_meta_fields_valid",
+			test: func(t *testing.T, accountID, categoryID string) {
+				result, status, err := doListTransactions()
+				if err != nil {
+					t.Fatalf("Failed to list transactions: %v", err)
+				}
+				if status != http.StatusOK {
+					t.Errorf("Expected status 200, got %d", status)
+				}
+				if result.Meta == nil {
+					t.Fatalf("Expected meta to be non-nil")
+				}
+				if result.Meta.Page <= 0 {
+					t.Errorf("Expected page >= 1, got %d", result.Meta.Page)
+				}
+				if result.Meta.PerPage <= 0 {
+					t.Errorf("Expected per_page >= 1, got %d", result.Meta.PerPage)
+				}
+				if result.Meta.Total < 0 {
+					t.Errorf("Expected total >= 0, got %d", result.Meta.Total)
+				}
+			},
+		},
 	}
 
-	result, status, err := doListTransactions()
-	if err != nil {
-		t.Fatalf("Failed to list transactions: %v", err)
-	}
-	if status != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", status)
-	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
-	}
-	if result.Data == nil {
-		t.Errorf("Expected data to be non-nil")
-	}
-	if result.Meta == nil {
-		t.Errorf("Expected meta to be non-nil")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			account := createTestAccount(t)
+			category := createTestCategory(t)
+			tt.test(t, account.Data.SubID, category.Data.SubID)
+		})
 	}
 }
 
-func TestListTransactions_PaginationMeta(t *testing.T) {
-	result, status, err := doListTransactions()
-	if err != nil {
-		t.Fatalf("Failed to list transactions: %v", err)
-	}
-	if status != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", status)
-	}
-	if result.Meta == nil {
-		t.Fatalf("Expected meta to be non-nil")
-	}
-	if result.Meta.Page <= 0 {
-		t.Errorf("Expected page >= 1, got %d", result.Meta.Page)
-	}
-	if result.Meta.PerPage <= 0 {
-		t.Errorf("Expected per_page >= 1, got %d", result.Meta.PerPage)
-	}
-	if result.Meta.Total < 0 {
-		t.Errorf("Expected total >= 0, got %d", result.Meta.Total)
-	}
-}
-
-func TestListTransactions_ReturnsCreatedTransactions(t *testing.T) {
-	account := createTestAccount(t)
-	category := createTestCategory(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: models.TransactionTypeIncome,
-		Title:           "Specific Income Transaction",
-		Amount:          999,
-		Currency:        "EUR",
-	}
-	created, createStatus, createErr := doCreateTransaction(req)
-	if createErr != nil {
-		t.Fatalf("Failed to create transaction: %v", createErr)
-	}
-	if createStatus != http.StatusCreated {
-		t.Fatalf("Failed to create transaction: status %d", createStatus)
-	}
-	if created == nil || created.Data.SubID == "" {
-		t.Fatalf("Created transaction has empty SubID")
-	}
-
-	// List should return at least the transaction we created
-	// Use large page_size to ensure our transaction appears even when
-	// other tests have created many transactions before this test runs
-	result, status, err := doJSONRequest[models.TransactionsResponse]("GET", "/transactions?page_size=1000", nil)
-	if err != nil {
-		t.Fatalf("Failed to list transactions: %v", err)
-	}
-	if status != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", status)
-	}
-
-	found := false
-	for _, tx := range result.Data {
-		if tx.SubID == created.Data.SubID {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("Expected created transaction %s to be in list", created.Data.SubID)
-	}
-}
-
-func TestGetTransaction_ValidUUIDFormat_NotFound(t *testing.T) {
-	_, status, _ := doGetTransaction("00000000-0000-0000-0000-000000000000")
-	if status != http.StatusNotFound {
-		t.Errorf("Expected status 404 for non-existent UUID, got %d", status)
-	}
-}

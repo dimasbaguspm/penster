@@ -7,47 +7,6 @@ import (
 	"github.com/dimasbaguspm/penster/pkg/models"
 )
 
-// createTestAccount creates a test account for transaction tests.
-func createTestAccount(t *testing.T) *models.AccountResponse {
-	accountReq := &models.CreateAccountRequest{
-		Name:    "Test Account",
-		Type:    models.AccountTypeExpense,
-		Balance: 1000,
-	}
-	account, _, err := doCreateAccount(accountReq)
-	if err != nil {
-		t.Fatalf("Failed to create test account: %v", err)
-	}
-	return account
-}
-
-// createTestCategory creates a test category for transaction tests.
-func createTestCategory(t *testing.T) *models.CategoryResponse {
-	categoryReq := &models.CreateCategoryRequest{
-		Name: "Test Category",
-		Type: models.CategoryTypeExpense,
-	}
-	category, _, err := doCreateCategory(categoryReq)
-	if err != nil {
-		t.Fatalf("Failed to create test category: %v", err)
-	}
-	return category
-}
-
-// createTransferTestAccount creates a second account for transfer transactions.
-func createTransferTestAccount(t *testing.T) *models.AccountResponse {
-	accountReq := &models.CreateAccountRequest{
-		Name:    "Transfer Target Account",
-		Type:    models.AccountTypeIncome,
-		Balance: 0,
-	}
-	account, _, err := doCreateAccount(accountReq)
-	if err != nil {
-		t.Fatalf("Failed to create transfer target account: %v", err)
-	}
-	return account
-}
-
 func TestCreateTransaction_Success_Expense(t *testing.T) {
 	account := createTestAccount(t)
 	category := createTestCategory(t)
@@ -146,86 +105,186 @@ func TestCreateTransaction_Success_Transfer(t *testing.T) {
 	}
 }
 
-func TestCreateTransaction_ValidationError_MissingAccountID(t *testing.T) {
-	category := createTestCategory(t)
-
-	req := &models.CreateTransactionRequest{
-		CategoryID:      category.Data.SubID,
-		TransactionType: models.TransactionTypeExpense,
-		Title:           "Missing Account",
-		Amount:          100,
-		Currency:        "USD",
+func TestCreateTransaction_ValidationError_TableDriven(t *testing.T) {
+	tests := []struct {
+		name       string
+		setupReq  func(t *testing.T, req *models.CreateTransactionRequest)
+		wantStatus int
+	}{
+		{
+			name: "missing_account_id",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				category := createTestCategory(t)
+				req.CategoryID = category.Data.SubID
+				req.AccountID = ""
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "missing_category_id",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				account := createTestAccount(t)
+				req.AccountID = account.Data.SubID
+				req.CategoryID = ""
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "missing_title",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				account := createTestAccount(t)
+				category := createTestCategory(t)
+				req.AccountID = account.Data.SubID
+				req.CategoryID = category.Data.SubID
+				req.Title = ""
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "missing_amount",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				account := createTestAccount(t)
+				category := createTestCategory(t)
+				req.AccountID = account.Data.SubID
+				req.CategoryID = category.Data.SubID
+				req.Amount = 0
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "missing_currency",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				account := createTestAccount(t)
+				category := createTestCategory(t)
+				req.AccountID = account.Data.SubID
+				req.CategoryID = category.Data.SubID
+				req.Currency = ""
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "invalid_account_id",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				category := createTestCategory(t)
+				req.AccountID = "00000000-0000-0000-0000-000000000000"
+				req.CategoryID = category.Data.SubID
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "invalid_category_id",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				account := createTestAccount(t)
+				req.AccountID = account.Data.SubID
+				req.CategoryID = "00000000-0000-0000-0000-000000000000"
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "invalid_transfer_account_id",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				account := createTestAccount(t)
+				category := createTestCategory(t)
+				req.AccountID = account.Data.SubID
+				req.TransferAccountID = "00000000-0000-0000-0000-000000000000"
+				req.CategoryID = category.Data.SubID
+				req.TransactionType = models.TransactionTypeTransfer
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "malformed_account_uuid",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				category := createTestCategory(t)
+				req.AccountID = "not-a-valid-uuid"
+				req.CategoryID = category.Data.SubID
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "malformed_category_uuid",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				account := createTestAccount(t)
+				req.AccountID = account.Data.SubID
+				req.CategoryID = "not-a-valid-uuid"
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "transfer_to_same_account",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				account := createTestAccount(t)
+				category := createTestCategory(t)
+				req.AccountID = account.Data.SubID
+				req.TransferAccountID = account.Data.SubID
+				req.CategoryID = category.Data.SubID
+				req.TransactionType = models.TransactionTypeTransfer
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "empty_account_id",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				category := createTestCategory(t)
+				req.AccountID = ""
+				req.CategoryID = category.Data.SubID
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "empty_category_id",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				account := createTestAccount(t)
+				req.AccountID = account.Data.SubID
+				req.CategoryID = ""
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "zero_amount",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				account := createTestAccount(t)
+				category := createTestCategory(t)
+				req.AccountID = account.Data.SubID
+				req.CategoryID = category.Data.SubID
+				req.Amount = 0
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "negative_amount",
+			setupReq: func(t *testing.T, req *models.CreateTransactionRequest) {
+				account := createTestAccount(t)
+				category := createTestCategory(t)
+				req.AccountID = account.Data.SubID
+				req.CategoryID = category.Data.SubID
+				req.Amount = -100
+			},
+			wantStatus: http.StatusBadRequest,
+		},
 	}
-	_, status, _ := doCreateTransaction(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
 
-func TestCreateTransaction_ValidationError_MissingCategoryID(t *testing.T) {
-	account := createTestAccount(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &models.CreateTransactionRequest{
+				TransactionType: models.TransactionTypeExpense,
+				Title:           "Test Transaction",
+				Amount:          100,
+				Currency:        "USD",
+			}
+			tt.setupReq(t, req)
 
-	req := &models.CreateTransactionRequest{
-		AccountID:       account.Data.SubID,
-		TransactionType: models.TransactionTypeExpense,
-		Title:           "Missing Category",
-		Amount:          100,
-		Currency:        "USD",
-	}
-	_, status, _ := doCreateTransaction(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-func TestCreateTransaction_ValidationError_MissingTitle(t *testing.T) {
-	account := createTestAccount(t)
-	category := createTestCategory(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: models.TransactionTypeExpense,
-		Amount:          100,
-		Currency:        "USD",
-	}
-	_, status, _ := doCreateTransaction(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-func TestCreateTransaction_ValidationError_MissingAmount(t *testing.T) {
-	account := createTestAccount(t)
-	category := createTestCategory(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: models.TransactionTypeExpense,
-		Title:           "Missing Amount",
-		Currency:        "USD",
-	}
-	_, status, _ := doCreateTransaction(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-}
-
-func TestCreateTransaction_ValidationError_MissingCurrency(t *testing.T) {
-	account := createTestAccount(t)
-	category := createTestCategory(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: models.TransactionTypeExpense,
-		Title:           "Missing Currency",
-		Amount:          100,
-	}
-	_, status, _ := doCreateTransaction(req)
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
+			result, status, err := doCreateTransaction(req)
+			if err != nil {
+				t.Fatalf("Request failed: %v", err)
+			}
+			if status != tt.wantStatus {
+				t.Errorf("Expected status %d, got %d", tt.wantStatus, status)
+			}
+			if result.Success {
+				t.Errorf("Expected success=false, got true")
+			}
+		})
 	}
 }
 
@@ -275,241 +334,5 @@ func TestCreateTransaction_WithNotes(t *testing.T) {
 	}
 	if result.Data.Notes != "This is a test note" {
 		t.Errorf("Expected notes 'This is a test note', got %s", result.Data.Notes)
-	}
-}
-
-func TestCreateTransaction_ZeroAmount(t *testing.T) {
-	account := createTestAccount(t)
-	category := createTestCategory(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: models.TransactionTypeExpense,
-		Title:           "Zero Amount Transaction",
-		Amount:          0,
-		Currency:        "USD",
-	}
-	result, status, err := doCreateTransaction(req)
-	if err != nil {
-		t.Fatalf("Failed to create zero amount transaction: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
-	}
-}
-
-func TestCreateTransaction_NegativeAmount(t *testing.T) {
-	account := createTestAccount(t)
-	category := createTestCategory(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      category.Data.SubID,
-		TransactionType: models.TransactionTypeExpense,
-		Title:           "Negative Amount Transaction",
-		Amount:          -100,
-		Currency:        "USD",
-	}
-	result, status, err := doCreateTransaction(req)
-	if err != nil {
-		t.Fatalf("Failed to create negative amount transaction: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for negative amount, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false for negative amount, got true")
-	}
-}
-
-func TestCreateTransaction_InvalidAccountID(t *testing.T) {
-	category := createTestCategory(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:       "00000000-0000-0000-0000-000000000000",
-		CategoryID:      category.Data.SubID,
-		TransactionType: models.TransactionTypeExpense,
-		Title:           "Invalid Account Transaction",
-		Amount:          100,
-		Currency:        "USD",
-	}
-	result, status, err := doCreateTransaction(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for invalid account ID, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false for invalid account ID, got true")
-	}
-}
-
-func TestCreateTransaction_InvalidCategoryID(t *testing.T) {
-	account := createTestAccount(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      "00000000-0000-0000-0000-000000000000",
-		TransactionType: models.TransactionTypeExpense,
-		Title:           "Invalid Category Transaction",
-		Amount:          100,
-		Currency:        "USD",
-	}
-	result, status, err := doCreateTransaction(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for invalid category ID, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false for invalid category ID, got true")
-	}
-}
-
-func TestCreateTransaction_InvalidTransferAccountID(t *testing.T) {
-	account := createTestAccount(t)
-	category := createTestCategory(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:         account.Data.SubID,
-		TransferAccountID: "00000000-0000-0000-0000-000000000000",
-		CategoryID:        category.Data.SubID,
-		TransactionType:   models.TransactionTypeTransfer,
-		Title:            "Invalid Transfer Account Transaction",
-		Amount:           100,
-		Currency:         "USD",
-	}
-	result, status, err := doCreateTransaction(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for invalid transfer account ID, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false for invalid transfer account ID, got true")
-	}
-}
-
-func TestCreateTransaction_MalformedAccountUUID(t *testing.T) {
-	category := createTestCategory(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:       "not-a-valid-uuid",
-		CategoryID:      category.Data.SubID,
-		TransactionType: models.TransactionTypeExpense,
-		Title:           "Malformed UUID Transaction",
-		Amount:          100,
-		Currency:        "USD",
-	}
-	result, status, err := doCreateTransaction(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for malformed account UUID, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false for malformed account UUID, got true")
-	}
-}
-
-func TestCreateTransaction_MalformedCategoryUUID(t *testing.T) {
-	account := createTestAccount(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      "not-a-valid-uuid",
-		TransactionType: models.TransactionTypeExpense,
-		Title:           "Malformed Category UUID Transaction",
-		Amount:          100,
-		Currency:        "USD",
-	}
-	result, status, err := doCreateTransaction(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for malformed category UUID, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false for malformed category UUID, got true")
-	}
-}
-
-func TestCreateTransaction_TransferToSameAccount(t *testing.T) {
-	account := createTestAccount(t)
-	category := createTestCategory(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:         account.Data.SubID,
-		TransferAccountID: account.Data.SubID, // same account
-		CategoryID:        category.Data.SubID,
-		TransactionType:   models.TransactionTypeTransfer,
-		Title:            "Transfer to Same Account",
-		Amount:           100,
-		Currency:         "USD",
-	}
-	result, status, err := doCreateTransaction(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for transfer to same account, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false for transfer to same account, got true")
-	}
-}
-
-func TestCreateTransaction_EmptyAccountID(t *testing.T) {
-	category := createTestCategory(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:       "",
-		CategoryID:      category.Data.SubID,
-		TransactionType: models.TransactionTypeExpense,
-		Title:           "Empty Account ID Transaction",
-		Amount:          100,
-		Currency:        "USD",
-	}
-	result, status, err := doCreateTransaction(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for empty account ID, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false for empty account ID, got true")
-	}
-}
-
-func TestCreateTransaction_EmptyCategoryID(t *testing.T) {
-	account := createTestAccount(t)
-
-	req := &models.CreateTransactionRequest{
-		AccountID:       account.Data.SubID,
-		CategoryID:      "",
-		TransactionType: models.TransactionTypeExpense,
-		Title:           "Empty Category ID Transaction",
-		Amount:          100,
-		Currency:        "USD",
-	}
-	result, status, err := doCreateTransaction(req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
-	if status != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for empty category ID, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false for empty category ID, got true")
 	}
 }

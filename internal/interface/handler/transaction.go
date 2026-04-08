@@ -130,7 +130,8 @@ func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, entities.ErrAccountNotFound) ||
 			errors.Is(err, entities.ErrCategoryNotFound) ||
-			errors.Is(err, entities.ErrTransferAccountNotFound) {
+			errors.Is(err, entities.ErrTransferAccountNotFound) ||
+			errors.Is(err, entities.ErrInsufficientBalance) {
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -183,7 +184,8 @@ func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, entities.ErrAccountNotFound) ||
 			errors.Is(err, entities.ErrCategoryNotFound) ||
 			errors.Is(err, entities.ErrTransferAccountNotFound) ||
-			errors.Is(err, entities.ErrTransferToSameAccount) {
+			errors.Is(err, entities.ErrTransferToSameAccount) ||
+			errors.Is(err, entities.ErrInsufficientBalance) {
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}

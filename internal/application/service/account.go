@@ -6,6 +6,7 @@ import (
 
 	"github.com/dimasbaguspm/penster/internal/application/command"
 	"github.com/dimasbaguspm/penster/internal/application/query"
+	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/pkg/models"
 )
 
@@ -122,6 +123,23 @@ func (s *AccountService) ReverseAccountBalances(ctx context.Context, accountID s
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// ValidateTransfer checks if a transfer would result in negative balance on the source account.
+func (s *AccountService) ValidateTransfer(ctx context.Context, accountID string, amount int64) error {
+	account, err := s.GetByID(ctx, accountID)
+	if err != nil {
+		return err
+	}
+	if account == nil {
+		return fmt.Errorf("account not found: %s", accountID)
+	}
+
+	if account.Balance < amount {
+		return entities.ErrInsufficientBalance
 	}
 
 	return nil

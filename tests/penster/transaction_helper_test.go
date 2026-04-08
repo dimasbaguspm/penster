@@ -1,6 +1,10 @@
 package main
 
-import "github.com/dimasbaguspm/penster/pkg/models"
+import (
+	"testing"
+
+	"github.com/dimasbaguspm/penster/pkg/models"
+)
 
 // doCreateTransaction POSTs a CreateTransactionRequest and returns TransactionResponse + status.
 func doCreateTransaction(req *models.CreateTransactionRequest) (*models.TransactionResponse, int, error) {
@@ -45,4 +49,45 @@ func doListTransactions() (*models.TransactionsResponse, int, error) {
 		return nil, status, err
 	}
 	return result, status, err
+}
+
+// createTestAccount creates a test account for transaction tests.
+func createTestAccount(t *testing.T) *models.AccountResponse {
+	accountReq := &models.CreateAccountRequest{
+		Name:    "Test Account",
+		Type:    models.AccountTypeExpense,
+		Balance: 1000,
+	}
+	account, _, err := doCreateAccount(accountReq)
+	if err != nil {
+		t.Fatalf("Failed to create test account: %v", err)
+	}
+	return account
+}
+
+// createTestCategory creates a test category for transaction tests.
+func createTestCategory(t *testing.T) *models.CategoryResponse {
+	categoryReq := &models.CreateCategoryRequest{
+		Name: "Test Category",
+		Type: models.CategoryTypeExpense,
+	}
+	category, _, err := doCreateCategory(categoryReq)
+	if err != nil {
+		t.Fatalf("Failed to create test category: %v", err)
+	}
+	return category
+}
+
+// createTransferTestAccount creates a second account for transfer transactions.
+func createTransferTestAccount(t *testing.T) *models.AccountResponse {
+	accountReq := &models.CreateAccountRequest{
+		Name:    "Transfer Target Account",
+		Type:    models.AccountTypeIncome,
+		Balance: 0,
+	}
+	account, _, err := doCreateAccount(accountReq)
+	if err != nil {
+		t.Fatalf("Failed to create transfer target account: %v", err)
+	}
+	return account
 }

@@ -302,6 +302,161 @@ func TestDeleteTransfer_RestoresBothBalances(t *testing.T) {
 	}
 }
 
+// TestUpdateExpenseToTransfer_UpdatesBalanceCorrectly verifies that updating
+// an expense transaction to a transfer correctly reverses the original expense
+// balance effect and applies new transfer balance effects to both accounts.
+func TestUpdateExpenseToTransfer_UpdatesBalanceCorrectly(t *testing.T) {
+	sourceAccount := createTestAccountWithBalance(t, 1000)
+	destAccount := createTestAccountWithBalance(t, 500)
+	category := createTestCategory(t)
+
+	// Create an expense of 300 (source balance will be 700)
+	createReq := &models.CreateTransactionRequest{
+		AccountID:       sourceAccount.Data.SubID,
+		CategoryID:      category.Data.SubID,
+		TransactionType: models.TransactionTypeExpense,
+		Title:           "Expense to Transfer Test",
+		Amount:          300,
+		Currency:        "USD",
+	}
+	created, _, err := doCreateTransaction(createReq)
+	if err != nil {
+		t.Fatalf("Failed to create expense transaction: %v", err)
+	}
+
+	// Verify balance after expense: 1000 - 300 = 700
+	sourceAfter, _, _ := doGetAccount(sourceAccount.Data.SubID)
+	if sourceAfter.Data.Balance != 700 {
+		t.Fatalf("Expected source balance 700 after expense, got %d", sourceAfter.Data.Balance)
+	}
+
+	// Update expense to transfer with a new destination account
+	transferAccountID := destAccount.Data.SubID
+	updateReq := &models.UpdateTransactionRequest{
+		TransactionType:   &[]models.TransactionType{models.TransactionTypeTransfer}[0],
+		TransferAccountID: &transferAccountID,
+	}
+	_, _, err = doUpdateTransaction(created.Data.SubID, updateReq)
+	if err != nil {
+		t.Fatalf("Failed to update expense to transfer: %v", err)
+	}
+
+	// After update:
+	// - Original expense is reversed: +300 to source (back to 1000)
+	// - New transfer applied: -300 from source, +300 to dest
+	// Expected: source = 700, dest = 800
+	sourceAfter, _, _ = doGetAccount(sourceAccount.Data.SubID)
+	expectedSourceBalance := int64(700)
+	if sourceAfter.Data.Balance != expectedSourceBalance {
+		t.Errorf("Expected source balance %d after expense->transfer, got %d", expectedSourceBalance, sourceAfter.Data.Balance)
+	}
+
+	destAfter, _, _ := doGetAccount(destAccount.Data.SubID)
+	expectedDestBalance := int64(800)
+	if destAfter.Data.Balance != expectedDestBalance {
+		t.Errorf("Expected dest balance %d after expense->transfer, got %d", expectedDestBalance, destAfter.Data.Balance)
+	}
+}
+
+// TestUpdateTransferToExpense_UpdatesBalanceCorrectly verifies that updating
+// a transfer transaction to an expense correctly reverses the original transfer
+// balance effects on both accounts and applies the new expense balance effect.
+func TestUpdateTransferToExpense_UpdatesBalanceCorrectly(t *testing.T) {
+	sourceAccount := createTestAccountWithBalance(t, 1000)
+	destAccount := createTestAccountWithBalance(t, 500)
+	category := createTestCategory(t)
+
+	// Create a transfer of 300
+	createReq := &models.CreateTransactionRequest{
+		AccountID:         sourceAccount.Data.SubID,
+		TransferAccountID: destAccount.Data.SubID,
+		CategoryID:        category.Data.SubID,
+		TransactionType:   models.TransactionTypeTransfer,
+		Title:             "Transfer to Expense Test",
+		Amount:            300,
+		Currency:          "USD",
+	}
+	created, _, err := doCreateTransaction(createReq)
+	if err != nil {
+		t.Fatalf("Failed to create transfer transaction: %v", err)
+	}
+
+	// Verify balances after transfer: source=700, dest=800
+	sourceAfter, _, _ := doGetAccount(sourceAccount.Data.SubID)
+	if sourceAfter.Data.Balance != 700 {
+		t.Fatalf("Expected source balance 700 after transfer, got %d", sourceAfter.Data.Balance)
+	}
+	destAfter, _, _ := doGetAccount(destAccount.Data.SubID)
+	if destAfter.Data.Balance != 800 {
+		t.Fatalf("Expected dest balance 800 after transfer, got %d", destAfter.Data.Balance)
+	}
+
+	// Update transfer to expense (remove transfer_account_id)
+	newType := models.TransactionTypeExpense
+	updateReq := &models.UpdateTransactionRequest{
+		TransactionType: &newType,
+	}
+	_, _, err = doUpdateTransaction(created.Data.SubID, updateReq)
+	if err != nil {
+		t.Fatalf("Failed to update transfer to expense: %v", err)
+	}
+
+	// After update:
+	// - Original transfer is reversed: +300 to source, -300 to dest (source=1000, dest=500)
+	// - New expense applied: -300 from source (source=700)
+	// Expected: source = 700, dest = 500
+	sourceAfter, _, _ = doGetAccount(sourceAccount.Data.SubID)
+	expectedSourceBalance := int64(700)
+	if sourceAfter.Data.Balance != expectedSourceBalance {
+		t.Errorf("Expected source balance %d after transfer->expense, got %d", expectedSourceBalance, sourceAfter.Data.Balance)
+	}
+
+	destAfter, _, _ = doGetAccount(destAccount.Data.SubID)
+	expectedDestBalance := int64(500)
+	if destAfter.Data.Balance != expectedDestBalance {
+		t.Errorf("Expected dest balance %d after transfer->expense, got %d", expectedDestBalance, destAfter.Data.Balance)
+	}
+}
+
+// TestCreateTransfer_InsufficientSourceBalance verifies that transfers are rejected
+// when they would result in negative balance on the source account.
+func TestCreateTransfer_InsufficientSourceBalance(t *testing.T) {
+	sourceAccount := createTestAccountWithBalance(t, 100)
+	destAccount := createTestAccountWithBalance(t, 500)
+	category := createTestCategory(t)
+
+	// Attempt to transfer 500 from account with only 100 balance
+	transferAmount := int64(500)
+	req := &models.CreateTransactionRequest{
+		AccountID:         sourceAccount.Data.SubID,
+		TransferAccountID: destAccount.Data.SubID,
+		CategoryID:        category.Data.SubID,
+		TransactionType:   models.TransactionTypeTransfer,
+		Title:             "Insufficient Balance Transfer",
+		Amount:            transferAmount,
+		Currency:          "USD",
+	}
+	result, status, _ := doCreateTransaction(req)
+
+	// Transfer should be rejected when it would result in negative balance
+	if status != http.StatusBadRequest {
+		t.Fatalf("Expected status 400 Bad Request, got %d", status)
+	}
+	if result != nil && result.Success {
+		t.Errorf("Expected success=false, got true")
+	}
+
+	// Balances should be unchanged
+	sourceAfter, _, _ := doGetAccount(sourceAccount.Data.SubID)
+	if sourceAfter.Data.Balance != 100 {
+		t.Errorf("Expected source balance 100 (unchanged), got %d", sourceAfter.Data.Balance)
+	}
+	destAfter, _, _ := doGetAccount(destAccount.Data.SubID)
+	if destAfter.Data.Balance != 500 {
+		t.Errorf("Expected dest balance 500 (unchanged), got %d", destAfter.Data.Balance)
+	}
+}
+
 // createTestAccountWithBalance creates a test account with a specific initial balance.
 func createTestAccountWithBalance(t *testing.T, initialBalance int64) *models.AccountResponse {
 	accountReq := &models.CreateAccountRequest{

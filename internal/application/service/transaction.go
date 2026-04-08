@@ -103,6 +103,13 @@ func (s *TransactionService) Create(ctx context.Context, req *models.CreateTrans
 		return nil, err
 	}
 
+	// Validate transfer doesn't result in negative balance
+	if req.TransactionType == models.TransactionTypeTransfer {
+		if err := s.accountService.ValidateTransfer(ctx, req.AccountID, req.Amount); err != nil {
+			return nil, err
+		}
+	}
+
 	currencyRate, err := s.rateCurrencyService.GetRate(ctx, req.Currency, s.cfg.App.BaseCurrency)
 	if err != nil {
 		return nil, err
@@ -186,6 +193,27 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 
 	if err := s.accountService.ReverseAccountBalances(ctx, existing.AccountID, existing.TransferAccountID, existing.TransactionType, existing.Amount); err != nil {
 		return nil, fmt.Errorf("failed to reverse account balance: %w", err)
+	}
+
+	// Determine the new transaction type for validation
+	newTransactionType := existing.TransactionType
+	if req.TransactionType != nil {
+		newTransactionType = *req.TransactionType
+	}
+
+	// Validate transfer doesn't result in negative balance after reversal
+	newAmount := existing.Amount
+	if req.Amount != nil {
+		newAmount = *req.Amount
+	}
+	if newTransactionType == models.TransactionTypeTransfer {
+		accountAfterReversal, err := s.accountService.GetByID(ctx, accountID)
+		if err != nil {
+			return nil, err
+		}
+		if accountAfterReversal.Balance < newAmount {
+			return nil, entities.ErrInsufficientBalance
+		}
 	}
 
 	updateParams := valueobjects.ToUpdateTransactionParams(ids.accountID, ids.transferAccountID, ids.categoryID, currencyRate, req)
