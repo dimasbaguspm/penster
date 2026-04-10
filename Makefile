@@ -18,4 +18,5 @@ sql:
 	sqlc generate
 
 test:
-	cd tests/penster && go test -v
+	go build -o bin/penster_test ./cmd/server
+	go test -v ./tests/...

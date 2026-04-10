@@ -14,6 +14,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 var tracer trace.Tracer
@@ -21,6 +22,7 @@ var tracer trace.Tracer
 func InitTracer(ctx context.Context, cfg *config.Config) func(context.Context) {
 	if !cfg.OTEL.Enabled {
 		slog.Info("OTEL tracing is disabled")
+		tracer = noop.NewTracerProvider().Tracer("")
 		return func(context.Context) {}
 	}
 

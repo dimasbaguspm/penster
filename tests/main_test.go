@@ -51,6 +51,7 @@ func TestMain(m *testing.M) {
 	os.Setenv("APP_ENV", "test")
 	os.Setenv("AUTO_MIGRATE", "true")
 	os.Setenv("APP_PORT", "8081")
+	os.Setenv("OTEL_ENABLED", "false")
 
 	serverURL = fmt.Sprintf("http://localhost:%s", os.Getenv("APP_PORT"))
 
@@ -59,21 +60,9 @@ func TestMain(m *testing.M) {
 	}
 
 	repoRoot, _ := os.Getwd()
-	repoRoot = filepath.Dir(filepath.Dir(repoRoot))
+	repoRoot = filepath.Dir(repoRoot)
 
 	binaryPath := filepath.Join(repoRoot, "bin", "penster_test")
-	if err := os.MkdirAll(filepath.Dir(binaryPath), 0755); err != nil {
-		log.Fatalf("Failed to create bin directory: %v", err)
-	}
-	buildCmd := exec.Command("go", "build", "-o", binaryPath, "github.com/dimasbaguspm/penster/cmd/server")
-	buildCmd.Env = append(os.Environ(), "GOSUMDB=off")
-	buildCmd.Stdout = os.Stdout
-	buildCmd.Stderr = os.Stderr
-
-	if err := buildCmd.Run(); err != nil {
-		log.Fatalf("Failed to build penster server: %v", err)
-	}
-
 	serverProcess = exec.Command(binaryPath)
 	serverProcess.Dir = repoRoot
 	serverProcess.Env = os.Environ()
