@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/dimasbaguspm/penster/internal/application/service"
@@ -92,9 +93,10 @@ func (h *ReportHandler) ByCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	report, err := h.svc.GetByAccount(r.Context(), startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	report, err := h.svc.GetByCategory(r.Context(), startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	if err != nil {
-		h.writeError(w, http.StatusInternalServerError, err.Error())
+		// Debug: log the actual error
+		h.writeError(w, http.StatusInternalServerError, fmt.Sprintf("ByCategory error: %v", err))
 		return
 	}
 

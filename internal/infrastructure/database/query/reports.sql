@@ -24,7 +24,7 @@ LEFT JOIN categories c ON t.category_id = c.id AND c.deleted_at IS NULL
 WHERE t.deleted_at IS NULL
     AND t.transacted_at >= @start_date
     AND t.transacted_at <= @end_date
-GROUP BY c.sub_id;
+GROUP BY c.sub_id, c.name, c.type;
 
 -- name: GetAccountBreakdown :many
 SELECT
