@@ -9,12 +9,14 @@ import (
 	"github.com/dimasbaguspm/penster/config"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var tracer trace.Tracer
@@ -26,9 +28,18 @@ func InitTracer(ctx context.Context, cfg *config.Config) func(context.Context) {
 		return func(context.Context) {}
 	}
 
-	exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+	conn, err := grpc.NewClient(cfg.OTEL.Endpoint,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
-		slog.Error(fmt.Sprintf("%v", err))
+		slog.Error(fmt.Sprintf("failed to create gRPC connection to OTEL exporter: %v", err))
+		os.Exit(1)
+		return nil
+	}
+
+	exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
+	if err != nil {
+		slog.Error(fmt.Sprintf("failed to create OTLP trace exporter: %v", err))
 		os.Exit(1)
 		return nil
 	}
@@ -55,7 +66,7 @@ func InitTracer(ctx context.Context, cfg *config.Config) func(context.Context) {
 	otel.SetTracerProvider(tp)
 	tracer = tp.Tracer("penster")
 
-	slog.Info("OTEL tracer initialized", "service", "penster", "environment", cfg.App.Env)
+	slog.Info("OTEL tracer initialized", "service", "penster", "environment", cfg.App.Env, "endpoint", cfg.OTEL.Endpoint)
 
 	shutdown := func(ctx context.Context) {
 		if err := tp.Shutdown(ctx); err != nil {

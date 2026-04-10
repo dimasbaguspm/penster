@@ -1,17 +1,13 @@
 package config
 
 type OTELConfig struct {
-	ExporterType string
-	Enabled      bool
+	Enabled  bool
+	Endpoint string
 }
 
 func LoadOTELConfig() OTELConfig {
 	return OTELConfig{
-		ExporterType: getEnv("OTEL_EXPORTER_TYPE", "stdout"),
-		Enabled:      isOTELEnabled(),
+		Enabled:  getEnv("OTEL_ENABLED", "true") == "true",
+		Endpoint: getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),
 	}
-}
-
-func isOTELEnabled() bool {
-	return getEnv("OTEL_ENABLED", "true") == "true"
 }
