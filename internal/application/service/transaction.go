@@ -10,6 +10,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/internal/domain/valueobjects"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 	"github.com/dimasbaguspm/penster/pkg/syncerr"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -98,6 +99,9 @@ func NewTransactionService(
 }
 
 func (s *TransactionService) Create(ctx context.Context, req *models.CreateTransactionRequest) (*models.Transaction, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "TransactionService", "Create")
+	defer span.End()
+
 	ids, err := s.validateRelatedEntities(ctx, req.AccountID, req.TransferAccountID, req.CategoryID)
 	if err != nil {
 		return nil, err
@@ -133,15 +137,22 @@ func (s *TransactionService) Create(ctx context.Context, req *models.CreateTrans
 }
 
 func (s *TransactionService) GetByID(ctx context.Context, id string) (*models.Transaction, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "TransactionService", "GetByID")
+	defer span.End()
 	return s.query.GetByID(ctx, id)
 }
 
 func (s *TransactionService) List(ctx context.Context, params *models.TransactionSearchParams) ([]*models.Transaction, int64, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "TransactionService", "List")
+	defer span.End()
 	queryParams := valueobjects.ToListTransactionsParams(params)
 	return s.query.List(ctx, queryParams)
 }
 
 func (s *TransactionService) Update(ctx context.Context, id string, req *models.UpdateTransactionRequest) (*models.Transaction, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "TransactionService", "Update")
+	defer span.End()
+
 	existing, err := s.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -242,6 +253,9 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 }
 
 func (s *TransactionService) Delete(ctx context.Context, id string) (*models.Transaction, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "TransactionService", "Delete")
+	defer span.End()
+
 	existing, err := s.GetByID(ctx, id)
 	if err != nil {
 		return nil, err

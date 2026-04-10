@@ -9,6 +9,7 @@ import (
 
 	"github.com/dimasbaguspm/penster/config"
 	_ "github.com/dimasbaguspm/penster/docs"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 func main() {
@@ -16,6 +17,8 @@ func main() {
 	defer cancel()
 
 	cfg := config.Load()
+	tracerShutdown := observability.InitTracer(ctx, cfg)
+	defer tracerShutdown(ctx)
 
 	infra := NewInfra(ctx, cfg)
 	defer infra.Close(ctx)

@@ -10,6 +10,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 type TransactionRepository struct {
@@ -21,49 +22,68 @@ func NewTransactionRepository(db *query.Queries) *TransactionRepository {
 }
 
 func (r *TransactionRepository) Create(ctx context.Context, params query.CreateTransactionParams) (*models.Transaction, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "transactions", "Create")
+	defer span.End()
+
 	id, err := r.db.CreateTransaction(ctx, params)
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return r.GetByID(ctx, id)
 }
 
 func (r *TransactionRepository) GetByID(ctx context.Context, id int32) (*models.Transaction, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "transactions", "GetByID")
+	defer span.End()
+
 	result, err := r.db.GetTransactionByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return toTransactionModelWithRelations(result), nil
 }
 
 func (r *TransactionRepository) GetBySubID(ctx context.Context, subID string) (*models.Transaction, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "transactions", "GetBySubID")
+	defer span.End()
+
 	uid := pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true}
 	result, err := r.db.GetTransactionBySubID(ctx, uid)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return toTransactionModelWithRelations(result), nil
 }
 
 func (r *TransactionRepository) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "transactions", "GetIDBySubID")
+	defer span.End()
+
 	uid := pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true}
 	result, err := r.db.GetTransactionBySubID(ctx, uid)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return 0, nil
 		}
+		observability.RecordError(ctx, err)
 		return 0, err
 	}
 	return result.ID, nil
 }
 
 func (r *TransactionRepository) UpdateBySubID(ctx context.Context, subID string, params query.UpdateTransactionParams) (*models.Transaction, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "transactions", "UpdateBySubID")
+	defer span.End()
+
 	id, err := r.GetIDBySubID(ctx, subID)
 	if err != nil {
 		return nil, err
@@ -74,12 +94,16 @@ func (r *TransactionRepository) UpdateBySubID(ctx context.Context, subID string,
 	params.ID = id
 	_, err = r.db.UpdateTransaction(ctx, params)
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return r.GetByID(ctx, id)
 }
 
 func (r *TransactionRepository) DeleteBySubID(ctx context.Context, subID string) (*models.Transaction, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "transactions", "DeleteBySubID")
+	defer span.End()
+
 	id, err := r.GetIDBySubID(ctx, subID)
 	if err != nil {
 		return nil, err
@@ -91,8 +115,12 @@ func (r *TransactionRepository) DeleteBySubID(ctx context.Context, subID string)
 }
 
 func (r *TransactionRepository) List(ctx context.Context, params query.ListTransactionsParams) ([]*models.Transaction, int64, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "transactions", "List")
+	defer span.End()
+
 	rows, err := r.db.ListTransactions(ctx, params)
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, 0, err
 	}
 
@@ -107,15 +135,22 @@ func (r *TransactionRepository) List(ctx context.Context, params query.ListTrans
 }
 
 func (r *TransactionRepository) Update(ctx context.Context, id int32, params query.UpdateTransactionParams) (*models.Transaction, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "transactions", "Update")
+	defer span.End()
+
 	params.ID = id
 	_, err := r.db.UpdateTransaction(ctx, params)
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return r.GetByID(ctx, id)
 }
 
 func (r *TransactionRepository) Delete(ctx context.Context, id int32) (*models.Transaction, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "transactions", "Delete")
+	defer span.End()
+
 	tx, err := r.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -129,6 +164,7 @@ func (r *TransactionRepository) Delete(ctx context.Context, id int32) (*models.T
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 

@@ -8,6 +8,7 @@ type Config struct {
 	Kafka        KafkaConfig
 	Migrate      MigrateConfig
 	RateCurrency RateCurrencyConfig
+	OTEL         OTELConfig
 }
 
 func Load() *Config {
@@ -19,5 +20,6 @@ func Load() *Config {
 		Kafka:        LoadKafkaConfig(),
 		Migrate:      LoadMigrateConfig(),
 		RateCurrency: LoadRateCurrencyConfig(),
+		OTEL:         LoadOTELConfig(),
 	}
 }

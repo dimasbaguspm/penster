@@ -7,6 +7,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/application/query"
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 type ReportService struct {
@@ -20,6 +21,9 @@ func NewReportService(reportQuery query.ReportQueryInterface) *ReportService {
 }
 
 func (s *ReportService) GetSummary(ctx context.Context, startDateStr, endDateStr string) (*models.ReportSummary, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "ReportService", "GetSummary")
+	defer span.End()
+
 	startDate, endDate, err := parseDates(startDateStr, endDateStr)
 	if err != nil {
 		return nil, err
@@ -29,6 +33,9 @@ func (s *ReportService) GetSummary(ctx context.Context, startDateStr, endDateStr
 }
 
 func (s *ReportService) GetByAccount(ctx context.Context, startDateStr, endDateStr string) (*models.ReportByAccount, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "ReportService", "GetByAccount")
+	defer span.End()
+
 	startDate, endDate, err := parseDates(startDateStr, endDateStr)
 	if err != nil {
 		return nil, err
@@ -38,6 +45,9 @@ func (s *ReportService) GetByAccount(ctx context.Context, startDateStr, endDateS
 }
 
 func (s *ReportService) GetByCategory(ctx context.Context, startDateStr, endDateStr string) (*models.ReportByCategory, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "ReportService", "GetByCategory")
+	defer span.End()
+
 	startDate, endDate, err := parseDates(startDateStr, endDateStr)
 	if err != nil {
 		return nil, err
@@ -47,6 +57,9 @@ func (s *ReportService) GetByCategory(ctx context.Context, startDateStr, endDate
 }
 
 func (s *ReportService) GetTrends(ctx context.Context, startDateStr, endDateStr string) (*models.ReportTrends, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "ReportService", "GetTrends")
+	defer span.End()
+
 	startDate, endDate, err := parseDates(startDateStr, endDateStr)
 	if err != nil {
 		return nil, err

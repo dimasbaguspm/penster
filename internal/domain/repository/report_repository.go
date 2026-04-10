@@ -8,6 +8,7 @@ import (
 
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -20,9 +21,13 @@ func NewReportRepository(db *query.Queries) *ReportRepository {
 }
 
 func (r *ReportRepository) GetReportSummary(ctx context.Context, startDate, endDate time.Time) (*models.ReportSummary, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "reports", "GetReportSummary")
+	defer span.End()
+
 	// Get total balance across all accounts
 	totalBalance, err := r.db.GetTotalBalance(ctx)
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
@@ -32,6 +37,7 @@ func (r *ReportRepository) GetReportSummary(ctx context.Context, startDate, endD
 		EndDate:   pgtype.Date{Time: endDate, Valid: true},
 	})
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
@@ -92,11 +98,15 @@ func (r *ReportRepository) GetReportSummary(ctx context.Context, startDate, endD
 }
 
 func (r *ReportRepository) GetReportByCategory(ctx context.Context, startDate, endDate time.Time) (*models.ReportByCategory, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "reports", "GetReportByCategory")
+	defer span.End()
+
 	categoryBreakdownRows, err := r.db.GetCategoryBreakdown(ctx, query.GetCategoryBreakdownParams{
 		StartDate: pgtype.Date{Time: startDate, Valid: true},
 		EndDate:   pgtype.Date{Time: endDate, Valid: true},
 	})
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, fmt.Errorf("GetCategoryBreakdown failed: %w", err)
 	}
 
@@ -132,11 +142,15 @@ func (r *ReportRepository) GetReportByCategory(ctx context.Context, startDate, e
 }
 
 func (r *ReportRepository) GetReportByAccount(ctx context.Context, startDate, endDate time.Time) (*models.ReportByAccount, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "reports", "GetReportByAccount")
+	defer span.End()
+
 	accountBreakdownRows, err := r.db.GetAccountBreakdown(ctx, query.GetAccountBreakdownParams{
 		StartDate: pgtype.Date{Time: startDate, Valid: true},
 		EndDate:   pgtype.Date{Time: endDate, Valid: true},
 	})
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
@@ -170,11 +184,15 @@ func (r *ReportRepository) GetReportByAccount(ctx context.Context, startDate, en
 }
 
 func (r *ReportRepository) GetReportTrends(ctx context.Context, startDate, endDate time.Time) (*models.ReportTrends, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "reports", "GetReportTrends")
+	defer span.End()
+
 	trendRows, err := r.db.GetTrends(ctx, query.GetTrendsParams{
 		StartDate: pgtype.Date{Time: startDate, Valid: true},
 		EndDate:   pgtype.Date{Time: endDate, Valid: true},
 	})
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 

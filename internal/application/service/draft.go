@@ -10,6 +10,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/internal/domain/valueobjects"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 	"github.com/dimasbaguspm/penster/pkg/syncerr"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -101,6 +102,9 @@ func NewDraftService(
 }
 
 func (s *DraftService) Create(ctx context.Context, req *models.CreateDraftRequest) (*models.Draft, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "Create")
+	defer span.End()
+
 	if req.TransactionType == string(models.TransactionTypeTransfer) && req.AccountID == req.TransferAccountID {
 		return nil, entities.ErrTransferAccountNotFound
 	}
@@ -124,15 +128,22 @@ func (s *DraftService) Create(ctx context.Context, req *models.CreateDraftReques
 }
 
 func (s *DraftService) GetByID(ctx context.Context, id string) (*models.Draft, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "GetByID")
+	defer span.End()
 	return s.query.GetByID(ctx, id)
 }
 
 func (s *DraftService) List(ctx context.Context, params *models.DraftSearchParams) ([]*models.Draft, int64, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "List")
+	defer span.End()
 	queryParams := valueobjects.ToListDraftsParams(params)
 	return s.query.List(ctx, queryParams)
 }
 
 func (s *DraftService) Update(ctx context.Context, id string, req *models.UpdateDraftRequest) (*models.Draft, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "Update")
+	defer span.End()
+
 	existing, err := s.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -183,6 +194,9 @@ func (s *DraftService) Update(ctx context.Context, id string, req *models.Update
 }
 
 func (s *DraftService) Confirm(ctx context.Context, draftSubID string) (*models.Transaction, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "Confirm")
+	defer span.End()
+
 	draft, err := s.GetByID(ctx, draftSubID)
 	if err != nil {
 		return nil, err
@@ -219,6 +233,9 @@ func (s *DraftService) Confirm(ctx context.Context, draftSubID string) (*models.
 }
 
 func (s *DraftService) Reject(ctx context.Context, draftSubID string) error {
+	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "Reject")
+	defer span.End()
+
 	draft, err := s.GetByID(ctx, draftSubID)
 	if err != nil {
 		return err
@@ -234,6 +251,9 @@ func (s *DraftService) Reject(ctx context.Context, draftSubID string) error {
 }
 
 func (s *DraftService) Delete(ctx context.Context, draftSubID string) error {
+	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "Delete")
+	defer span.End()
+
 	draft, err := s.GetByID(ctx, draftSubID)
 	if err != nil {
 		return err

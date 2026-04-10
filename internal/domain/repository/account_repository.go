@@ -12,6 +12,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 type AccountRepository struct {
@@ -23,53 +24,72 @@ func NewAccountRepository(db *query.Queries) *AccountRepository {
 }
 
 func (r *AccountRepository) Create(ctx context.Context, req *models.CreateAccountRequest) (*models.Account, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "accounts", "Create")
+	defer span.End()
+
 	result, err := r.db.CreateAccount(ctx, query.CreateAccountParams{
 		Name:    req.Name,
 		Type:    string(req.Type),
 		Balance: req.Balance,
 	})
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return toAccountModel(result), nil
 }
 
 func (r *AccountRepository) GetByID(ctx context.Context, id int32) (*models.Account, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "accounts", "GetByID")
+	defer span.End()
+
 	result, err := r.db.GetAccountByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return toAccountModel(result), nil
 }
 
 func (r *AccountRepository) GetBySubID(ctx context.Context, subID string) (*models.Account, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "accounts", "GetBySubID")
+	defer span.End()
+
 	uid := pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true}
 	result, err := r.db.GetAccountBySubID(ctx, uid)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return toAccountModel(result), nil
 }
 
 func (r *AccountRepository) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "accounts", "GetIDBySubID")
+	defer span.End()
+
 	uid := pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true}
 	result, err := r.db.GetAccountBySubID(ctx, uid)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return 0, nil
 		}
+		observability.RecordError(ctx, err)
 		return 0, err
 	}
 	return result.ID, nil
 }
 
 func (r *AccountRepository) UpdateBySubID(ctx context.Context, subID string, req *models.UpdateAccountRequest) (*models.Account, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "accounts", "UpdateBySubID")
+	defer span.End()
+
 	id, err := r.GetIDBySubID(ctx, subID)
 	if err != nil {
 		return nil, err
@@ -81,6 +101,9 @@ func (r *AccountRepository) UpdateBySubID(ctx context.Context, subID string, req
 }
 
 func (r *AccountRepository) DeleteBySubID(ctx context.Context, subID string) (*models.Account, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "accounts", "DeleteBySubID")
+	defer span.End()
+
 	id, err := r.GetIDBySubID(ctx, subID)
 	if err != nil {
 		return nil, err
@@ -92,9 +115,13 @@ func (r *AccountRepository) DeleteBySubID(ctx context.Context, subID string) (*m
 }
 
 func (r *AccountRepository) List(ctx context.Context, params *models.AccountSearchParams) ([]*models.Account, int64, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "accounts", "List")
+	defer span.End()
+
 	queryParams := entities.ToListAccountsParams(params)
 	rows, err := r.db.ListAccounts(ctx, queryParams)
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, 0, err
 	}
 
@@ -118,6 +145,9 @@ func (r *AccountRepository) List(ctx context.Context, params *models.AccountSear
 }
 
 func (r *AccountRepository) Update(ctx context.Context, id int32, req *models.UpdateAccountRequest) (*models.Account, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "accounts", "Update")
+	defer span.End()
+
 	name := ""
 	if req.Name != nil {
 		name = *req.Name
@@ -141,23 +171,31 @@ func (r *AccountRepository) Update(ctx context.Context, id int32, req *models.Up
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return toAccountModel(result), nil
 }
 
 func (r *AccountRepository) Delete(ctx context.Context, id int32) (*models.Account, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "accounts", "Delete")
+	defer span.End()
+
 	result, err := r.db.DeleteAccount(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return toAccountModel(result), nil
 }
 
 func (r *AccountRepository) UpdateBalanceByID(ctx context.Context, id int32, newBalance int64) (*models.Account, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "accounts", "UpdateBalanceByID")
+	defer span.End()
+
 	result, err := r.db.UpdateAccountBalance(ctx, query.UpdateAccountBalanceParams{
 		Balance: newBalance,
 		ID:      id,
@@ -166,6 +204,7 @@ func (r *AccountRepository) UpdateBalanceByID(ctx context.Context, id int32, new
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return toAccountModel(result), nil

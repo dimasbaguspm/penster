@@ -11,6 +11,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 type DraftRepository struct {
@@ -22,52 +23,72 @@ func NewDraftRepository(db *query.Queries) *DraftRepository {
 }
 
 func (r *DraftRepository) Create(ctx context.Context, params query.CreateDraftParams) (*models.Draft, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "drafts", "Create")
+	defer span.End()
+
 	id, err := r.db.CreateDraft(ctx, params)
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return r.GetByID(ctx, id)
 }
 
 func (r *DraftRepository) GetByID(ctx context.Context, id int32) (*models.Draft, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "drafts", "GetByID")
+	defer span.End()
+
 	result, err := r.db.GetDraftByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return toDraftModelWithRelations(result), nil
 }
 
 func (r *DraftRepository) GetBySubID(ctx context.Context, subID string) (*models.Draft, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "drafts", "GetBySubID")
+	defer span.End()
+
 	uid := pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true}
 	result, err := r.db.GetDraftBySubID(ctx, uid)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	return toDraftModelWithRelations(result), nil
 }
 
 func (r *DraftRepository) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "drafts", "GetIDBySubID")
+	defer span.End()
+
 	uid := pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true}
 	result, err := r.db.GetDraftBySubID(ctx, uid)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return 0, nil
 		}
+		observability.RecordError(ctx, err)
 		return 0, err
 	}
 	return result.ID, nil
 }
 
 func (r *DraftRepository) UpdateBySubID(ctx context.Context, subID string, params query.UpdateDraftParams) (*models.Draft, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "drafts", "UpdateBySubID")
+	defer span.End()
+
 	params.SubID = pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true}
 	_, err := r.db.UpdateDraft(ctx, params)
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	id, err := r.GetIDBySubID(ctx, subID)
@@ -81,20 +102,31 @@ func (r *DraftRepository) UpdateBySubID(ctx context.Context, subID string, param
 }
 
 func (r *DraftRepository) UpdateStatus(ctx context.Context, subID string, status string) error {
+	ctx, span := observability.StartRepoSpan(ctx, "drafts", "UpdateStatus")
+	defer span.End()
+
 	params := query.UpdateDraftStatusParams{
 		SubID:  pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true},
 		Status: status,
 	}
 	_, err := r.db.UpdateDraftStatus(ctx, params)
 	if err == pgx.ErrNoRows {
+		observability.RecordError(ctx, entities.ErrDraftNotFound)
 		return entities.ErrDraftNotFound
+	}
+	if err != nil {
+		observability.RecordError(ctx, err)
 	}
 	return err
 }
 
 func (r *DraftRepository) List(ctx context.Context, params query.ListDraftsParams) ([]*models.Draft, int64, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "drafts", "List")
+	defer span.End()
+
 	rows, err := r.db.ListDrafts(ctx, params)
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, 0, err
 	}
 
@@ -109,7 +141,13 @@ func (r *DraftRepository) List(ctx context.Context, params query.ListDraftsParam
 }
 
 func (r *DraftRepository) SoftDelete(ctx context.Context, subID string) error {
+	ctx, span := observability.StartRepoSpan(ctx, "drafts", "SoftDelete")
+	defer span.End()
+
 	_, err := r.db.SoftDeleteDraft(ctx, pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true})
+	if err != nil {
+		observability.RecordError(ctx, err)
+	}
 	return err
 }
 

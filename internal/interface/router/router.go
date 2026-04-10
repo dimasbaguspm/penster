@@ -7,6 +7,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/application/service"
 	"github.com/dimasbaguspm/penster/internal/interface/handler"
 	"github.com/dimasbaguspm/penster/internal/interface/middleware"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 // Router holds all HTTP handlers and provides route registration
@@ -86,7 +87,8 @@ func (r *Router) Routes() http.Handler {
 	mux.HandleFunc("GET /reports/trends", r.reportHandler.Trends)
 
 	// Apply middleware chain
-	handlerChain := middleware.Logging(mux)
+	handlerChain := observability.TracingMiddleware(mux)
+	handlerChain = middleware.Logging(handlerChain)
 	handlerChain = middleware.Recovery(handlerChain)
 
 	return handlerChain

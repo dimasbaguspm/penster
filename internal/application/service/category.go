@@ -6,6 +6,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/application/command"
 	"github.com/dimasbaguspm/penster/internal/application/query"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 type CategoryService struct {
@@ -21,25 +22,37 @@ func NewCategoryService(query query.CategoryQueryInterface, commands command.Cat
 }
 
 func (s *CategoryService) Create(ctx context.Context, req *models.CreateCategoryRequest) (*models.Category, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "CategoryService", "Create")
+	defer span.End()
 	return s.commands.Create(ctx, req)
 }
 
 func (s *CategoryService) GetByID(ctx context.Context, id string) (*models.Category, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "CategoryService", "GetByID")
+	defer span.End()
 	return s.query.GetByID(ctx, id)
 }
 
 func (s *CategoryService) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "CategoryService", "GetIDBySubID")
+	defer span.End()
 	return s.query.GetIDBySubID(ctx, subID)
 }
 
 func (s *CategoryService) List(ctx context.Context, params *models.CategorySearchParams) ([]*models.Category, int64, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "CategoryService", "List")
+	defer span.End()
 	return s.query.List(ctx, params)
 }
 
 func (s *CategoryService) Update(ctx context.Context, id string, req *models.UpdateCategoryRequest) (*models.Category, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "CategoryService", "Update")
+	defer span.End()
 	return s.commands.Update(ctx, id, req)
 }
 
 func (s *CategoryService) Delete(ctx context.Context, id string) (*models.Category, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "CategoryService", "Delete")
+	defer span.End()
 	return s.commands.Delete(ctx, id)
 }

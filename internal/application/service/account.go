@@ -8,6 +8,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/application/query"
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 type AccountService struct {
@@ -23,30 +24,45 @@ func NewAccountService(query query.AccountQueryInterface, commands command.Accou
 }
 
 func (s *AccountService) Create(ctx context.Context, req *models.CreateAccountRequest) (*models.Account, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "AccountService", "Create")
+	defer span.End()
 	return s.commands.Create(ctx, req)
 }
 
 func (s *AccountService) GetByID(ctx context.Context, id string) (*models.Account, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "AccountService", "GetByID")
+	defer span.End()
 	return s.query.GetByID(ctx, id)
 }
 
 func (s *AccountService) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "AccountService", "GetIDBySubID")
+	defer span.End()
 	return s.query.GetIDBySubID(ctx, subID)
 }
 
 func (s *AccountService) List(ctx context.Context, params *models.AccountSearchParams) ([]*models.Account, int64, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "AccountService", "List")
+	defer span.End()
 	return s.query.List(ctx, params)
 }
 
 func (s *AccountService) Update(ctx context.Context, id string, req *models.UpdateAccountRequest) (*models.Account, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "AccountService", "Update")
+	defer span.End()
 	return s.commands.Update(ctx, id, req)
 }
 
 func (s *AccountService) Delete(ctx context.Context, id string) (*models.Account, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "AccountService", "Delete")
+	defer span.End()
 	return s.commands.Delete(ctx, id)
 }
 
 func (s *AccountService) UpdateAccountBalances(ctx context.Context, accountID string, transferAccountID string, transactionType models.TransactionType, amount int64) error {
+	ctx, span := observability.StartServiceSpan(ctx, "AccountService", "UpdateAccountBalances")
+	defer span.End()
+
 	account, err := s.GetByID(ctx, accountID)
 	if err != nil {
 		return err
@@ -88,6 +104,9 @@ func (s *AccountService) UpdateAccountBalances(ctx context.Context, accountID st
 }
 
 func (s *AccountService) ReverseAccountBalances(ctx context.Context, accountID string, transferAccountID string, transactionType models.TransactionType, amount int64) error {
+	ctx, span := observability.StartServiceSpan(ctx, "AccountService", "ReverseAccountBalances")
+	defer span.End()
+
 	account, err := s.GetByID(ctx, accountID)
 	if err != nil {
 		return err
@@ -130,6 +149,9 @@ func (s *AccountService) ReverseAccountBalances(ctx context.Context, accountID s
 
 // ValidateTransfer checks if a transfer would result in negative balance on the source account.
 func (s *AccountService) ValidateTransfer(ctx context.Context, accountID string, amount int64) error {
+	ctx, span := observability.StartServiceSpan(ctx, "AccountService", "ValidateTransfer")
+	defer span.End()
+
 	account, err := s.GetByID(ctx, accountID)
 	if err != nil {
 		return err
