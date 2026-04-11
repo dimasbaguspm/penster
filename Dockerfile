@@ -20,3 +20,9 @@ RUN go mod download
 COPY . .
 
 CMD ["/go/bin/air"]
+
+FROM scratch AS runtime
+COPY --from=builder /app/bin/server /app/bin/server
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+EXPOSE 8080
+CMD ["/app/bin/server"]

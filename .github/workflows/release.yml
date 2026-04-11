@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  schedule:
+    - cron: '0 0 * * *'        # Every midnight UTC
+  workflow_dispatch:             # Manual trigger via GitHub UI
+  release:
+    types: [published, edited]  # Fires for both pre-release and stable releases
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine release type and tag
+        id: release-info
+        run: |
+          if ${{ github.event.release.prerelease }}; then
+            echo "tag=nightly" >> $GITHUB_OUTPUT
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract Go version
+        run: echo "GO_VERSION=$(grep '^go ' go.mod | awk '{print $2}')" >> $GITHUB_ENV
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/dimasbaguspm/penster:${{ steps.release-info.outputs.tag }}
+          build-args: GO_VERSION=${{ env.GO_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
