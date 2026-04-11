@@ -22,6 +22,9 @@ type draftIDs struct {
 }
 
 func (s *DraftService) validateRelatedEntities(ctx context.Context, accountID, transferAccountID, categoryID string) (*draftIDs, error) {
+	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "validateRelatedEntities")
+	defer span.End()
+
 	var ids draftIDs
 
 	grp := syncerr.Group{}
@@ -119,7 +122,7 @@ func (s *DraftService) Create(ctx context.Context, req *models.CreateDraftReques
 		return nil, err
 	}
 
-	params, err := valueobjects.ToCreateDraftParams(ids.accountID, ids.transferAccountID, ids.categoryID, currencyRate, req)
+	params, err := valueobjects.ToCreateDraftParams(ctx, ids.accountID, ids.transferAccountID, ids.categoryID, currencyRate, req)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +139,7 @@ func (s *DraftService) GetByID(ctx context.Context, id string) (*models.Draft, e
 func (s *DraftService) List(ctx context.Context, params *models.DraftSearchParams) ([]*models.Draft, int64, error) {
 	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "List")
 	defer span.End()
-	queryParams := valueobjects.ToListDraftsParams(params)
+	queryParams := valueobjects.ToListDraftsParams(ctx, params)
 	return s.query.List(ctx, queryParams)
 }
 
@@ -188,7 +191,7 @@ func (s *DraftService) Update(ctx context.Context, id string, req *models.Update
 		}
 	}
 
-	updateParams := valueobjects.ToUpdateDraftParams(ids.accountID, ids.transferAccountID, ids.categoryID, currencyRate, req)
+	updateParams := valueobjects.ToUpdateDraftParams(ctx, ids.accountID, ids.transferAccountID, ids.categoryID, currencyRate, req)
 
 	return s.commands.Update(ctx, id, updateParams)
 }
