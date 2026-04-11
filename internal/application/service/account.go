@@ -7,6 +7,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/application/command"
 	"github.com/dimasbaguspm/penster/internal/application/query"
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
+	"github.com/dimasbaguspm/penster/internal/domain/valueobjects"
 	"github.com/dimasbaguspm/penster/pkg/models"
 	"github.com/dimasbaguspm/penster/pkg/observability"
 )
@@ -26,7 +27,9 @@ func NewAccountService(query query.AccountQueryInterface, commands command.Accou
 func (s *AccountService) Create(ctx context.Context, req *models.CreateAccountRequest) (*models.Account, error) {
 	ctx, span := observability.StartServiceSpan(ctx, "AccountService", "Create")
 	defer span.End()
-	return s.commands.Create(ctx, req)
+
+	params := valueobjects.ToCreateAccountParams(ctx, req)
+	return s.commands.Create(ctx, params)
 }
 
 func (s *AccountService) GetByID(ctx context.Context, id string) (*models.Account, error) {
@@ -44,13 +47,17 @@ func (s *AccountService) GetIDBySubID(ctx context.Context, subID string) (int32,
 func (s *AccountService) List(ctx context.Context, params *models.AccountSearchParams) ([]*models.Account, int64, error) {
 	ctx, span := observability.StartServiceSpan(ctx, "AccountService", "List")
 	defer span.End()
-	return s.query.List(ctx, params)
+
+	queryParams := valueobjects.ToListAccountsParams(ctx, params)
+	return s.query.List(ctx, queryParams)
 }
 
 func (s *AccountService) Update(ctx context.Context, id string, req *models.UpdateAccountRequest) (*models.Account, error) {
 	ctx, span := observability.StartServiceSpan(ctx, "AccountService", "Update")
 	defer span.End()
-	return s.commands.Update(ctx, id, req)
+
+	params := valueobjects.ToUpdateAccountParams(ctx, req)
+	return s.commands.Update(ctx, id, params)
 }
 
 func (s *AccountService) Delete(ctx context.Context, id string) (*models.Account, error) {
