@@ -22,13 +22,13 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    subgraph Commands "Write Path"
+    subgraph Commands["Write Path"]
         C1["Create"]
         C2["Update"]
         C3["Delete"]
         C4["UpdateBalance"]
     end
-    subgraph Queries "Read Path"
+    subgraph Queries["Read Path"]
         Q1["GetByID"]
         Q2["List"]
         Q3["Summary"]
@@ -36,8 +36,8 @@ flowchart TD
         Q5["ByCategory"]
         Q6["Trends"]
     end
-    subgraph Services
-        Svc["Service\nOrchestrates business logic"]
+    subgraph Services["Service"]
+        Svc["Orchestrates\nbusiness logic"]
     end
     C1 & C2 & C3 & C4 --> Svc
     Q1 & Q2 & Q3 & Q4 & Q5 & Q6 --> Svc
