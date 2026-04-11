@@ -7,6 +7,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/application/service"
 	"github.com/dimasbaguspm/penster/internal/interface/dto"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
@@ -33,13 +34,16 @@ func NewAccountHandler(svc *service.AccountService) *AccountHandler {
 // @Failure 500 {object} response.Response
 // @Router /accounts [get]
 func (h *AccountHandler) List(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Account", "List")
+	defer span.End()
+
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	params := dto.ParseAccountListParams(r)
-	accounts, total, err := h.svc.List(r.Context(), params)
+	accounts, total, err := h.svc.List(ctx, params)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -67,6 +71,9 @@ func (h *AccountHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /accounts/{id} [get]
 func (h *AccountHandler) Get(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Account", "Get")
+	defer span.End()
+
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -78,7 +85,7 @@ func (h *AccountHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	account, err := h.svc.GetByID(r.Context(), id)
+	account, err := h.svc.GetByID(ctx, id)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -104,6 +111,9 @@ func (h *AccountHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /accounts [post]
 func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Account", "Create")
+	defer span.End()
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -120,7 +130,7 @@ func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	account, err := h.svc.Create(r.Context(), &req)
+	account, err := h.svc.Create(ctx, &req)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -144,6 +154,9 @@ func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /accounts/{id} [put]
 func (h *AccountHandler) Update(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Account", "Update")
+	defer span.End()
+
 	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -166,7 +179,7 @@ func (h *AccountHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	account, err := h.svc.Update(r.Context(), id, &req)
+	account, err := h.svc.Update(ctx, id, &req)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -193,6 +206,9 @@ func (h *AccountHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /accounts/{id} [delete]
 func (h *AccountHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Account", "Delete")
+	defer span.End()
+
 	if r.Method != http.MethodDelete {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -204,7 +220,7 @@ func (h *AccountHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	account, err := h.svc.Delete(r.Context(), id)
+	account, err := h.svc.Delete(ctx, id)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return

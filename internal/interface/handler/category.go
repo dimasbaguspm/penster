@@ -7,6 +7,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/application/service"
 	"github.com/dimasbaguspm/penster/internal/interface/dto"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
@@ -33,13 +34,16 @@ func NewCategoryHandler(svc *service.CategoryService) *CategoryHandler {
 // @Failure 500 {object} response.Response
 // @Router /categories [get]
 func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Category", "List")
+	defer span.End()
+
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	params := dto.ParseCategoryListParams(r)
-	categories, total, err := h.svc.List(r.Context(), params)
+	categories, total, err := h.svc.List(ctx, params)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -67,6 +71,9 @@ func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /categories/{id} [get]
 func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Category", "Get")
+	defer span.End()
+
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -78,7 +85,7 @@ func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	category, err := h.svc.GetByID(r.Context(), id)
+	category, err := h.svc.GetByID(ctx, id)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -104,6 +111,9 @@ func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /categories [post]
 func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Category", "Create")
+	defer span.End()
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -120,7 +130,7 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	category, err := h.svc.Create(r.Context(), &req)
+	category, err := h.svc.Create(ctx, &req)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -144,6 +154,9 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /categories/{id} [put]
 func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Category", "Update")
+	defer span.End()
+
 	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -166,7 +179,7 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	category, err := h.svc.Update(r.Context(), id, &req)
+	category, err := h.svc.Update(ctx, id, &req)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -193,6 +206,9 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /categories/{id} [delete]
 func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Category", "Delete")
+	defer span.End()
+
 	if r.Method != http.MethodDelete {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -204,7 +220,7 @@ func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	category, err := h.svc.Delete(r.Context(), id)
+	category, err := h.svc.Delete(ctx, id)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return

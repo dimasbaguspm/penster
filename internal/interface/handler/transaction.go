@@ -9,6 +9,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/internal/interface/dto"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
@@ -38,13 +39,16 @@ func NewTransactionHandler(svc *service.TransactionService) *TransactionHandler 
 // @Failure 500 {object} response.Response
 // @Router /transactions [get]
 func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Transaction", "List")
+	defer span.End()
+
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	params := dto.ParseTransactionListParams(r)
-	transactions, total, err := h.svc.List(r.Context(), params)
+	transactions, total, err := h.svc.List(ctx, params)
 
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
@@ -73,6 +77,9 @@ func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /transactions/{id} [get]
 func (h *TransactionHandler) Get(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Transaction", "Get")
+	defer span.End()
+
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -84,7 +91,7 @@ func (h *TransactionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.svc.GetByID(r.Context(), id)
+	tx, err := h.svc.GetByID(ctx, id)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -110,6 +117,9 @@ func (h *TransactionHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /transactions [post]
 func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Transaction", "Create")
+	defer span.End()
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -126,7 +136,7 @@ func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.svc.Create(r.Context(), &req)
+	tx, err := h.svc.Create(ctx, &req)
 	if err != nil {
 		if errors.Is(err, entities.ErrAccountNotFound) ||
 			errors.Is(err, entities.ErrCategoryNotFound) ||
@@ -157,6 +167,9 @@ func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /transactions/{id} [put]
 func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Transaction", "Update")
+	defer span.End()
+
 	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -179,7 +192,7 @@ func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.svc.Update(r.Context(), id, &req)
+	tx, err := h.svc.Update(ctx, id, &req)
 	if err != nil {
 		if errors.Is(err, entities.ErrAccountNotFound) ||
 			errors.Is(err, entities.ErrCategoryNotFound) ||
@@ -214,6 +227,9 @@ func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /transactions/{id} [delete]
 func (h *TransactionHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Transaction", "Delete")
+	defer span.End()
+
 	if r.Method != http.MethodDelete {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -225,7 +241,7 @@ func (h *TransactionHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.svc.Delete(r.Context(), id)
+	tx, err := h.svc.Delete(ctx, id)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return

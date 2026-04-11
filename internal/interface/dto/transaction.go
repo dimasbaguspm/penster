@@ -1,11 +1,13 @@
 package dto
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 func isValidTransactionType(t string) bool {
@@ -18,6 +20,9 @@ func isValidTransactionType(t string) bool {
 }
 
 func ParseTransactionListParams(r *http.Request) *models.TransactionSearchParams {
+	_, span := observability.StartDTOSpan(context.Background(), "transaction", "parse_list_params")
+	defer span.End()
+
 	q := r.URL.Query()
 	params := &models.TransactionSearchParams{
 		PageNumber: 1,
@@ -57,6 +62,9 @@ func ParseTransactionListParams(r *http.Request) *models.TransactionSearchParams
 }
 
 func ValidateCreateTransactionRequest(req *models.CreateTransactionRequest) error {
+	_, span := observability.StartDTOSpan(context.Background(), "transaction", "validate_create")
+	defer span.End()
+
 	if req.AccountID == "" {
 		return entities.ErrIDRequired
 	}
@@ -94,6 +102,9 @@ func ValidateCreateTransactionRequest(req *models.CreateTransactionRequest) erro
 }
 
 func ValidateUpdateTransactionRequest(req *models.UpdateTransactionRequest) error {
+	_, span := observability.StartDTOSpan(context.Background(), "transaction", "validate_update")
+	defer span.End()
+
 	if req.TransactionType != nil && !isValidTransactionType(string(*req.TransactionType)) {
 		return entities.ErrInvalidTransactionType
 	}

@@ -1,12 +1,14 @@
 package dto
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 func isValidCategoryType(t string) bool {
@@ -19,6 +21,9 @@ func isValidCategoryType(t string) bool {
 }
 
 func ParseCategoryListParams(r *http.Request) *models.CategorySearchParams {
+	_, span := observability.StartDTOSpan(context.Background(), "category", "parse_list_params")
+	defer span.End()
+
 	q := r.URL.Query()
 	params := &models.CategorySearchParams{
 		PageNumber: 1,
@@ -49,6 +54,9 @@ func ParseCategoryListParams(r *http.Request) *models.CategorySearchParams {
 }
 
 func ValidateCreateCategoryRequest(req *models.CreateCategoryRequest) error {
+	_, span := observability.StartDTOSpan(context.Background(), "category", "validate_create")
+	defer span.End()
+
 	if strings.TrimSpace(req.Name) == "" {
 		return entities.ErrNameRequired
 	}
@@ -62,6 +70,9 @@ func ValidateCreateCategoryRequest(req *models.CreateCategoryRequest) error {
 }
 
 func ValidateUpdateCategoryRequest(req *models.UpdateCategoryRequest) error {
+	_, span := observability.StartDTOSpan(context.Background(), "category", "validate_update")
+	defer span.End()
+
 	if req.Name != nil && strings.TrimSpace(*req.Name) == "" {
 		return entities.ErrNameRequired
 	}

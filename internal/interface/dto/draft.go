@@ -1,11 +1,13 @@
 package dto
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 func isValidDraftSource(s string) bool {
@@ -18,6 +20,9 @@ func isValidDraftSource(s string) bool {
 }
 
 func ParseDraftListParams(r *http.Request) *models.DraftSearchParams {
+	_, span := observability.StartDTOSpan(context.Background(), "draft", "parse_list_params")
+	defer span.End()
+
 	q := r.URL.Query()
 	params := &models.DraftSearchParams{
 		PageSize: 10,
@@ -39,6 +44,9 @@ func ParseDraftListParams(r *http.Request) *models.DraftSearchParams {
 }
 
 func ValidateCreateDraftRequest(req *models.CreateDraftRequest) error {
+	_, span := observability.StartDTOSpan(context.Background(), "draft", "validate_create")
+	defer span.End()
+
 	if req.AccountID == "" {
 		return entities.ErrIDRequired
 	}
@@ -82,6 +90,9 @@ func ValidateCreateDraftRequest(req *models.CreateDraftRequest) error {
 }
 
 func ValidateUpdateDraftRequest(req *models.UpdateDraftRequest) error {
+	_, span := observability.StartDTOSpan(context.Background(), "draft", "validate_update")
+	defer span.End()
+
 	if req.TransactionType != nil && !isValidTransactionType(*req.TransactionType) {
 		return entities.ErrInvalidTransactionType
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/internal/interface/dto"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 	"github.com/dimasbaguspm/penster/pkg/response"
 	"github.com/google/uuid"
 )
@@ -34,6 +35,9 @@ func NewDraftHandler(svc *service.DraftService) *DraftHandler {
 // @Failure 500 {object} response.Response
 // @Router /drafts [get]
 func (h *DraftHandler) List(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "List")
+	defer span.End()
+
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -41,7 +45,7 @@ func (h *DraftHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	params := dto.ParseDraftListParams(r)
 
-	drafts, total, err := h.svc.List(r.Context(), params)
+	drafts, total, err := h.svc.List(ctx, params)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -69,6 +73,9 @@ func (h *DraftHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /drafts/{id} [get]
 func (h *DraftHandler) Get(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "Get")
+	defer span.End()
+
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -85,7 +92,7 @@ func (h *DraftHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	draft, err := h.svc.GetByID(r.Context(), id)
+	draft, err := h.svc.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, entities.ErrDraftNotFound) {
 			h.writeError(w, http.StatusNotFound, err.Error())
@@ -115,6 +122,9 @@ func (h *DraftHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /drafts [post]
 func (h *DraftHandler) Create(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "Create")
+	defer span.End()
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -131,7 +141,7 @@ func (h *DraftHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	draft, err := h.svc.Create(r.Context(), &req)
+	draft, err := h.svc.Create(ctx, &req)
 	if err != nil {
 		if errors.Is(err, entities.ErrAccountNotFound) ||
 			errors.Is(err, entities.ErrCategoryNotFound) ||
@@ -161,6 +171,9 @@ func (h *DraftHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /drafts/{id} [patch]
 func (h *DraftHandler) Update(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "Update")
+	defer span.End()
+
 	if r.Method != http.MethodPatch {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -188,7 +201,7 @@ func (h *DraftHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	draft, err := h.svc.Update(r.Context(), id, &req)
+	draft, err := h.svc.Update(ctx, id, &req)
 	if err != nil {
 		if errors.Is(err, entities.ErrDraftNotFound) {
 			h.writeError(w, http.StatusNotFound, err.Error())
@@ -228,6 +241,9 @@ func (h *DraftHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /drafts/{id}/confirm [post]
 func (h *DraftHandler) Confirm(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "Confirm")
+	defer span.End()
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -244,7 +260,7 @@ func (h *DraftHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.svc.Confirm(r.Context(), id)
+	tx, err := h.svc.Confirm(ctx, id)
 	if err != nil {
 		if errors.Is(err, entities.ErrDraftNotFound) {
 			h.writeError(w, http.StatusNotFound, err.Error())
@@ -279,6 +295,9 @@ func (h *DraftHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /drafts/{id}/reject [post]
 func (h *DraftHandler) Reject(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "Reject")
+	defer span.End()
+
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -295,7 +314,7 @@ func (h *DraftHandler) Reject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.svc.Reject(r.Context(), id)
+	err := h.svc.Reject(ctx, id)
 	if err != nil {
 		if errors.Is(err, entities.ErrDraftNotFound) {
 			h.writeError(w, http.StatusNotFound, err.Error())
@@ -325,6 +344,9 @@ func (h *DraftHandler) Reject(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /drafts/{id} [delete]
 func (h *DraftHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "Delete")
+	defer span.End()
+
 	if r.Method != http.MethodDelete {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -341,7 +363,7 @@ func (h *DraftHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.svc.Delete(r.Context(), id)
+	err := h.svc.Delete(ctx, id)
 	if err != nil {
 		if errors.Is(err, entities.ErrDraftNotFound) {
 			h.writeError(w, http.StatusNotFound, err.Error())

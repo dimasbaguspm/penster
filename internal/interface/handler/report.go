@@ -7,6 +7,7 @@ import (
 
 	"github.com/dimasbaguspm/penster/internal/application/service"
 	"github.com/dimasbaguspm/penster/internal/interface/dto"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
@@ -31,13 +32,16 @@ func NewReportHandler(svc *service.ReportService) *ReportHandler {
 // @Failure 500 {object} response.Response
 // @Router /reports/summary [get]
 func (h *ReportHandler) Summary(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Report", "Summary")
+	defer span.End()
+
 	startDate, endDate, err := dto.ParseReportParams(r)
 	if err != nil {
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	summary, err := h.svc.GetSummary(r.Context(), startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	summary, err := h.svc.GetSummary(ctx, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -59,13 +63,16 @@ func (h *ReportHandler) Summary(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /reports/by-account [get]
 func (h *ReportHandler) ByAccount(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Report", "ByAccount")
+	defer span.End()
+
 	startDate, endDate, err := dto.ParseReportParams(r)
 	if err != nil {
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	report, err := h.svc.GetByAccount(r.Context(), startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	report, err := h.svc.GetByAccount(ctx, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -87,13 +94,16 @@ func (h *ReportHandler) ByAccount(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /reports/by-category [get]
 func (h *ReportHandler) ByCategory(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Report", "ByCategory")
+	defer span.End()
+
 	startDate, endDate, err := dto.ParseReportParams(r)
 	if err != nil {
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	report, err := h.svc.GetByCategory(r.Context(), startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	report, err := h.svc.GetByCategory(ctx, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	if err != nil {
 		// Debug: log the actual error
 		h.writeError(w, http.StatusInternalServerError, fmt.Sprintf("ByCategory error: %v", err))
@@ -116,13 +126,16 @@ func (h *ReportHandler) ByCategory(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /reports/trends [get]
 func (h *ReportHandler) Trends(w http.ResponseWriter, r *http.Request) {
+	ctx, span := observability.StartHandlerSpan(r.Context(), "Report", "Trends")
+	defer span.End()
+
 	startDate, endDate, err := dto.ParseReportParams(r)
 	if err != nil {
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	report, err := h.svc.GetTrends(r.Context(), startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	report, err := h.svc.GetTrends(ctx, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return

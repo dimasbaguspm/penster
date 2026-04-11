@@ -1,10 +1,12 @@
 package dto
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"github.com/dimasbaguspm/penster/internal/domain/entities"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 type ReportParams struct {
@@ -13,6 +15,9 @@ type ReportParams struct {
 }
 
 func ParseReportParams(r *http.Request) (startDate, endDate time.Time, err error) {
+	_, span := observability.StartDTOSpan(context.Background(), "report", "parse_params")
+	defer span.End()
+
 	q := r.URL.Query()
 
 	startDateStr := q.Get("start_date")
