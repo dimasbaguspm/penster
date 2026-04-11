@@ -20,7 +20,7 @@ func isValidTransactionType(t string) bool {
 }
 
 func ParseTransactionListParams(r *http.Request) *models.TransactionSearchParams {
-	_, span := observability.StartDTOSpan(context.Background(), "transaction", "parse_list_params")
+	_, span := observability.StartDTOSpan(r.Context(), "transaction", "parse_list_params")
 	defer span.End()
 
 	q := r.URL.Query()
@@ -61,8 +61,8 @@ func ParseTransactionListParams(r *http.Request) *models.TransactionSearchParams
 	return params
 }
 
-func ValidateCreateTransactionRequest(req *models.CreateTransactionRequest) error {
-	_, span := observability.StartDTOSpan(context.Background(), "transaction", "validate_create")
+func ValidateCreateTransactionRequest(ctx context.Context, req *models.CreateTransactionRequest) error {
+	_, span := observability.StartDTOSpan(ctx, "transaction", "validate_create")
 	defer span.End()
 
 	if req.AccountID == "" {
@@ -101,8 +101,8 @@ func ValidateCreateTransactionRequest(req *models.CreateTransactionRequest) erro
 	return nil
 }
 
-func ValidateUpdateTransactionRequest(req *models.UpdateTransactionRequest) error {
-	_, span := observability.StartDTOSpan(context.Background(), "transaction", "validate_update")
+func ValidateUpdateTransactionRequest(ctx context.Context, req *models.UpdateTransactionRequest) error {
+	_, span := observability.StartDTOSpan(ctx, "transaction", "validate_update")
 	defer span.End()
 
 	if req.TransactionType != nil && !isValidTransactionType(string(*req.TransactionType)) {

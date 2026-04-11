@@ -125,7 +125,7 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := dto.ValidateCreateCategoryRequest(&req); err != nil {
+	if err := dto.ValidateCreateCategoryRequest(ctx, &req); err != nil {
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -174,7 +174,7 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := dto.ValidateUpdateCategoryRequest(&req); err != nil {
+	if err := dto.ValidateUpdateCategoryRequest(ctx, &req); err != nil {
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}

@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -15,7 +14,7 @@ type ReportParams struct {
 }
 
 func ParseReportParams(r *http.Request) (startDate, endDate time.Time, err error) {
-	_, span := observability.StartDTOSpan(context.Background(), "report", "parse_params")
+	_, span := observability.StartDTOSpan(r.Context(), "report", "parse_params")
 	defer span.End()
 
 	q := r.URL.Query()

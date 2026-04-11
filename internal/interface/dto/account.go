@@ -52,8 +52,8 @@ func ParseAccountListParams(r *http.Request) *models.AccountSearchParams {
 	return params
 }
 
-func ValidateCreateAccountRequest(req *models.CreateAccountRequest) error {
-	_, span := observability.StartDTOSpan(context.Background(), "account", "validate_create")
+func ValidateCreateAccountRequest(ctx context.Context, req *models.CreateAccountRequest) error {
+	_, span := observability.StartDTOSpan(ctx, "account", "validate_create")
 	defer span.End()
 
 	if req.Name == "" {
@@ -71,8 +71,8 @@ func ValidateCreateAccountRequest(req *models.CreateAccountRequest) error {
 	return nil
 }
 
-func ValidateUpdateAccountRequest(req *models.UpdateAccountRequest) error {
-	_, span := observability.StartDTOSpan(context.Background(), "account", "validate_update")
+func ValidateUpdateAccountRequest(ctx context.Context, req *models.UpdateAccountRequest) error {
+	_, span := observability.StartDTOSpan(ctx, "account", "validate_update")
 	defer span.End()
 
 	if req.Type != nil && !isValidAccountType(string(*req.Type)) {

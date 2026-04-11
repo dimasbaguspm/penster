@@ -20,7 +20,7 @@ func isValidDraftSource(s string) bool {
 }
 
 func ParseDraftListParams(r *http.Request) *models.DraftSearchParams {
-	_, span := observability.StartDTOSpan(context.Background(), "draft", "parse_list_params")
+	_, span := observability.StartDTOSpan(r.Context(), "draft", "parse_list_params")
 	defer span.End()
 
 	q := r.URL.Query()
@@ -43,8 +43,8 @@ func ParseDraftListParams(r *http.Request) *models.DraftSearchParams {
 	return params
 }
 
-func ValidateCreateDraftRequest(req *models.CreateDraftRequest) error {
-	_, span := observability.StartDTOSpan(context.Background(), "draft", "validate_create")
+func ValidateCreateDraftRequest(ctx context.Context, req *models.CreateDraftRequest) error {
+	_, span := observability.StartDTOSpan(ctx, "draft", "validate_create")
 	defer span.End()
 
 	if req.AccountID == "" {
@@ -89,8 +89,8 @@ func ValidateCreateDraftRequest(req *models.CreateDraftRequest) error {
 	return nil
 }
 
-func ValidateUpdateDraftRequest(req *models.UpdateDraftRequest) error {
-	_, span := observability.StartDTOSpan(context.Background(), "draft", "validate_update")
+func ValidateUpdateDraftRequest(ctx context.Context, req *models.UpdateDraftRequest) error {
+	_, span := observability.StartDTOSpan(ctx, "draft", "validate_update")
 	defer span.End()
 
 	if req.TransactionType != nil && !isValidTransactionType(*req.TransactionType) {

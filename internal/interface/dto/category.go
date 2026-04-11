@@ -21,7 +21,7 @@ func isValidCategoryType(t string) bool {
 }
 
 func ParseCategoryListParams(r *http.Request) *models.CategorySearchParams {
-	_, span := observability.StartDTOSpan(context.Background(), "category", "parse_list_params")
+	_, span := observability.StartDTOSpan(r.Context(), "category", "parse_list_params")
 	defer span.End()
 
 	q := r.URL.Query()
@@ -53,8 +53,8 @@ func ParseCategoryListParams(r *http.Request) *models.CategorySearchParams {
 	return params
 }
 
-func ValidateCreateCategoryRequest(req *models.CreateCategoryRequest) error {
-	_, span := observability.StartDTOSpan(context.Background(), "category", "validate_create")
+func ValidateCreateCategoryRequest(ctx context.Context, req *models.CreateCategoryRequest) error {
+	_, span := observability.StartDTOSpan(ctx, "category", "validate_create")
 	defer span.End()
 
 	if strings.TrimSpace(req.Name) == "" {
@@ -69,8 +69,8 @@ func ValidateCreateCategoryRequest(req *models.CreateCategoryRequest) error {
 	return nil
 }
 
-func ValidateUpdateCategoryRequest(req *models.UpdateCategoryRequest) error {
-	_, span := observability.StartDTOSpan(context.Background(), "category", "validate_update")
+func ValidateUpdateCategoryRequest(ctx context.Context, req *models.UpdateCategoryRequest) error {
+	_, span := observability.StartDTOSpan(ctx, "category", "validate_update")
 	defer span.End()
 
 	if req.Name != nil && strings.TrimSpace(*req.Name) == "" {

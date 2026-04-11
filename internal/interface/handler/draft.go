@@ -136,7 +136,7 @@ func (h *DraftHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := dto.ValidateCreateDraftRequest(&req); err != nil {
+	if err := dto.ValidateCreateDraftRequest(ctx, &req); err != nil {
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -196,7 +196,7 @@ func (h *DraftHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := dto.ValidateUpdateDraftRequest(&req); err != nil {
+	if err := dto.ValidateUpdateDraftRequest(ctx, &req); err != nil {
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}

@@ -125,7 +125,7 @@ func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := dto.ValidateCreateAccountRequest(&req); err != nil {
+	if err := dto.ValidateCreateAccountRequest(ctx, &req); err != nil {
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -174,7 +174,7 @@ func (h *AccountHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := dto.ValidateUpdateAccountRequest(&req); err != nil {
+	if err := dto.ValidateUpdateAccountRequest(ctx, &req); err != nil {
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}

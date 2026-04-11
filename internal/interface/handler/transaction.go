@@ -131,7 +131,7 @@ func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := dto.ValidateCreateTransactionRequest(&req); err != nil {
+	if err := dto.ValidateCreateTransactionRequest(ctx, &req); err != nil {
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -187,7 +187,7 @@ func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := dto.ValidateUpdateTransactionRequest(&req); err != nil {
+	if err := dto.ValidateUpdateTransactionRequest(ctx, &req); err != nil {
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
