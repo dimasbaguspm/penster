@@ -13,6 +13,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/application/service"
 	"github.com/dimasbaguspm/penster/internal/scheduler"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 type RateCurrencyJob struct {
@@ -37,10 +38,14 @@ func (j *RateCurrencyJob) Schedule() scheduler.Schedule {
 }
 
 func (j *RateCurrencyJob) Run(ctx context.Context) error {
+	ctx, span := observability.StartJobSpan(ctx, "rate_currency")
+	defer span.End()
+
 	log.Println("Running rate_currency job - fetching ECB rates")
 
 	rates, err := fetchECBRates(ctx, j.cfg.RateCurrency.ECBURL)
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return fmt.Errorf("failed to fetch ECB rates: %w", err)
 	}
 
@@ -98,6 +103,9 @@ type ecbRate struct {
 }
 
 func fetchECBRates(ctx context.Context, url string) (map[string]float64, error) {
+	ctx, span := observability.StartJobSpan(ctx, "fetch_ecb_rates")
+	defer span.End()
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
