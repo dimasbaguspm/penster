@@ -1,22 +1,28 @@
 package valueobjects
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 // ToCreateDraftParams converts CreateDraftRequest with translated IDs to query params
 func ToCreateDraftParams(
+	ctx context.Context,
 	accountID int32,
 	transferAccountID pgtype.Int4,
 	categoryID int32,
 	currencyRate float64,
 	req *models.CreateDraftRequest,
 ) (query.CreateDraftParams, error) {
+	ctx, span := observability.StartValueObjectSpan(ctx, "draft", "to_create_params")
+	defer span.End()
+
 	enhancedAmountInt := req.Amount * int64(currencyRate)
 	var currencyRateNumeric pgtype.Numeric
 	if err := currencyRateNumeric.Scan(fmt.Sprintf("%.6f", currencyRate)); err != nil {
@@ -41,12 +47,16 @@ func ToCreateDraftParams(
 
 // ToUpdateDraftParams converts UpdateDraftRequest with translated IDs to query params
 func ToUpdateDraftParams(
+	ctx context.Context,
 	accountID int32,
 	transferAccountID pgtype.Int4,
 	categoryID int32,
 	currencyRate float64,
 	req *models.UpdateDraftRequest,
 ) query.UpdateDraftParams {
+	ctx, span := observability.StartValueObjectSpan(ctx, "draft", "to_update_params")
+	defer span.End()
+
 	var enhancedAmount pgtype.Int8
 	if req.Amount != nil && currencyRate > 0 {
 		enhancedAmountInt := *req.Amount * int64(currencyRate)
@@ -100,10 +110,13 @@ func ToUpdateDraftParams(
 }
 
 // ToListDraftsParams converts DraftSearchParams to query params
-func ToListDraftsParams(params *models.DraftSearchParams) query.ListDraftsParams {
+func ToListDraftsParams(ctx context.Context, params *models.DraftSearchParams) query.ListDraftsParams {
+	ctx, span := observability.StartValueObjectSpan(ctx, "draft", "to_list_params")
+	defer span.End()
+
 	queryParams := query.ListDraftsParams{
-		Column1: "",
-		Column2: "",
+		Column1:  "",
+		Column2:  "",
 		PageSize: params.PageSize,
 	}
 
