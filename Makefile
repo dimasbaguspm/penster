@@ -1,15 +1,19 @@
-.PHONY: init dev-backend dev-reset swag test
+.PHONY: init vet build test swag sql dev-backend dev-reset
 
 init:
 	go install github.com/swaggo/swag/cmd/swag@latest
 	go mod tidy
 	go mod download
 
-dev-backend:
-	docker compose -f infra/docker-compose.local.yml up --build
+vet:
+	go vet ./...
 
-dev-reset:
-	docker compose -f infra/docker-compose.local.yml down -v
+build:
+	go build -o bin/penster ./cmd/server
+
+test:
+	go build -o bin/penster_test ./cmd/server
+	go test -v ./tests/...
 
 swag:
 	swag init -g ./cmd/server/main.go -o ./docs --packageName docs --quiet
@@ -17,6 +21,8 @@ swag:
 sql:
 	sqlc generate
 
-test:
-	go build -o bin/penster_test ./cmd/server
-	go test -v ./tests/...
+dev-backend:
+	docker compose -f infra/docker-compose.local.yml up --build
+
+dev-reset:
+	docker compose -f infra/docker-compose.local.yml down -v
