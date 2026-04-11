@@ -31,7 +31,7 @@ jobs:
       - name: Determine release type and tag
         id: release-info
         run: |
-          if [[ "${{ github.event_name }}" == "release" ]] && ${{ github.event.release.prerelease }}; then
+          if [[ "${{ github.event_name }}" == "release" ]] && [[ "${{ fromJSON(github.event.release.prerelease || 'false') }}" == "true" ]]; then
             echo "tag=nightly" >> $GITHUB_OUTPUT
           else
             VERSION="${GITHUB_REF#refs/tags/v}"
