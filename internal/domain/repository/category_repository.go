@@ -8,7 +8,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/models"
@@ -23,19 +22,16 @@ func NewCategoryRepository(db *query.Queries) *CategoryRepository {
 	return &CategoryRepository{db: db}
 }
 
-func (r *CategoryRepository) Create(ctx context.Context, req *models.CreateCategoryRequest) (*models.Category, error) {
+func (r *CategoryRepository) Create(ctx context.Context, params query.CreateCategoryParams) (*models.Category, error) {
 	ctx, span := observability.StartRepoSpan(ctx, "categories", "Create")
 	defer span.End()
 
-	result, err := r.db.CreateCategory(ctx, query.CreateCategoryParams{
-		Name: req.Name,
-		Type: string(req.Type),
-	})
+	result, err := r.db.CreateCategory(ctx, params)
 	if err != nil {
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toCategoryModel(result), nil
+	return toCategoryModel(ctx, result), nil
 }
 
 func (r *CategoryRepository) GetByID(ctx context.Context, id int32) (*models.Category, error) {
@@ -50,7 +46,7 @@ func (r *CategoryRepository) GetByID(ctx context.Context, id int32) (*models.Cat
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toCategoryModel(result), nil
+	return toCategoryModel(ctx, result), nil
 }
 
 func (r *CategoryRepository) GetBySubID(ctx context.Context, subID string) (*models.Category, error) {
@@ -66,7 +62,7 @@ func (r *CategoryRepository) GetBySubID(ctx context.Context, subID string) (*mod
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toCategoryModel(result), nil
+	return toCategoryModel(ctx, result), nil
 }
 
 func (r *CategoryRepository) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
@@ -85,7 +81,7 @@ func (r *CategoryRepository) GetIDBySubID(ctx context.Context, subID string) (in
 	return result.ID, nil
 }
 
-func (r *CategoryRepository) UpdateBySubID(ctx context.Context, subID string, req *models.UpdateCategoryRequest) (*models.Category, error) {
+func (r *CategoryRepository) UpdateBySubID(ctx context.Context, subID string, params query.UpdateCategoryParams) (*models.Category, error) {
 	ctx, span := observability.StartRepoSpan(ctx, "categories", "UpdateBySubID")
 	defer span.End()
 
@@ -96,7 +92,7 @@ func (r *CategoryRepository) UpdateBySubID(ctx context.Context, subID string, re
 	if id == 0 {
 		return nil, nil
 	}
-	return r.Update(ctx, id, req)
+	return r.Update(ctx, id, params)
 }
 
 func (r *CategoryRepository) DeleteBySubID(ctx context.Context, subID string) (*models.Category, error) {
@@ -113,12 +109,11 @@ func (r *CategoryRepository) DeleteBySubID(ctx context.Context, subID string) (*
 	return r.Delete(ctx, id)
 }
 
-func (r *CategoryRepository) List(ctx context.Context, params *models.CategorySearchParams) ([]*models.Category, int64, error) {
+func (r *CategoryRepository) List(ctx context.Context, params query.ListCategoriesParams) ([]*models.Category, int64, error) {
 	ctx, span := observability.StartRepoSpan(ctx, "categories", "List")
 	defer span.End()
 
-	queryParams := entities.ToListCategoriesParams(params)
-	rows, err := r.db.ListCategories(ctx, queryParams)
+	rows, err := r.db.ListCategories(ctx, params)
 	if err != nil {
 		observability.RecordError(ctx, err)
 		return nil, 0, err
@@ -127,7 +122,7 @@ func (r *CategoryRepository) List(ctx context.Context, params *models.CategorySe
 	categories := make([]*models.Category, 0, len(rows))
 	var total int64
 	for _, row := range rows {
-		categories = append(categories, toCategoryModel(query.Category{
+		categories = append(categories, toCategoryModel(ctx, query.Category{
 			ID:        row.ID,
 			SubID:     row.SubID,
 			Name:      row.Name,
@@ -142,22 +137,13 @@ func (r *CategoryRepository) List(ctx context.Context, params *models.CategorySe
 	return categories, total, nil
 }
 
-func (r *CategoryRepository) Update(ctx context.Context, id int32, req *models.UpdateCategoryRequest) (*models.Category, error) {
+func (r *CategoryRepository) Update(ctx context.Context, id int32, params query.UpdateCategoryParams) (*models.Category, error) {
 	ctx, span := observability.StartRepoSpan(ctx, "categories", "Update")
 	defer span.End()
 
-	name := ""
-	if req.Name != nil {
-		name = *req.Name
-	}
-	catType := ""
-	if req.Type != nil {
-		catType = string(*req.Type)
-	}
-
 	result, err := r.db.UpdateCategory(ctx, query.UpdateCategoryParams{
-		Name: name,
-		Type: catType,
+		Name: params.Name,
+		Type: params.Type,
 		ID:   id,
 	})
 	if err != nil {
@@ -167,7 +153,7 @@ func (r *CategoryRepository) Update(ctx context.Context, id int32, req *models.U
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toCategoryModel(result), nil
+	return toCategoryModel(ctx, result), nil
 }
 
 func (r *CategoryRepository) Delete(ctx context.Context, id int32) (*models.Category, error) {
@@ -182,10 +168,13 @@ func (r *CategoryRepository) Delete(ctx context.Context, id int32) (*models.Cate
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toCategoryModel(result), nil
+	return toCategoryModel(ctx, result), nil
 }
 
-func toCategoryModel(q query.Category) *models.Category {
+func toCategoryModel(ctx context.Context, q query.Category) *models.Category {
+	_, span := observability.StartRepoSpan(ctx, "categories", "to_model")
+	defer span.End()
+
 	m := &models.Category{
 		SubID:     uuid.UUID(q.SubID.Bytes).String(),
 		Name:      q.Name,

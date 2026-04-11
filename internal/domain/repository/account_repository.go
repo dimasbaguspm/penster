@@ -8,7 +8,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/dimasbaguspm/penster/internal/domain/entities"
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/conv"
 	"github.com/dimasbaguspm/penster/pkg/models"
@@ -23,20 +22,16 @@ func NewAccountRepository(db *query.Queries) *AccountRepository {
 	return &AccountRepository{db: db}
 }
 
-func (r *AccountRepository) Create(ctx context.Context, req *models.CreateAccountRequest) (*models.Account, error) {
+func (r *AccountRepository) Create(ctx context.Context, params query.CreateAccountParams) (*models.Account, error) {
 	ctx, span := observability.StartRepoSpan(ctx, "accounts", "Create")
 	defer span.End()
 
-	result, err := r.db.CreateAccount(ctx, query.CreateAccountParams{
-		Name:    req.Name,
-		Type:    string(req.Type),
-		Balance: req.Balance,
-	})
+	result, err := r.db.CreateAccount(ctx, params)
 	if err != nil {
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toAccountModel(result), nil
+	return toAccountModel(ctx, result), nil
 }
 
 func (r *AccountRepository) GetByID(ctx context.Context, id int32) (*models.Account, error) {
@@ -51,7 +46,7 @@ func (r *AccountRepository) GetByID(ctx context.Context, id int32) (*models.Acco
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toAccountModel(result), nil
+	return toAccountModel(ctx, result), nil
 }
 
 func (r *AccountRepository) GetBySubID(ctx context.Context, subID string) (*models.Account, error) {
@@ -67,7 +62,7 @@ func (r *AccountRepository) GetBySubID(ctx context.Context, subID string) (*mode
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toAccountModel(result), nil
+	return toAccountModel(ctx, result), nil
 }
 
 func (r *AccountRepository) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
@@ -86,7 +81,7 @@ func (r *AccountRepository) GetIDBySubID(ctx context.Context, subID string) (int
 	return result.ID, nil
 }
 
-func (r *AccountRepository) UpdateBySubID(ctx context.Context, subID string, req *models.UpdateAccountRequest) (*models.Account, error) {
+func (r *AccountRepository) UpdateBySubID(ctx context.Context, subID string, params query.UpdateAccountParams) (*models.Account, error) {
 	ctx, span := observability.StartRepoSpan(ctx, "accounts", "UpdateBySubID")
 	defer span.End()
 
@@ -97,7 +92,7 @@ func (r *AccountRepository) UpdateBySubID(ctx context.Context, subID string, req
 	if id == 0 {
 		return nil, nil
 	}
-	return r.Update(ctx, id, req)
+	return r.Update(ctx, id, params)
 }
 
 func (r *AccountRepository) DeleteBySubID(ctx context.Context, subID string) (*models.Account, error) {
@@ -114,12 +109,11 @@ func (r *AccountRepository) DeleteBySubID(ctx context.Context, subID string) (*m
 	return r.Delete(ctx, id)
 }
 
-func (r *AccountRepository) List(ctx context.Context, params *models.AccountSearchParams) ([]*models.Account, int64, error) {
+func (r *AccountRepository) List(ctx context.Context, params query.ListAccountsParams) ([]*models.Account, int64, error) {
 	ctx, span := observability.StartRepoSpan(ctx, "accounts", "List")
 	defer span.End()
 
-	queryParams := entities.ToListAccountsParams(params)
-	rows, err := r.db.ListAccounts(ctx, queryParams)
+	rows, err := r.db.ListAccounts(ctx, params)
 	if err != nil {
 		observability.RecordError(ctx, err)
 		return nil, 0, err
@@ -128,7 +122,7 @@ func (r *AccountRepository) List(ctx context.Context, params *models.AccountSear
 	accounts := make([]*models.Account, 0, len(rows))
 	var total int64
 	for _, row := range rows {
-		accounts = append(accounts, toAccountModel(query.Account{
+		accounts = append(accounts, toAccountModel(ctx, query.Account{
 			ID:        row.ID,
 			SubID:     row.SubID,
 			Name:      row.Name,
@@ -144,27 +138,14 @@ func (r *AccountRepository) List(ctx context.Context, params *models.AccountSear
 	return accounts, total, nil
 }
 
-func (r *AccountRepository) Update(ctx context.Context, id int32, req *models.UpdateAccountRequest) (*models.Account, error) {
+func (r *AccountRepository) Update(ctx context.Context, id int32, params query.UpdateAccountParams) (*models.Account, error) {
 	ctx, span := observability.StartRepoSpan(ctx, "accounts", "Update")
 	defer span.End()
 
-	name := ""
-	if req.Name != nil {
-		name = *req.Name
-	}
-	accType := ""
-	if req.Type != nil {
-		accType = string(*req.Type)
-	}
-	balance := int64(0)
-	if req.Balance != nil {
-		balance = *req.Balance
-	}
-
 	result, err := r.db.UpdateAccount(ctx, query.UpdateAccountParams{
-		Name:    name,
-		Type:    accType,
-		Balance: balance,
+		Name:    params.Name,
+		Type:    params.Type,
+		Balance: params.Balance,
 		ID:      id,
 	})
 	if err != nil {
@@ -174,7 +155,7 @@ func (r *AccountRepository) Update(ctx context.Context, id int32, req *models.Up
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toAccountModel(result), nil
+	return toAccountModel(ctx, result), nil
 }
 
 func (r *AccountRepository) Delete(ctx context.Context, id int32) (*models.Account, error) {
@@ -189,7 +170,7 @@ func (r *AccountRepository) Delete(ctx context.Context, id int32) (*models.Accou
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toAccountModel(result), nil
+	return toAccountModel(ctx, result), nil
 }
 
 func (r *AccountRepository) UpdateBalanceByID(ctx context.Context, id int32, newBalance int64) (*models.Account, error) {
@@ -207,10 +188,13 @@ func (r *AccountRepository) UpdateBalanceByID(ctx context.Context, id int32, new
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toAccountModel(result), nil
+	return toAccountModel(ctx, result), nil
 }
 
-func toAccountModel(q query.Account) *models.Account {
+func toAccountModel(ctx context.Context, q query.Account) *models.Account {
+	_, span := observability.StartRepoSpan(ctx, "accounts", "to_model")
+	defer span.End()
+
 	m := &models.Account{
 		SubID:     uuid.UUID(q.SubID.Bytes).String(),
 		Name:      q.Name,
