@@ -45,7 +45,7 @@ func (r *TransactionRepository) GetByID(ctx context.Context, id int32) (*models.
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toTransactionModelWithRelations(result), nil
+	return toTransactionModelWithRelations(ctx, result), nil
 }
 
 func (r *TransactionRepository) GetBySubID(ctx context.Context, subID string) (*models.Transaction, error) {
@@ -61,7 +61,7 @@ func (r *TransactionRepository) GetBySubID(ctx context.Context, subID string) (*
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toTransactionModelWithRelations(result), nil
+	return toTransactionModelWithRelations(ctx, result), nil
 }
 
 func (r *TransactionRepository) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
@@ -127,7 +127,7 @@ func (r *TransactionRepository) List(ctx context.Context, params query.ListTrans
 	transactions := make([]*models.Transaction, 0, len(rows))
 	var total int64
 	for _, row := range rows {
-		transactions = append(transactions, toTransactionModelWithRelations(row))
+		transactions = append(transactions, toTransactionModelWithRelations(ctx, row))
 		total = row.Total
 	}
 
@@ -171,7 +171,10 @@ func (r *TransactionRepository) Delete(ctx context.Context, id int32) (*models.T
 	return tx, nil
 }
 
-func toTransactionModelWithRelations(q interface{}) *models.Transaction {
+func toTransactionModelWithRelations(ctx context.Context, q interface{}) *models.Transaction {
+	_, span := observability.StartRepoSpan(ctx, "transactions", "to_model_with_relations")
+	defer span.End()
+
 	var (
 		subID                pgtype.UUID
 		accountSubID         pgtype.UUID

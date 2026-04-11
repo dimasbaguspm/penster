@@ -46,7 +46,7 @@ func (r *DraftRepository) GetByID(ctx context.Context, id int32) (*models.Draft,
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toDraftModelWithRelations(result), nil
+	return toDraftModelWithRelations(ctx, result), nil
 }
 
 func (r *DraftRepository) GetBySubID(ctx context.Context, subID string) (*models.Draft, error) {
@@ -62,7 +62,7 @@ func (r *DraftRepository) GetBySubID(ctx context.Context, subID string) (*models
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toDraftModelWithRelations(result), nil
+	return toDraftModelWithRelations(ctx, result), nil
 }
 
 func (r *DraftRepository) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
@@ -133,7 +133,7 @@ func (r *DraftRepository) List(ctx context.Context, params query.ListDraftsParam
 	drafts := make([]*models.Draft, 0, len(rows))
 	var total int64
 	for _, row := range rows {
-		drafts = append(drafts, toDraftModelWithRelations(row))
+		drafts = append(drafts, toDraftModelWithRelations(ctx, row))
 		total = row.Total
 	}
 
@@ -151,7 +151,10 @@ func (r *DraftRepository) SoftDelete(ctx context.Context, subID string) error {
 	return err
 }
 
-func toDraftModelWithRelations(q interface{}) *models.Draft {
+func toDraftModelWithRelations(ctx context.Context, q interface{}) *models.Draft {
+	_, span := observability.StartRepoSpan(ctx, "drafts", "to_model_with_relations")
+	defer span.End()
+
 	var (
 		subID                pgtype.UUID
 		accountSubID         pgtype.UUID

@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/pkg/models"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 type RateCurrencyRepository struct {
@@ -21,25 +21,22 @@ func NewRateCurrencyRepository(db *query.Queries) *RateCurrencyRepository {
 	return &RateCurrencyRepository{db: db}
 }
 
-func (r *RateCurrencyRepository) Upsert(ctx context.Context, req *models.UpsertRateCurrencyRequest) (*models.RateCurrency, error) {
-	var rateNumeric pgtype.Numeric
-	if err := rateNumeric.Scan(fmt.Sprintf("%.6f", req.Rate)); err != nil {
-		return nil, err
-	}
+func (r *RateCurrencyRepository) Upsert(ctx context.Context, params query.UpsertRateCurrencyParams) (*models.RateCurrency, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "rate_currencies", "Upsert")
+	defer span.End()
 
-	result, err := r.db.UpsertRateCurrency(ctx, query.UpsertRateCurrencyParams{
-		FromCurrency: req.FromCurrency,
-		ToCurrency:   req.ToCurrency,
-		Rate:         rateNumeric,
-		RateDate:     pgtype.Date{Time: req.RateDate, Valid: true},
-	})
+	result, err := r.db.UpsertRateCurrency(ctx, params)
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toRateCurrencyModel(result), nil
+	return toRateCurrencyModel(ctx, result), nil
 }
 
 func (r *RateCurrencyRepository) Get(ctx context.Context, from, to string, date time.Time) (*models.RateCurrency, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "rate_currencies", "Get")
+	defer span.End()
+
 	result, err := r.db.GetRateCurrency(ctx, query.GetRateCurrencyParams{
 		FromCurrency: from,
 		ToCurrency:   to,
@@ -49,40 +46,33 @@ func (r *RateCurrencyRepository) Get(ctx context.Context, from, to string, date 
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
-	return toRateCurrencyModel(result), nil
+	return toRateCurrencyModel(ctx, result), nil
 }
 
-func (r *RateCurrencyRepository) List(ctx context.Context, params *models.RateCurrencySearchParams) ([]*models.RateCurrency, int64, error) {
-	var fromCurrency, toCurrency string
-	if params.FromCurrency != nil {
-		fromCurrency = *params.FromCurrency
-	}
-	if params.ToCurrency != nil {
-		toCurrency = *params.ToCurrency
-	}
+func (r *RateCurrencyRepository) List(ctx context.Context, params query.ListRateCurrenciesParams) ([]*models.RateCurrency, int64, error) {
+	ctx, span := observability.StartRepoSpan(ctx, "rate_currencies", "List")
+	defer span.End()
 
-	rows, err := r.db.ListRateCurrencies(ctx, query.ListRateCurrenciesParams{
-		Column1: fromCurrency,
-		Column2: toCurrency,
-		Column3: params.PageSize,
-		Offset:  int32(params.Offset()),
-	})
+	rows, err := r.db.ListRateCurrencies(ctx, params)
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, 0, err
 	}
 
 	currencies := make([]*models.RateCurrency, 0, len(rows))
 	for _, row := range rows {
-		currencies = append(currencies, toRateCurrencyModel(row))
+		currencies = append(currencies, toRateCurrencyModel(ctx, row))
 	}
 
 	total, err := r.db.CountRateCurrencies(ctx, query.CountRateCurrenciesParams{
-		FromCurrency: fromCurrency,
-		ToCurrency:   toCurrency,
+		FromCurrency: params.Column1,
+		ToCurrency:   params.Column2,
 	})
 	if err != nil {
+		observability.RecordError(ctx, err)
 		return nil, 0, err
 	}
 
@@ -90,10 +80,21 @@ func (r *RateCurrencyRepository) List(ctx context.Context, params *models.RateCu
 }
 
 func (r *RateCurrencyRepository) Prune(ctx context.Context, olderThan time.Time) error {
-	return r.db.PruneOldRates(ctx, pgtype.Date{Time: olderThan, Valid: true})
+	ctx, span := observability.StartRepoSpan(ctx, "rate_currencies", "Prune")
+	defer span.End()
+
+	err := r.db.PruneOldRates(ctx, pgtype.Date{Time: olderThan, Valid: true})
+	if err != nil {
+		observability.RecordError(ctx, err)
+		return err
+	}
+	return nil
 }
 
-func toRateCurrencyModel(q query.RateCurrency) *models.RateCurrency {
+func toRateCurrencyModel(ctx context.Context, q query.RateCurrency) *models.RateCurrency {
+	_, span := observability.StartRepoSpan(ctx, "rate_currencies", "to_model")
+	defer span.End()
+
 	m := &models.RateCurrency{
 		FromCurrency: q.FromCurrency,
 		ToCurrency:   q.ToCurrency,
