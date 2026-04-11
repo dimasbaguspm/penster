@@ -33,9 +33,11 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "release" ]] && [[ "${{ fromJSON(github.event.release.prerelease || 'false') }}" == "true" ]]; then
             echo "tag=nightly" >> $GITHUB_OUTPUT
-          else
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF#refs/tags/v}"
             echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "tag=nightly" >> $GITHUB_OUTPUT
           fi
 
       - name: Extract Go version
