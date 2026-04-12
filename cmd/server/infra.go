@@ -20,7 +20,7 @@ type Infra struct {
 }
 
 func NewInfra(ctx context.Context, cfg *config.Config) *Infra {
-	log := observability.NewLogger(ctx, "infra", "core")
+	log := observability.NewLogger(ctx, "core", "infra")
 	ctx, span := observability.StartServiceSpan(log.Context(), "core", "NewInfra")
 	defer span.End()
 

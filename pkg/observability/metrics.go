@@ -17,6 +17,42 @@ import (
 
 var meter metric.Meter
 
+// Metric instruments organized by category
+var (
+	// Business metrics - transaction operations
+	TransactionsCreated metric.Int64Counter
+	TransactionsUpdated metric.Int64Counter
+	TransactionsDeleted metric.Int64Counter
+	DraftsConfirmed     metric.Int64Counter
+	DraftsRejected      metric.Int64Counter
+
+	// Business metrics - account operations
+	AccountsCreated metric.Int64Counter
+	AccountsUpdated metric.Int64Counter
+	AccountsDeleted metric.Int64Counter
+
+	// Business metrics - category operations
+	CategoriesCreated metric.Int64Counter
+	CategoriesUpdated metric.Int64Counter
+	CategoriesDeleted metric.Int64Counter
+
+	// Infrastructure metrics - database
+	DBPoolConnectionsActive metric.Int64ObservableGauge
+	DBPoolConnectionsIdle   metric.Int64ObservableGauge
+	DBPoolConnectionsUsed   metric.Int64ObservableGauge
+	DBQueryDuration         metric.Float64Histogram
+
+	// Infrastructure metrics - scheduler
+	SchedulerJobsExecuted metric.Int64Counter
+	SchedulerJobsFailed   metric.Int64Counter
+	SchedulerJobDuration  metric.Float64Histogram
+
+	// Traffic metrics - HTTP
+	HTTPRequestsTotal   metric.Int64Counter
+	HTTPRequestDuration metric.Float64Histogram
+	HTTPPanicCount      metric.Int64Counter
+)
+
 // InitMeter initializes the OTEL meter with OTLP exporter to Mimir.
 func InitMeter(ctx context.Context, cfg *config.Config) func(context.Context) error {
 	if !cfg.Observability.Enabled {
@@ -53,6 +89,10 @@ func InitMeter(ctx context.Context, cfg *config.Config) func(context.Context) er
 	otel.SetMeterProvider(provider)
 	meter = provider.Meter("penster")
 
+	if err := registerMetrics(meter); err != nil {
+		slog.Error(fmt.Sprintf("failed to register metrics: %v", err))
+	}
+
 	slog.Info("metrics initialized", "endpoint", cfg.Observability.MetricsEndpoint)
 
 	return func(ctx context.Context) error {
@@ -67,4 +107,148 @@ func InitMeter(ctx context.Context, cfg *config.Config) func(context.Context) er
 // Meter returns the global meter instance.
 func Meter() metric.Meter {
 	return meter
+}
+
+// registerMetrics creates and registers all metric instruments.
+func registerMetrics(m metric.Meter) error {
+	// Business metrics - transactions
+	var err error
+	TransactionsCreated, err = m.Int64Counter("penster_transactions_created",
+		metric.WithDescription("Total number of transactions created"),
+		metric.WithUnit("{transaction}"))
+	if err != nil {
+		return fmt.Errorf("failed to create transactions_created counter: %w", err)
+	}
+	TransactionsUpdated, err = m.Int64Counter("penster_transactions_updated",
+		metric.WithDescription("Total number of transactions updated"),
+		metric.WithUnit("{transaction}"))
+	if err != nil {
+		return fmt.Errorf("failed to create transactions_updated counter: %w", err)
+	}
+	TransactionsDeleted, err = m.Int64Counter("penster_transactions_deleted",
+		metric.WithDescription("Total number of transactions deleted"),
+		metric.WithUnit("{transaction}"))
+	if err != nil {
+		return fmt.Errorf("failed to create transactions_deleted counter: %w", err)
+	}
+	DraftsConfirmed, err = m.Int64Counter("penster_drafts_confirmed",
+		metric.WithDescription("Total number of drafts confirmed"),
+		metric.WithUnit("{draft}"))
+	if err != nil {
+		return fmt.Errorf("failed to create drafts_confirmed counter: %w", err)
+	}
+	DraftsRejected, err = m.Int64Counter("penster_drafts_rejected",
+		metric.WithDescription("Total number of drafts rejected"),
+		metric.WithUnit("{draft}"))
+	if err != nil {
+		return fmt.Errorf("failed to create drafts_rejected counter: %w", err)
+	}
+
+	// Business metrics - accounts
+	AccountsCreated, err = m.Int64Counter("penster_accounts_created",
+		metric.WithDescription("Total number of accounts created"),
+		metric.WithUnit("{account}"))
+	if err != nil {
+		return fmt.Errorf("failed to create accounts_created counter: %w", err)
+	}
+	AccountsUpdated, err = m.Int64Counter("penster_accounts_updated",
+		metric.WithDescription("Total number of accounts updated"),
+		metric.WithUnit("{account}"))
+	if err != nil {
+		return fmt.Errorf("failed to create accounts_updated counter: %w", err)
+	}
+	AccountsDeleted, err = m.Int64Counter("penster_accounts_deleted",
+		metric.WithDescription("Total number of accounts deleted"),
+		metric.WithUnit("{account}"))
+	if err != nil {
+		return fmt.Errorf("failed to create accounts_deleted counter: %w", err)
+	}
+
+	// Business metrics - categories
+	CategoriesCreated, err = m.Int64Counter("penster_categories_created",
+		metric.WithDescription("Total number of categories created"),
+		metric.WithUnit("{category}"))
+	if err != nil {
+		return fmt.Errorf("failed to create categories_created counter: %w", err)
+	}
+	CategoriesUpdated, err = m.Int64Counter("penster_categories_updated",
+		metric.WithDescription("Total number of categories updated"),
+		metric.WithUnit("{category}"))
+	if err != nil {
+		return fmt.Errorf("failed to create categories_updated counter: %w", err)
+	}
+	CategoriesDeleted, err = m.Int64Counter("penster_categories_deleted",
+		metric.WithDescription("Total number of categories deleted"),
+		metric.WithUnit("{category}"))
+	if err != nil {
+		return fmt.Errorf("failed to create categories_deleted counter: %w", err)
+	}
+
+	// Infrastructure metrics - database
+	DBPoolConnectionsActive, err = m.Int64ObservableGauge("penster_db_pool_connections_active",
+		metric.WithDescription("Number of active connections in the pool"),
+		metric.WithUnit("{connection}"))
+	if err != nil {
+		return fmt.Errorf("failed to create db_pool_connections_active gauge: %w", err)
+	}
+	DBPoolConnectionsIdle, err = m.Int64ObservableGauge("penster_db_pool_connections_idle",
+		metric.WithDescription("Number of idle connections in the pool"),
+		metric.WithUnit("{connection}"))
+	if err != nil {
+		return fmt.Errorf("failed to create db_pool_connections_idle gauge: %w", err)
+	}
+	DBPoolConnectionsUsed, err = m.Int64ObservableGauge("penster_db_pool_connections_used",
+		metric.WithDescription("Number of used connections in the pool"),
+		metric.WithUnit("{connection}"))
+	if err != nil {
+		return fmt.Errorf("failed to create db_pool_connections_used gauge: %w", err)
+	}
+	DBQueryDuration, err = m.Float64Histogram("penster_db_query_duration",
+		metric.WithDescription("Duration of database queries"),
+		metric.WithUnit("ms"))
+	if err != nil {
+		return fmt.Errorf("failed to create db_query_duration histogram: %w", err)
+	}
+
+	// Infrastructure metrics - scheduler
+	SchedulerJobsExecuted, err = m.Int64Counter("penster_scheduler_jobs_executed",
+		metric.WithDescription("Total number of scheduler jobs executed"),
+		metric.WithUnit("{job}"))
+	if err != nil {
+		return fmt.Errorf("failed to create scheduler_jobs_executed counter: %w", err)
+	}
+	SchedulerJobsFailed, err = m.Int64Counter("penster_scheduler_jobs_failed",
+		metric.WithDescription("Total number of scheduler jobs failed"),
+		metric.WithUnit("{job}"))
+	if err != nil {
+		return fmt.Errorf("failed to create scheduler_jobs_failed counter: %w", err)
+	}
+	SchedulerJobDuration, err = m.Float64Histogram("penster_scheduler_job_duration",
+		metric.WithDescription("Duration of scheduler jobs"),
+		metric.WithUnit("ms"))
+	if err != nil {
+		return fmt.Errorf("failed to create scheduler_job_duration histogram: %w", err)
+	}
+
+	// Traffic metrics - HTTP
+	HTTPRequestsTotal, err = m.Int64Counter("penster_http_requests_total",
+		metric.WithDescription("Total number of HTTP requests"),
+		metric.WithUnit("{request}"))
+	if err != nil {
+		return fmt.Errorf("failed to create http_requests_total counter: %w", err)
+	}
+	HTTPRequestDuration, err = m.Float64Histogram("penster_http_request_duration",
+		metric.WithDescription("Duration of HTTP requests"),
+		metric.WithUnit("ms"))
+	if err != nil {
+		return fmt.Errorf("failed to create http_request_duration histogram: %w", err)
+	}
+	HTTPPanicCount, err = m.Int64Counter("penster_http_panic_count",
+		metric.WithDescription("Total number of HTTP panics recovered"),
+		metric.WithUnit("{panic}"))
+	if err != nil {
+		return fmt.Errorf("failed to create http_panic_count counter: %w", err)
+	}
+
+	return nil
 }
