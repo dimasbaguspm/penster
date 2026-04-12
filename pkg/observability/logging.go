@@ -10,21 +10,24 @@ import (
 )
 
 var logger *slog.Logger
+var observabilityEnabled bool
 
 type contextKey string
 
 const txnIDKey contextKey = "txn_id"
 
 func InitLogger(ctx context.Context, cfg *config.Config) *slog.Logger {
+	observabilityEnabled = cfg.Observability.Enabled
+
 	opts := &slog.HandlerOptions{
-		Level: slog.LevelInfo,
+		Level: slog.LevelDebug,
 	}
 
 	handler := slog.NewJSONHandler(os.Stdout, opts)
 	logger = slog.New(handler)
 	slog.SetDefault(logger)
 
-	if cfg.Observability.Enabled {
+	if observabilityEnabled {
 		slog.Info("logger initialized",
 			"service", cfg.App.Env,
 			"env", cfg.App.Env,
@@ -85,6 +88,9 @@ func (l *Logger) Debug(msg string, attrs ...any) {
 }
 
 func (l *Logger) Log(level slog.Level, msg string, attrs ...any) {
+	if !observabilityEnabled {
+		return
+	}
 	args := []any{"layer", l.layer, "component", l.component, "txn_id", GetTransactionID(l.ctx)}
 	args = append(args, attrs...)
 	l.log.Log(l.ctx, level, msg, args...)
