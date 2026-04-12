@@ -21,51 +21,99 @@ func NewReportService(reportQuery query.ReportQueryInterface) *ReportService {
 }
 
 func (s *ReportService) GetSummary(ctx context.Context, startDateStr, endDateStr string) (*models.ReportSummary, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "ReportService", "GetSummary")
+	log := observability.NewLogger(ctx, "service", "report")
+	ctx, span := observability.StartServiceSpan(log.Context(), "report", "GetSummary")
 	defer span.End()
+
+	log.Info("get_summary started", "start_date", startDateStr, "end_date", endDateStr)
 
 	startDate, endDate, err := parseDates(startDateStr, endDateStr)
 	if err != nil {
+		log.Error("get_summary failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
-	return s.query.GetReportSummary(ctx, startDate, endDate)
+	result, err := s.query.GetReportSummary(ctx, startDate, endDate)
+	if err != nil {
+		log.Error("get_summary failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
+	}
+	log.Info("get_summary succeeded", "start_date", startDateStr, "end_date", endDateStr)
+	return result, nil
 }
 
 func (s *ReportService) GetByAccount(ctx context.Context, startDateStr, endDateStr string) (*models.ReportByAccount, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "ReportService", "GetByAccount")
+	log := observability.NewLogger(ctx, "service", "report")
+	ctx, span := observability.StartServiceSpan(log.Context(), "report", "GetByAccount")
 	defer span.End()
+
+	log.Info("get_by_account started", "start_date", startDateStr, "end_date", endDateStr)
 
 	startDate, endDate, err := parseDates(startDateStr, endDateStr)
 	if err != nil {
+		log.Error("get_by_account failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
-	return s.query.GetReportByAccount(ctx, startDate, endDate)
+	result, err := s.query.GetReportByAccount(ctx, startDate, endDate)
+	if err != nil {
+		log.Error("get_by_account failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
+	}
+	log.Info("get_by_account succeeded", "start_date", startDateStr, "end_date", endDateStr)
+	return result, nil
 }
 
 func (s *ReportService) GetByCategory(ctx context.Context, startDateStr, endDateStr string) (*models.ReportByCategory, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "ReportService", "GetByCategory")
+	log := observability.NewLogger(ctx, "service", "report")
+	ctx, span := observability.StartServiceSpan(log.Context(), "report", "GetByCategory")
 	defer span.End()
+
+	log.Info("get_by_category started", "start_date", startDateStr, "end_date", endDateStr)
 
 	startDate, endDate, err := parseDates(startDateStr, endDateStr)
 	if err != nil {
+		log.Error("get_by_category failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
-	return s.query.GetReportByCategory(ctx, startDate, endDate)
+	result, err := s.query.GetReportByCategory(ctx, startDate, endDate)
+	if err != nil {
+		log.Error("get_by_category failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
+	}
+	log.Info("get_by_category succeeded", "start_date", startDateStr, "end_date", endDateStr)
+	return result, nil
 }
 
 func (s *ReportService) GetTrends(ctx context.Context, startDateStr, endDateStr string) (*models.ReportTrends, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "ReportService", "GetTrends")
+	log := observability.NewLogger(ctx, "service", "report")
+	ctx, span := observability.StartServiceSpan(log.Context(), "report", "GetTrends")
 	defer span.End()
+
+	log.Info("get_trends started", "start_date", startDateStr, "end_date", endDateStr)
 
 	startDate, endDate, err := parseDates(startDateStr, endDateStr)
 	if err != nil {
+		log.Error("get_trends failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
-	return s.query.GetReportTrends(ctx, startDate, endDate)
+	result, err := s.query.GetReportTrends(ctx, startDate, endDate)
+	if err != nil {
+		log.Error("get_trends failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
+	}
+	log.Info("get_trends succeeded", "start_date", startDateStr, "end_date", endDateStr)
+	return result, nil
 }
 
 func parseDates(startDateStr, endDateStr string) (time.Time, time.Time, error) {

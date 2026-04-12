@@ -99,67 +99,112 @@ func NewTransactionService(
 }
 
 func (s *TransactionService) Create(ctx context.Context, req *models.CreateTransactionRequest) (*models.Transaction, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "TransactionService", "Create")
+	log := observability.NewLogger(ctx, "service", "transaction")
+	ctx, span := observability.StartServiceSpan(log.Context(), "transaction", "Create")
 	defer span.End()
 
+	log.Info("create started", "account_id", req.AccountID, "category_id", req.CategoryID, "amount", req.Amount)
+
+	log.Debug("create validating_related_entities", "account_id", req.AccountID, "transfer_account_id", req.TransferAccountID, "category_id", req.CategoryID)
 	ids, err := s.validateRelatedEntities(ctx, req.AccountID, req.TransferAccountID, req.CategoryID)
 	if err != nil {
+		log.Error("create failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
+	log.Debug("create entities_validated", "account_id", ids.accountID)
 
 	// Validate transfer doesn't result in negative balance
 	if req.TransactionType == models.TransactionTypeTransfer {
+		log.Debug("create validating_transfer", "account_id", req.AccountID, "amount", req.Amount)
 		if err := s.accountService.ValidateTransfer(ctx, req.AccountID, req.Amount); err != nil {
+			log.Error("create failed", "error", err)
+			observability.RecordError(ctx, err)
 			return nil, err
 		}
+		log.Debug("create transfer_validated")
 	}
 
+	log.Debug("create fetching_currency_rate", "currency", req.Currency, "base_currency", s.cfg.App.BaseCurrency)
 	currencyRate, err := s.rateCurrencyService.GetRate(ctx, req.Currency, s.cfg.App.BaseCurrency)
 	if err != nil {
+		log.Error("create failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
+	log.Debug("create currency_rate_fetched", "rate", currencyRate)
 
 	params, err := valueobjects.ToCreateTransactionParams(ids.accountID, ids.transferAccountID, ids.categoryID, currencyRate, req)
 	if err != nil {
+		log.Error("create failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
 	tx, err := s.commands.Create(ctx, params)
 	if err != nil {
+		log.Error("create failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
+	log.Debug("create transaction_saved", "tx_id", tx.ID)
 
+	log.Debug("create updating_balances", "account_id", req.AccountID, "type", tx.TransactionType, "amount", tx.Amount)
 	if err := s.accountService.UpdateAccountBalances(ctx, req.AccountID, req.TransferAccountID, tx.TransactionType, tx.Amount); err != nil {
+		log.Error("create failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, fmt.Errorf("failed to update account balance: %w", err)
 	}
+	log.Debug("create balances_updated")
 
+	log.Info("create succeeded", "id", tx.ID)
 	return tx, nil
 }
 
 func (s *TransactionService) GetByID(ctx context.Context, id string) (*models.Transaction, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "TransactionService", "GetByID")
+	log := observability.NewLogger(ctx, "service", "transaction")
+	ctx, span := observability.StartServiceSpan(log.Context(), "transaction", "GetByID")
 	defer span.End()
+
+	log.Info("get_by_id started", "id", id)
 	return s.query.GetByID(ctx, id)
 }
 
 func (s *TransactionService) List(ctx context.Context, params *models.TransactionSearchParams) ([]*models.Transaction, int64, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "TransactionService", "List")
+	log := observability.NewLogger(ctx, "service", "transaction")
+	ctx, span := observability.StartServiceSpan(log.Context(), "transaction", "List")
 	defer span.End()
+
+	log.Info("list started")
 	queryParams := valueobjects.ToListTransactionsParams(params)
-	return s.query.List(ctx, queryParams)
+	transactions, total, err := s.query.List(ctx, queryParams)
+	if err != nil {
+		log.Error("list failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, 0, err
+	}
+	log.Info("list succeeded", "count", len(transactions), "total", total)
+	return transactions, total, nil
 }
 
 func (s *TransactionService) Update(ctx context.Context, id string, req *models.UpdateTransactionRequest) (*models.Transaction, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "TransactionService", "Update")
+	log := observability.NewLogger(ctx, "service", "transaction")
+	ctx, span := observability.StartServiceSpan(log.Context(), "transaction", "Update")
 	defer span.End()
+
+	log.Info("update started", "id", id)
 
 	existing, err := s.GetByID(ctx, id)
 	if err != nil {
+		log.Error("update failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	if existing == nil {
 		return nil, nil
 	}
+
+	log.Debug("update fetching_existing", "id", id, "type", existing.TransactionType, "amount", existing.Amount)
 
 	isTransfer := existing.TransactionType == models.TransactionTypeTransfer
 	if req.TransactionType != nil {
@@ -171,7 +216,10 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 			accountID = *req.AccountID
 		}
 		if accountID == *req.TransferAccountID {
-			return nil, entities.ErrTransferToSameAccount
+			err := entities.ErrTransferToSameAccount
+			log.Error("update failed", "error", err)
+			observability.RecordError(ctx, err)
+			return nil, err
 		}
 	}
 
@@ -189,20 +237,31 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 		categoryID = *req.CategoryID
 	}
 
+	log.Debug("update validating_entities", "account_id", accountID, "transfer_account_id", transferAccountID, "category_id", categoryID)
 	ids, err := s.validateRelatedEntities(ctx, accountID, transferAccountID, categoryID)
 	if err != nil {
+		log.Error("update failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
+	log.Debug("update entities_validated")
 
 	currencyRate := existing.CurrencyRate
 	if req.Currency != nil && *req.Currency != existing.Currency {
+		log.Debug("update fetching_currency_rate", "currency", *req.Currency, "base_currency", s.cfg.App.BaseCurrency)
 		currencyRate, err = s.rateCurrencyService.GetRate(ctx, *req.Currency, s.cfg.App.BaseCurrency)
 		if err != nil {
+			log.Error("update failed", "error", err)
+			observability.RecordError(ctx, err)
 			return nil, err
 		}
+		log.Debug("update currency_rate_fetched", "rate", currencyRate)
 	}
 
+	log.Debug("update reverse_balances", "account_id", existing.AccountID, "type", existing.TransactionType, "amount", existing.Amount)
 	if err := s.accountService.ReverseAccountBalances(ctx, existing.AccountID, existing.TransferAccountID, existing.TransactionType, existing.Amount); err != nil {
+		log.Error("update failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, fmt.Errorf("failed to reverse account balance: %w", err)
 	}
 
@@ -220,10 +279,15 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 	if newTransactionType == models.TransactionTypeTransfer {
 		accountAfterReversal, err := s.accountService.GetByID(ctx, accountID)
 		if err != nil {
+			log.Error("update failed", "error", err)
+			observability.RecordError(ctx, err)
 			return nil, err
 		}
 		if accountAfterReversal.Balance < newAmount {
-			return nil, entities.ErrInsufficientBalance
+			err := entities.ErrInsufficientBalance
+			log.Error("update failed", "error", err)
+			observability.RecordError(ctx, err)
+			return nil, err
 		}
 	}
 
@@ -231,6 +295,8 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 
 	tx, err := s.commands.Update(ctx, id, updateParams)
 	if err != nil {
+		log.Error("update failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
@@ -245,28 +311,47 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 		transferAccountIDStr = existing.TransferAccountID
 	}
 
+	log.Debug("update apply_balances", "account_id", accountIDStr, "type", tx.TransactionType, "amount", tx.Amount)
 	if err := s.accountService.UpdateAccountBalances(ctx, accountIDStr, transferAccountIDStr, tx.TransactionType, tx.Amount); err != nil {
+		log.Error("update failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, fmt.Errorf("failed to update account balance: %w", err)
 	}
 
+	log.Info("update succeeded", "id", id)
 	return tx, nil
 }
 
 func (s *TransactionService) Delete(ctx context.Context, id string) (*models.Transaction, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "TransactionService", "Delete")
+	log := observability.NewLogger(ctx, "service", "transaction")
+	ctx, span := observability.StartServiceSpan(log.Context(), "transaction", "Delete")
 	defer span.End()
+
+	log.Info("delete started", "id", id)
 
 	existing, err := s.GetByID(ctx, id)
 	if err != nil {
+		log.Error("delete failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	if existing == nil {
 		return nil, nil
 	}
 
+	log.Debug("delete reverse_balances", "account_id", existing.AccountID, "type", existing.TransactionType, "amount", existing.Amount)
 	if err := s.accountService.ReverseAccountBalances(ctx, existing.AccountID, existing.TransferAccountID, existing.TransactionType, existing.Amount); err != nil {
+		log.Error("delete failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, fmt.Errorf("failed to reverse account balance: %w", err)
 	}
 
-	return s.commands.Delete(ctx, id)
+	result, err := s.commands.Delete(ctx, id)
+	if err != nil {
+		log.Error("delete failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
+	}
+	log.Info("delete succeeded", "id", id)
+	return result, nil
 }

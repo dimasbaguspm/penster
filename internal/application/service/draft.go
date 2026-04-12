@@ -105,50 +105,87 @@ func NewDraftService(
 }
 
 func (s *DraftService) Create(ctx context.Context, req *models.CreateDraftRequest) (*models.Draft, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "Create")
+	log := observability.NewLogger(ctx, "service", "draft")
+	ctx, span := observability.StartServiceSpan(log.Context(), "draft", "Create")
 	defer span.End()
 
+	log.Info("create started", "title", req.Title, "type", req.TransactionType)
+
 	if req.TransactionType == string(models.TransactionTypeTransfer) && req.AccountID == req.TransferAccountID {
-		return nil, entities.ErrTransferAccountNotFound
+		err := entities.ErrTransferAccountNotFound
+		log.Error("create failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
 	}
 
 	ids, err := s.validateRelatedEntities(ctx, req.AccountID, req.TransferAccountID, req.CategoryID)
 	if err != nil {
+		log.Error("create failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
 	currencyRate, err := s.rateCurrencyService.GetRate(ctx, req.Currency, s.cfg.App.BaseCurrency)
 	if err != nil {
+		log.Error("create failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
 	params, err := valueobjects.ToCreateDraftParams(ctx, ids.accountID, ids.transferAccountID, ids.categoryID, currencyRate, req)
 	if err != nil {
+		log.Error("create failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
-	return s.commands.Create(ctx, params)
+	result, err := s.commands.Create(ctx, params)
+	if err != nil {
+		log.Error("create failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
+	}
+	log.Info("create succeeded", "id", result.ID)
+	return result, nil
 }
 
 func (s *DraftService) GetByID(ctx context.Context, id string) (*models.Draft, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "GetByID")
+	log := observability.NewLogger(ctx, "service", "draft")
+	ctx, span := observability.StartServiceSpan(log.Context(), "draft", "GetByID")
 	defer span.End()
+
+	log.Info("get_by_id started", "id", id)
 	return s.query.GetByID(ctx, id)
 }
 
 func (s *DraftService) List(ctx context.Context, params *models.DraftSearchParams) ([]*models.Draft, int64, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "List")
+	log := observability.NewLogger(ctx, "service", "draft")
+	ctx, span := observability.StartServiceSpan(log.Context(), "draft", "List")
 	defer span.End()
+
+	log.Info("list started")
 	queryParams := valueobjects.ToListDraftsParams(ctx, params)
-	return s.query.List(ctx, queryParams)
+	drafts, total, err := s.query.List(ctx, queryParams)
+	if err != nil {
+		log.Error("list failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, 0, err
+	}
+	log.Info("list succeeded", "count", len(drafts), "total", total)
+	return drafts, total, nil
 }
 
 func (s *DraftService) Update(ctx context.Context, id string, req *models.UpdateDraftRequest) (*models.Draft, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "Update")
+	log := observability.NewLogger(ctx, "service", "draft")
+	ctx, span := observability.StartServiceSpan(log.Context(), "draft", "Update")
 	defer span.End()
+
+	log.Info("update started", "id", id)
 
 	existing, err := s.GetByID(ctx, id)
 	if err != nil {
+		log.Error("update failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	if existing == nil {
@@ -175,11 +212,16 @@ func (s *DraftService) Update(ctx context.Context, id string, req *models.Update
 		transactionType = *req.TransactionType
 	}
 	if transactionType == string(models.TransactionTypeTransfer) && accountID == transferAccountID {
-		return nil, entities.ErrTransferAccountNotFound
+		err := entities.ErrTransferAccountNotFound
+		log.Error("update failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
 	}
 
 	ids, err := s.validateRelatedEntities(ctx, accountID, transferAccountID, categoryID)
 	if err != nil {
+		log.Error("update failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
@@ -187,29 +229,52 @@ func (s *DraftService) Update(ctx context.Context, id string, req *models.Update
 	if req.Currency != nil && *req.Currency != existing.Currency {
 		currencyRate, err = s.rateCurrencyService.GetRate(ctx, *req.Currency, s.cfg.App.BaseCurrency)
 		if err != nil {
+			log.Error("update failed", "error", err)
+			observability.RecordError(ctx, err)
 			return nil, err
 		}
 	}
 
 	updateParams := valueobjects.ToUpdateDraftParams(ctx, ids.accountID, ids.transferAccountID, ids.categoryID, currencyRate, req)
 
-	return s.commands.Update(ctx, id, updateParams)
+	result, err := s.commands.Update(ctx, id, updateParams)
+	if err != nil {
+		log.Error("update failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
+	}
+	log.Info("update succeeded", "id", id)
+	return result, nil
 }
 
 func (s *DraftService) Confirm(ctx context.Context, draftSubID string) (*models.Transaction, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "Confirm")
+	log := observability.NewLogger(ctx, "service", "draft")
+	ctx, span := observability.StartServiceSpan(log.Context(), "draft", "Confirm")
 	defer span.End()
+
+	log.Info("confirm started", "draft_sub_id", draftSubID)
 
 	draft, err := s.GetByID(ctx, draftSubID)
 	if err != nil {
+		log.Error("confirm failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, err
 	}
 	if draft == nil {
-		return nil, entities.ErrDraftNotFound
+		err := entities.ErrDraftNotFound
+		log.Error("confirm failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
 	}
+	log.Debug("confirm draft_fetched", "status", draft.Status, "type", draft.TransactionType)
+
 	if draft.Status != string(models.DraftStatusPending) {
-		return nil, entities.ErrDraftNotPending
+		err := entities.ErrDraftNotPending
+		log.Error("confirm failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
 	}
+	log.Debug("confirm status_validated")
 
 	txReq := &models.CreateTransactionRequest{
 		AccountID:         draft.AccountID,
@@ -222,51 +287,100 @@ func (s *DraftService) Confirm(ctx context.Context, draftSubID string) (*models.
 		Notes:             draft.Notes,
 	}
 
+	log.Debug("confirm creating_transaction", "account_id", draft.AccountID, "category_id", draft.CategoryID, "amount", draft.Amount)
 	tx, err := s.transactionService.Create(ctx, txReq)
 	if err != nil {
+		log.Error("confirm failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, fmt.Errorf("failed to create transaction from draft: %w", err)
 	}
+	log.Debug("confirm transaction_created", "tx_id", tx.ID)
 
-	// Update draft status to confirmed
+	log.Debug("confirm updating_status", "draft_sub_id", draftSubID, "status", "confirmed")
 	if err := s.commands.UpdateStatus(ctx, draftSubID, string(models.DraftStatusConfirmed)); err != nil {
+		log.Error("confirm failed", "error", err)
+		observability.RecordError(ctx, err)
 		return nil, fmt.Errorf("failed to update draft status: %w", err)
 	}
+	log.Debug("confirm status_updated")
 
+	log.Info("confirm succeeded", "draft_sub_id", draftSubID, "tx_id", tx.ID)
 	return tx, nil
 }
 
 func (s *DraftService) Reject(ctx context.Context, draftSubID string) error {
-	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "Reject")
+	log := observability.NewLogger(ctx, "service", "draft")
+	ctx, span := observability.StartServiceSpan(log.Context(), "draft", "Reject")
 	defer span.End()
+
+	log.Info("reject started", "draft_sub_id", draftSubID)
 
 	draft, err := s.GetByID(ctx, draftSubID)
 	if err != nil {
+		log.Error("reject failed", "error", err)
+		observability.RecordError(ctx, err)
 		return err
 	}
 	if draft == nil {
-		return entities.ErrDraftNotFound
+		err := entities.ErrDraftNotFound
+		log.Error("reject failed", "error", err)
+		observability.RecordError(ctx, err)
+		return err
 	}
-	if draft.Status != string(models.DraftStatusPending) {
-		return entities.ErrDraftNotPending
-	}
+	log.Debug("reject draft_fetched", "status", draft.Status)
 
-	return s.commands.UpdateStatus(ctx, draftSubID, string(models.DraftStatusRejected))
+	if draft.Status != string(models.DraftStatusPending) {
+		err := entities.ErrDraftNotPending
+		log.Error("reject failed", "error", err)
+		observability.RecordError(ctx, err)
+		return err
+	}
+	log.Debug("reject status_validated")
+
+	log.Debug("reject updating_status", "draft_sub_id", draftSubID, "status", "rejected")
+	err = s.commands.UpdateStatus(ctx, draftSubID, string(models.DraftStatusRejected))
+	if err != nil {
+		log.Error("reject failed", "error", err)
+		observability.RecordError(ctx, err)
+		return err
+	}
+	log.Debug("reject status_updated")
+	log.Info("reject succeeded", "draft_sub_id", draftSubID)
+	return nil
 }
 
 func (s *DraftService) Delete(ctx context.Context, draftSubID string) error {
-	ctx, span := observability.StartServiceSpan(ctx, "DraftService", "Delete")
+	log := observability.NewLogger(ctx, "service", "draft")
+	ctx, span := observability.StartServiceSpan(log.Context(), "draft", "Delete")
 	defer span.End()
+
+	log.Info("delete started", "draft_sub_id", draftSubID)
 
 	draft, err := s.GetByID(ctx, draftSubID)
 	if err != nil {
+		log.Error("delete failed", "error", err)
+		observability.RecordError(ctx, err)
 		return err
 	}
 	if draft == nil {
-		return entities.ErrDraftNotFound
+		err := entities.ErrDraftNotFound
+		log.Error("delete failed", "error", err)
+		observability.RecordError(ctx, err)
+		return err
 	}
 	if draft.Status != string(models.DraftStatusRejected) {
-		return entities.ErrDraftNotRejected
+		err := entities.ErrDraftNotRejected
+		log.Error("delete failed", "error", err)
+		observability.RecordError(ctx, err)
+		return err
 	}
 
-	return s.commands.Delete(ctx, draftSubID)
+	err = s.commands.Delete(ctx, draftSubID)
+	if err != nil {
+		log.Error("delete failed", "error", err)
+		observability.RecordError(ctx, err)
+		return err
+	}
+	log.Info("delete succeeded", "draft_sub_id", draftSubID)
+	return nil
 }

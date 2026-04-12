@@ -23,16 +23,27 @@ func NewCategoryService(query query.CategoryQueryInterface, commands command.Cat
 }
 
 func (s *CategoryService) Create(ctx context.Context, req *models.CreateCategoryRequest) (*models.Category, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "CategoryService", "Create")
+	log := observability.NewLogger(ctx, "service", "category")
+	ctx, span := observability.StartServiceSpan(log.Context(), "category", "Create")
 	defer span.End()
 
-	params := valueobjects.ToCreateCategoryParams(ctx, req)
-	return s.commands.Create(ctx, params)
+	log.Info("create started", "name", req.Name)
+	result, err := s.commands.Create(ctx, valueobjects.ToCreateCategoryParams(ctx, req))
+	if err != nil {
+		log.Error("create failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
+	}
+	log.Info("create succeeded", "id", result.ID)
+	return result, nil
 }
 
 func (s *CategoryService) GetByID(ctx context.Context, id string) (*models.Category, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "CategoryService", "GetByID")
+	log := observability.NewLogger(ctx, "service", "category")
+	ctx, span := observability.StartServiceSpan(log.Context(), "category", "GetByID")
 	defer span.End()
+
+	log.Info("get_by_id started", "id", id)
 	return s.query.GetByID(ctx, id)
 }
 
@@ -43,23 +54,51 @@ func (s *CategoryService) GetIDBySubID(ctx context.Context, subID string) (int32
 }
 
 func (s *CategoryService) List(ctx context.Context, params *models.CategorySearchParams) ([]*models.Category, int64, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "CategoryService", "List")
+	log := observability.NewLogger(ctx, "service", "category")
+	ctx, span := observability.StartServiceSpan(log.Context(), "category", "List")
 	defer span.End()
 
+	log.Info("list started")
 	queryParams := valueobjects.ToListCategoriesParams(ctx, params)
-	return s.query.List(ctx, queryParams)
+	categories, total, err := s.query.List(ctx, queryParams)
+	if err != nil {
+		log.Error("list failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, 0, err
+	}
+	log.Info("list succeeded", "count", len(categories), "total", total)
+	return categories, total, nil
 }
 
 func (s *CategoryService) Update(ctx context.Context, id string, req *models.UpdateCategoryRequest) (*models.Category, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "CategoryService", "Update")
+	log := observability.NewLogger(ctx, "service", "category")
+	ctx, span := observability.StartServiceSpan(log.Context(), "category", "Update")
 	defer span.End()
 
+	log.Info("update started", "id", id)
 	params := valueobjects.ToUpdateCategoryParams(ctx, req)
-	return s.commands.Update(ctx, id, params)
+	result, err := s.commands.Update(ctx, id, params)
+	if err != nil {
+		log.Error("update failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
+	}
+	log.Info("update succeeded", "id", id)
+	return result, nil
 }
 
 func (s *CategoryService) Delete(ctx context.Context, id string) (*models.Category, error) {
-	ctx, span := observability.StartServiceSpan(ctx, "CategoryService", "Delete")
+	log := observability.NewLogger(ctx, "service", "category")
+	ctx, span := observability.StartServiceSpan(log.Context(), "category", "Delete")
 	defer span.End()
-	return s.commands.Delete(ctx, id)
+
+	log.Info("delete started", "id", id)
+	result, err := s.commands.Delete(ctx, id)
+	if err != nil {
+		log.Error("delete failed", "error", err)
+		observability.RecordError(ctx, err)
+		return nil, err
+	}
+	log.Info("delete succeeded", "id", id)
+	return result, nil
 }
