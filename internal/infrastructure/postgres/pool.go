@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dimasbaguspm/penster/pkg/observability"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 type Config struct {
@@ -15,7 +16,22 @@ type Config struct {
 	MinConns int
 }
 
-func MustConnect(ctx context.Context, cfg Config) *pgxpool.Pool {
+// Pool wraps pgxpool.Pool and implements PoolStats interface.
+type Pool struct {
+	*pgxpool.Pool
+}
+
+// Stat returns pool statistics for observability gauges.
+func (p *Pool) Stat(ctx context.Context) observability.PoolsStat {
+	stat := p.Pool.Stat()
+	return observability.PoolsStat{
+		Acquired: int64(stat.AcquiredConns()),
+		Idle:     int64(stat.IdleConns()),
+		Total:    int64(stat.TotalConns()),
+	}
+}
+
+func MustConnect(ctx context.Context, cfg Config) *Pool {
 	log := observability.NewLogger(ctx, "infrastructure", "postgres")
 	log.Info("Attempting to connect the database")
 
@@ -31,5 +47,5 @@ func MustConnect(ctx context.Context, cfg Config) *pgxpool.Pool {
 	}
 
 	log.Info("Connection established")
-	return conn
+	return &Pool{Pool: conn}
 }

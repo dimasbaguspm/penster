@@ -17,6 +17,24 @@ import (
 
 var meter metric.Meter
 
+// DB pool reference for observable gauges
+var dbPool PoolStats
+
+// PoolStats abstracts database pool statistics.
+type PoolStats interface {
+	Stat(ctx context.Context) PoolsStat
+}
+
+// PoolsStat holds pool statistics.
+type PoolsStat struct {
+	Acquired int64
+	Acquiredv int64
+	Idle     int64
+	Idlev    int64
+	Total    int64
+	Totalv   int64
+}
+
 // Metric instruments organized by category
 var (
 	// Business metrics - transaction operations
@@ -109,6 +127,21 @@ func Meter() metric.Meter {
 	return meter
 }
 
+// SetDBPool sets the database pool for observable gauge collection.
+func SetDBPool(pool PoolStats) {
+	dbPool = pool
+}
+
+// RecordJobMetrics records scheduler job execution metrics.
+func RecordJobMetrics(ctx context.Context, jobName string, success bool, durationMs float64) {
+	if success {
+		SchedulerJobsExecuted.Add(ctx, 1)
+	} else {
+		SchedulerJobsFailed.Add(ctx, 1)
+	}
+	SchedulerJobDuration.Record(ctx, durationMs)
+}
+
 // registerMetrics creates and registers all metric instruments.
 func registerMetrics(m metric.Meter) error {
 	// Business metrics - transactions
@@ -184,22 +217,43 @@ func registerMetrics(m metric.Meter) error {
 		return fmt.Errorf("failed to create categories_deleted counter: %w", err)
 	}
 
-	// Infrastructure metrics - database
+	// Infrastructure metrics - database (observable gauges with callbacks)
 	DBPoolConnectionsActive, err = m.Int64ObservableGauge("penster_db_pool_connections_active",
 		metric.WithDescription("Number of active connections in the pool"),
-		metric.WithUnit("{connection}"))
+		metric.WithUnit("{connection}"),
+		metric.WithInt64Callback(func(ctx context.Context, o metric.Int64Observer) error {
+			if dbPool != nil {
+				stat := dbPool.Stat(ctx)
+				o.Observe(stat.Acquired)
+			}
+			return nil
+		}))
 	if err != nil {
 		return fmt.Errorf("failed to create db_pool_connections_active gauge: %w", err)
 	}
 	DBPoolConnectionsIdle, err = m.Int64ObservableGauge("penster_db_pool_connections_idle",
 		metric.WithDescription("Number of idle connections in the pool"),
-		metric.WithUnit("{connection}"))
+		metric.WithUnit("{connection}"),
+		metric.WithInt64Callback(func(ctx context.Context, o metric.Int64Observer) error {
+			if dbPool != nil {
+				stat := dbPool.Stat(ctx)
+				o.Observe(stat.Idle)
+			}
+			return nil
+		}))
 	if err != nil {
 		return fmt.Errorf("failed to create db_pool_connections_idle gauge: %w", err)
 	}
 	DBPoolConnectionsUsed, err = m.Int64ObservableGauge("penster_db_pool_connections_used",
 		metric.WithDescription("Number of used connections in the pool"),
-		metric.WithUnit("{connection}"))
+		metric.WithUnit("{connection}"),
+		metric.WithInt64Callback(func(ctx context.Context, o metric.Int64Observer) error {
+			if dbPool != nil {
+				stat := dbPool.Stat(ctx)
+				o.Observe(stat.Total - stat.Idle)
+			}
+			return nil
+		}))
 	if err != nil {
 		return fmt.Errorf("failed to create db_pool_connections_used gauge: %w", err)
 	}

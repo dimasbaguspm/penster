@@ -77,8 +77,12 @@ func (e *Engine) dispatch(now time.Time) {
 			log.Info("Dispatching job", "job", job.Name())
 			e.nextRun[job] = now.Add(job.Schedule().NextRun(now).Sub(now))
 			go func(j scheduler.Job) {
+				start := time.Now()
 				if err := j.Run(context.Background()); err != nil {
 					log.Error("Job failed", "job", j.Name(), "error", err)
+					observability.RecordJobMetrics(context.Background(), j.Name(), false, float64(time.Since(start).Milliseconds()))
+				} else {
+					observability.RecordJobMetrics(context.Background(), j.Name(), true, float64(time.Since(start).Milliseconds()))
 				}
 			}(job)
 		}

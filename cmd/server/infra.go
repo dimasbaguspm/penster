@@ -33,6 +33,7 @@ func NewInfra(ctx context.Context, cfg *config.Config) *Infra {
 		MinConns: cfg.DB.MinConns,
 	})
 	log.Debug("infra db_connected")
+	observability.SetDBPool(conn)
 
 	if cfg.Migrate.AutoMigrate {
 		log.Info("infra running_migration")
