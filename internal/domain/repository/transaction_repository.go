@@ -22,104 +22,134 @@ func NewTransactionRepository(db *query.Queries) *TransactionRepository {
 }
 
 func (r *TransactionRepository) Create(ctx context.Context, params query.CreateTransactionParams) (*models.Transaction, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "transactions", "Create")
+	log := observability.NewLogger(ctx, "repository", "transaction")
+	ctx, span := observability.StartRepoSpan(log.Context(), "transaction", "Create")
 	defer span.End()
 
+	log.Info("transaction.create started", "account_id", params.AccountID, "category_id", params.CategoryID, "amount", params.BaseAmount)
 	id, err := r.db.CreateTransaction(ctx, params)
 	if err != nil {
+		log.Error("transaction.create failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
+	log.Info("transaction.created", "id", id)
 	return r.GetByID(ctx, id)
 }
 
 func (r *TransactionRepository) GetByID(ctx context.Context, id int32) (*models.Transaction, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "transactions", "GetByID")
+	log := observability.NewLogger(ctx, "repository", "transaction")
+	ctx, span := observability.StartRepoSpan(log.Context(), "transaction", "GetByID")
 	defer span.End()
 
+	log.Info("transaction.get_by_id started", "id", id)
 	result, err := r.db.GetTransactionByID(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
+			log.Debug("transaction.get_by_id not found", "id", id)
 			return nil, nil
 		}
+		log.Error("transaction.get_by_id failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
+	log.Info("transaction.get_by_id succeeded", "id", id)
 	return toTransactionModelWithRelations(ctx, result), nil
 }
 
 func (r *TransactionRepository) GetBySubID(ctx context.Context, subID string) (*models.Transaction, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "transactions", "GetBySubID")
+	log := observability.NewLogger(ctx, "repository", "transaction")
+	ctx, span := observability.StartRepoSpan(log.Context(), "transaction", "GetBySubID")
 	defer span.End()
 
+	log.Info("transaction.get_by_sub_id started", "sub_id", subID)
 	uid := pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true}
 	result, err := r.db.GetTransactionBySubID(ctx, uid)
 	if err != nil {
 		if err == pgx.ErrNoRows {
+			log.Debug("transaction.get_by_sub_id not found", "sub_id", subID)
 			return nil, nil
 		}
+		log.Error("transaction.get_by_sub_id failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
+	log.Info("transaction.get_by_sub_id succeeded", "sub_id", subID)
 	return toTransactionModelWithRelations(ctx, result), nil
 }
 
 func (r *TransactionRepository) GetIDBySubID(ctx context.Context, subID string) (int32, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "transactions", "GetIDBySubID")
+	log := observability.NewLogger(ctx, "repository", "transaction")
+	ctx, span := observability.StartRepoSpan(log.Context(), "transaction", "GetIDBySubID")
 	defer span.End()
 
+	log.Info("transaction.get_id_by_sub_id started", "sub_id", subID)
 	uid := pgtype.UUID{Bytes: conv.ParseUUID(subID), Valid: true}
 	result, err := r.db.GetTransactionBySubID(ctx, uid)
 	if err != nil {
 		if err == pgx.ErrNoRows {
+			log.Debug("transaction.get_id_by_sub_id not found", "sub_id", subID)
 			return 0, nil
 		}
+		log.Error("transaction.get_id_by_sub_id failed", "error", err)
 		observability.RecordError(ctx, err)
 		return 0, err
 	}
+	log.Info("transaction.get_id_by_sub_id succeeded", "sub_id", subID, "id", result.ID)
 	return result.ID, nil
 }
 
 func (r *TransactionRepository) UpdateBySubID(ctx context.Context, subID string, params query.UpdateTransactionParams) (*models.Transaction, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "transactions", "UpdateBySubID")
+	log := observability.NewLogger(ctx, "repository", "transaction")
+	ctx, span := observability.StartRepoSpan(log.Context(), "transaction", "UpdateBySubID")
 	defer span.End()
 
+	log.Info("transaction.update_by_sub_id started", "sub_id", subID)
 	id, err := r.GetIDBySubID(ctx, subID)
 	if err != nil {
 		return nil, err
 	}
 	if id == 0 {
+		log.Debug("transaction.update_by_sub_id not found", "sub_id", subID)
 		return nil, nil
 	}
 	params.ID = id
 	_, err = r.db.UpdateTransaction(ctx, params)
 	if err != nil {
+		log.Error("transaction.update_by_sub_id failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
+	log.Info("transaction.update_by_sub_id succeeded", "sub_id", subID)
 	return r.GetByID(ctx, id)
 }
 
 func (r *TransactionRepository) DeleteBySubID(ctx context.Context, subID string) (*models.Transaction, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "transactions", "DeleteBySubID")
+	log := observability.NewLogger(ctx, "repository", "transaction")
+	ctx, span := observability.StartRepoSpan(log.Context(), "transaction", "DeleteBySubID")
 	defer span.End()
 
+	log.Info("transaction.delete_by_sub_id started", "sub_id", subID)
 	id, err := r.GetIDBySubID(ctx, subID)
 	if err != nil {
 		return nil, err
 	}
 	if id == 0 {
+		log.Debug("transaction.delete_by_sub_id not found", "sub_id", subID)
 		return nil, nil
 	}
 	return r.Delete(ctx, id)
 }
 
 func (r *TransactionRepository) List(ctx context.Context, params query.ListTransactionsParams) ([]*models.Transaction, int64, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "transactions", "List")
+	log := observability.NewLogger(ctx, "repository", "transaction")
+	ctx, span := observability.StartRepoSpan(log.Context(), "transaction", "List")
 	defer span.End()
 
+	log.Info("transaction.list started")
 	rows, err := r.db.ListTransactions(ctx, params)
 	if err != nil {
+		log.Error("transaction.list failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, 0, err
 	}
@@ -131,43 +161,54 @@ func (r *TransactionRepository) List(ctx context.Context, params query.ListTrans
 		total = row.Total
 	}
 
+	log.Info("transaction.list succeeded", "count", len(transactions), "total", total)
 	return transactions, total, nil
 }
 
 func (r *TransactionRepository) Update(ctx context.Context, id int32, params query.UpdateTransactionParams) (*models.Transaction, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "transactions", "Update")
+	log := observability.NewLogger(ctx, "repository", "transaction")
+	ctx, span := observability.StartRepoSpan(log.Context(), "transaction", "Update")
 	defer span.End()
 
+	log.Info("transaction.update started", "id", id)
 	params.ID = id
 	_, err := r.db.UpdateTransaction(ctx, params)
 	if err != nil {
+		log.Error("transaction.update failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
+	log.Info("transaction.update succeeded", "id", id)
 	return r.GetByID(ctx, id)
 }
 
 func (r *TransactionRepository) Delete(ctx context.Context, id int32) (*models.Transaction, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "transactions", "Delete")
+	log := observability.NewLogger(ctx, "repository", "transaction")
+	ctx, span := observability.StartRepoSpan(log.Context(), "transaction", "Delete")
 	defer span.End()
 
+	log.Info("transaction.delete started", "id", id)
 	tx, err := r.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	if tx == nil {
+		log.Debug("transaction.delete not found", "id", id)
 		return nil, nil
 	}
 
 	_, err = r.db.DeleteTransaction(ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
+			log.Debug("transaction.delete not found", "id", id)
 			return nil, nil
 		}
+		log.Error("transaction.delete failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
 
+	log.Info("transaction.deleted", "id", id)
 	return tx, nil
 }
 

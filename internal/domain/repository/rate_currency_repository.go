@@ -22,21 +22,27 @@ func NewRateCurrencyRepository(db *query.Queries) *RateCurrencyRepository {
 }
 
 func (r *RateCurrencyRepository) Upsert(ctx context.Context, params query.UpsertRateCurrencyParams) (*models.RateCurrency, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "rate_currencies", "Upsert")
+	log := observability.NewLogger(ctx, "repository", "rate_currency")
+	ctx, span := observability.StartRepoSpan(log.Context(), "rate_currency", "Upsert")
 	defer span.End()
 
+	log.Info("rate_currency.upsert started", "from", params.FromCurrency, "to", params.ToCurrency)
 	result, err := r.db.UpsertRateCurrency(ctx, params)
 	if err != nil {
+		log.Error("rate_currency.upsert failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
+	log.Info("rate_currency.upsert succeeded")
 	return toRateCurrencyModel(ctx, result), nil
 }
 
 func (r *RateCurrencyRepository) Get(ctx context.Context, from, to string, date time.Time) (*models.RateCurrency, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "rate_currencies", "Get")
+	log := observability.NewLogger(ctx, "repository", "rate_currency")
+	ctx, span := observability.StartRepoSpan(log.Context(), "rate_currency", "Get")
 	defer span.End()
 
+	log.Info("rate_currency.get started", "from", from, "to", to, "date", date.Format("2006-01-02"))
 	result, err := r.db.GetRateCurrency(ctx, query.GetRateCurrencyParams{
 		FromCurrency: from,
 		ToCurrency:   to,
@@ -44,20 +50,26 @@ func (r *RateCurrencyRepository) Get(ctx context.Context, from, to string, date 
 	})
 	if err != nil {
 		if err == pgx.ErrNoRows {
+			log.Debug("rate_currency.get not found", "from", from, "to", to)
 			return nil, nil
 		}
+		log.Error("rate_currency.get failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
+	log.Info("rate_currency.get succeeded")
 	return toRateCurrencyModel(ctx, result), nil
 }
 
 func (r *RateCurrencyRepository) List(ctx context.Context, params query.ListRateCurrenciesParams) ([]*models.RateCurrency, int64, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "rate_currencies", "List")
+	log := observability.NewLogger(ctx, "repository", "rate_currency")
+	ctx, span := observability.StartRepoSpan(log.Context(), "rate_currency", "List")
 	defer span.End()
 
+	log.Info("rate_currency.list started")
 	rows, err := r.db.ListRateCurrencies(ctx, params)
 	if err != nil {
+		log.Error("rate_currency.list failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, 0, err
 	}
@@ -72,22 +84,28 @@ func (r *RateCurrencyRepository) List(ctx context.Context, params query.ListRate
 		ToCurrency:   params.Column2,
 	})
 	if err != nil {
+		log.Error("rate_currency.list.count failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, 0, err
 	}
 
+	log.Info("rate_currency.list succeeded", "count", len(currencies), "total", total)
 	return currencies, total, nil
 }
 
 func (r *RateCurrencyRepository) Prune(ctx context.Context, olderThan time.Time) error {
-	ctx, span := observability.StartRepoSpan(ctx, "rate_currencies", "Prune")
+	log := observability.NewLogger(ctx, "repository", "rate_currency")
+	ctx, span := observability.StartRepoSpan(log.Context(), "rate_currency", "Prune")
 	defer span.End()
 
+	log.Info("rate_currency.prune started", "older_than", olderThan.Format("2006-01-02"))
 	err := r.db.PruneOldRates(ctx, pgtype.Date{Time: olderThan, Valid: true})
 	if err != nil {
+		log.Error("rate_currency.prune failed", "error", err)
 		observability.RecordError(ctx, err)
 		return err
 	}
+	log.Info("rate_currency.prune succeeded")
 	return nil
 }
 

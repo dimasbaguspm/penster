@@ -21,12 +21,16 @@ func NewReportRepository(db *query.Queries) *ReportRepository {
 }
 
 func (r *ReportRepository) GetReportSummary(ctx context.Context, startDate, endDate time.Time) (*models.ReportSummary, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "reports", "GetReportSummary")
+	log := observability.NewLogger(ctx, "repository", "report")
+	ctx, span := observability.StartRepoSpan(log.Context(), "report", "GetReportSummary")
 	defer span.End()
+
+	log.Info("report.get_summary started", "start_date", startDate.Format("2006-01-02"), "end_date", endDate.Format("2006-01-02"))
 
 	// Get total balance across all accounts
 	totalBalance, err := r.db.GetTotalBalance(ctx)
 	if err != nil {
+		log.Error("report.get_summary failed: get_total_balance", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
@@ -37,6 +41,7 @@ func (r *ReportRepository) GetReportSummary(ctx context.Context, startDate, endD
 		EndDate:   pgtype.Date{Time: endDate, Valid: true},
 	})
 	if err != nil {
+		log.Error("report.get_summary failed: get_totals_by_type", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
@@ -98,14 +103,18 @@ func (r *ReportRepository) GetReportSummary(ctx context.Context, startDate, endD
 }
 
 func (r *ReportRepository) GetReportByCategory(ctx context.Context, startDate, endDate time.Time) (*models.ReportByCategory, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "reports", "GetReportByCategory")
+	log := observability.NewLogger(ctx, "repository", "report")
+	ctx, span := observability.StartRepoSpan(log.Context(), "report", "GetReportByCategory")
 	defer span.End()
+
+	log.Info("report.get_by_category started", "start_date", startDate.Format("2006-01-02"), "end_date", endDate.Format("2006-01-02"))
 
 	categoryBreakdownRows, err := r.db.GetCategoryBreakdown(ctx, query.GetCategoryBreakdownParams{
 		StartDate: pgtype.Date{Time: startDate, Valid: true},
 		EndDate:   pgtype.Date{Time: endDate, Valid: true},
 	})
 	if err != nil {
+		log.Error("report.get_by_category failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, fmt.Errorf("GetCategoryBreakdown failed: %w", err)
 	}
@@ -142,14 +151,18 @@ func (r *ReportRepository) GetReportByCategory(ctx context.Context, startDate, e
 }
 
 func (r *ReportRepository) GetReportByAccount(ctx context.Context, startDate, endDate time.Time) (*models.ReportByAccount, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "reports", "GetReportByAccount")
+	log := observability.NewLogger(ctx, "repository", "report")
+	ctx, span := observability.StartRepoSpan(log.Context(), "report", "GetReportByAccount")
 	defer span.End()
+
+	log.Info("report.get_by_account started", "start_date", startDate.Format("2006-01-02"), "end_date", endDate.Format("2006-01-02"))
 
 	accountBreakdownRows, err := r.db.GetAccountBreakdown(ctx, query.GetAccountBreakdownParams{
 		StartDate: pgtype.Date{Time: startDate, Valid: true},
 		EndDate:   pgtype.Date{Time: endDate, Valid: true},
 	})
 	if err != nil {
+		log.Error("report.get_by_account failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
@@ -184,14 +197,18 @@ func (r *ReportRepository) GetReportByAccount(ctx context.Context, startDate, en
 }
 
 func (r *ReportRepository) GetReportTrends(ctx context.Context, startDate, endDate time.Time) (*models.ReportTrends, error) {
-	ctx, span := observability.StartRepoSpan(ctx, "reports", "GetReportTrends")
+	log := observability.NewLogger(ctx, "repository", "report")
+	ctx, span := observability.StartRepoSpan(log.Context(), "report", "GetReportTrends")
 	defer span.End()
+
+	log.Info("report.get_trends started", "start_date", startDate.Format("2006-01-02"), "end_date", endDate.Format("2006-01-02"))
 
 	trendRows, err := r.db.GetTrends(ctx, query.GetTrendsParams{
 		StartDate: pgtype.Date{Time: startDate, Valid: true},
 		EndDate:   pgtype.Date{Time: endDate, Valid: true},
 	})
 	if err != nil {
+		log.Error("report.get_trends failed", "error", err)
 		observability.RecordError(ctx, err)
 		return nil, err
 	}
