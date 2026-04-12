@@ -19,7 +19,7 @@ services:
       - DB_NAME=penster
       - DB_SSLMODE=disable
       - OTEL_ENABLED=true
-      - OTEL_EXPORTER_OTLP_ENDPOINT=jaeger:4317
+      - TEMPO_ENDPOINT=tempo:4317
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,19 +47,76 @@ services:
     networks:
       - penster-local
 
-  jaeger:
-    image: cr.jaegertracing.io/jaegertracing/jaeger:2.17.0
-    container_name: jaeger
+  loki:
+    container_name: grafana-loki
+    image: grafana/loki:3.6.10
+    restart: unless-stopped
     ports:
-      - "16686:16686"  # Jaeger UI (HTTP)
-      - "16685:16685"  # gRPC Query API
-      - "4317:4317"    # OTLP gRPC receiver
-      - "4318:4318"    # OTLP HTTP receiver
+      - "13100:3100"
+    volumes:
+      - loki_data:/data
+      - ./loki.yaml:/etc/loki/local-config.yaml
+    networks:
+      - penster-local
+    command: -config.expand-env=true -config.file=/etc/loki/local-config.yaml
+
+  tempo:
+    container_name: grafana-tempo
+    image: grafana/tempo:2.6.1
+    restart: unless-stopped
+    ports:
+      - "13200:3200"
+      - "13217:4317"
+      - "13218:4318"
+    volumes:
+      - tempo_data:/var/tempo
+      - ./tempo.yaml:/etc/tempo.yaml
+    networks:
+      - penster-local
+    command: -config.file=/etc/tempo.yaml
+
+  mimir:
+    container_name: grafana-mimir
+    image: grafana/mimir:2.17.9
+    restart: unless-stopped
+    ports:
+      - "13080:8080"
+    environment:
+      - MIMIR_HTTP_PORT=8080
+      - MIMIR_GRPC_PORT=9095
+      - MIMIR_STORAGE_BACKEND=filesystem
+      - MIMIR_STORAGE_FILESYSTEM_DIRECTORY=/data
+    volumes:
+      - mimir_data:/data
     networks:
       - penster-local
 
+  grafana:
+    container_name: grafana-grafana
+    image: grafana/grafana:12.3.0
+    restart: unless-stopped
+    ports:
+      - "13300:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./datasources/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    networks:
+      - penster-local
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    depends_on:
+      - loki
+      - tempo
+      - mimir
+
 volumes:
   postgres_data:
+  grafana_data:
+  tempo_data:
+  loki_data:
+  mimir_data:
 
 networks:
   penster-local:

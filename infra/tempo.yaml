@@ -1,0 +1,21 @@
+server:
+  http_listen_port: 3200
+
+target: all
+
+distributor:
+  receivers:
+    otlp:
+
+ingester:
+  lifecycler:
+    ring:
+      replication_factor: 1
+      kvstore:
+        store: inmemory
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /tmp/tempo

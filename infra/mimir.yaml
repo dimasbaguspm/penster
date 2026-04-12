@@ -1,0 +1,7 @@
+server:
+  http_listen_port: 8080
+  grpc_listen_port: 9095
+
+limits:
+  max_global_series_per_user: 0
+  max_series_limit_per_user: 0
