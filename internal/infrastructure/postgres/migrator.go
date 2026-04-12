@@ -14,18 +14,39 @@ import (
 func RunMigration(cfg Config) {
 	slog.Info("[Migrator]: trying to migrate tables into DB")
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		slog.Error("[Migrator]: failed to get current working directory", "error", err)
-		os.Exit(1)
-	}
-	migrationsPath, err := filepath.Abs(filepath.Join(cwd, "migrations"))
-	if err != nil {
-		slog.Error("[Migrator]: failed to resolve absolute path to migrations", "error", err)
-		os.Exit(1)
+	migrationsPath := os.Getenv("MIGRATIONS_PATH")
+	if migrationsPath == "" {
+		execPath, err := os.Executable()
+		if err != nil {
+			slog.Error("[Migrator]: failed to get executable path", "error", err)
+			os.Exit(1)
+		}
+		// Resolve symlinks (e.g., from Air live-reload)
+		execPath, err = filepath.EvalSymlinks(execPath)
+		if err != nil {
+			slog.Error("[Migrator]: failed to resolve symlinks", "error", err)
+			os.Exit(1)
+		}
+		execDir := filepath.Dir(execPath)
+
+		// Try executable's dir first, then fallback to /app/migrations
+		for _, mp := range []string{
+			filepath.Join(execDir, "migrations"),
+			"/app/migrations",
+		} {
+			if _, err := os.Stat(mp); err == nil {
+				migrationsPath = mp
+				break
+			}
+		}
+		if migrationsPath == "" {
+			slog.Error("[Migrator]: migrations folder not found")
+			os.Exit(1)
+		}
 	}
 
-	m, err := migrate.New("file:///"+migrationsPath, cfg.Primary)
+	migrationsURL := "file://" + migrationsPath
+	m, err := migrate.New(migrationsURL, cfg.Primary)
 	if err != nil {
 		slog.Error("[Migrator]: migration failed something odd while lookup the migrations file", "error", err)
 		os.Exit(1)

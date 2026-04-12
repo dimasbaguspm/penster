@@ -63,6 +63,7 @@ func TestMain(m *testing.M) {
 	repoRoot = filepath.Dir(repoRoot)
 
 	binaryPath := filepath.Join(repoRoot, "bin", "penster_test")
+	os.Setenv("MIGRATIONS_PATH", filepath.Join(repoRoot, "migrations"))
 	serverProcess = exec.Command(binaryPath)
 	serverProcess.Dir = repoRoot
 	serverProcess.Env = os.Environ()
