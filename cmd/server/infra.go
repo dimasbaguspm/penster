@@ -20,7 +20,6 @@ type Infra struct {
 }
 
 func NewInfra(ctx context.Context, cfg *config.Config) *Infra {
-	ctx = observability.GenTransactionID(ctx)
 	log := observability.NewLogger(ctx, "infrastructure", "postgres")
 	conn := postgres.MustConnect(ctx, postgres.Config{
 		Primary:  cfg.DB.Primary,

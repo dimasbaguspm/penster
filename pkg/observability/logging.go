@@ -57,6 +57,9 @@ type Logger struct {
 }
 
 func NewLogger(ctx context.Context, layer, component string) *Logger {
+	if GetTransactionID(ctx) == "" {
+		ctx = context.WithValue(ctx, txnIDKey, uuid.New().String())
+	}
 	return &Logger{
 		ctx:       ctx,
 		layer:     layer,
@@ -94,4 +97,8 @@ func (l *Logger) WithCtx(ctx context.Context) *Logger {
 		component: l.component,
 		log:       l.log,
 	}
+}
+
+func (l *Logger) Context() context.Context {
+	return l.ctx
 }
