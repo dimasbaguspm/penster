@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
@@ -98,10 +98,10 @@ func mustExtractHostPort(connectionString string) (string, string) {
 func waitForPostgres(host, port string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), 2*time.Second)
+		connStr := fmt.Sprintf("postgres://penster:placeholder@%s:%s/penster?sslmode=disable", host, port)
+		conn, err := pgx.Connect(context.Background(), connStr)
 		if err == nil {
-			conn.Close()
-			time.Sleep(1 * time.Second)
+			conn.Close(context.Background())
 			return nil
 		}
 		time.Sleep(500 * time.Millisecond)
