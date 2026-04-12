@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 // @title Penster API
@@ -44,11 +46,15 @@ type HealthResponse struct {
 // @Success 200 {object} HealthResponse
 // @Router /health [get]
 func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
+	log := observability.NewLogger(r.Context(), "http", "health")
+
 	if r.Method != http.MethodGet {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
+	log.Info("health check")
 	resp := HealthResponse{
 		Status:    "ok",
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
@@ -70,13 +76,17 @@ func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 // @Failure 503 {object} HealthResponse
 // @Router /ready [get]
 func (h *HealthHandler) Ready(w http.ResponseWriter, r *http.Request) {
+	log := observability.NewLogger(r.Context(), "http", "health")
+
 	if r.Method != http.MethodGet {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	if h.readyChecker != nil {
 		if err := h.readyChecker.Health(r.Context()); err != nil {
+			log.Error("readiness check failed", "error", err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusServiceUnavailable)
 			json.NewEncoder(w).Encode(HealthResponse{
@@ -88,6 +98,7 @@ func (h *HealthHandler) Ready(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	log.Info("readiness check passed")
 	resp := HealthResponse{
 		Status:    "ready",
 		Timestamp: time.Now().UTC().Format(time.RFC3339),

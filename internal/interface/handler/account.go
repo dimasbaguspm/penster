@@ -34,17 +34,21 @@ func NewAccountHandler(svc *service.AccountService) *AccountHandler {
 // @Failure 500 {object} response.Response
 // @Router /accounts [get]
 func (h *AccountHandler) List(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Account", "List")
+	log := observability.NewLogger(r.Context(), "http", "account")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Account", "List")
 	defer span.End()
 
 	if r.Method != http.MethodGet {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
+	log.Info("listing accounts")
 	params := dto.ParseAccountListParams(r)
 	accounts, total, err := h.svc.List(ctx, params)
 	if err != nil {
+		log.Error("failed to list accounts", "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -54,6 +58,7 @@ func (h *AccountHandler) List(w http.ResponseWriter, r *http.Request) {
 		accountList = append(accountList, *acc)
 	}
 
+	log.Info("accounts listed", "count", len(accountList), "total", total)
 	resp := response.NewPaginatedResponse(accountList, params.PageNumber, params.PageSize, total)
 	h.writeJSON(w, http.StatusOK, resp)
 }
@@ -71,30 +76,37 @@ func (h *AccountHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /accounts/{id} [get]
 func (h *AccountHandler) Get(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Account", "Get")
+	log := observability.NewLogger(r.Context(), "http", "account")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Account", "Get")
 	defer span.End()
 
 	if r.Method != http.MethodGet {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	id := r.PathValue("id")
 	if id == "" {
+		log.Warn("invalid account id")
 		h.writeError(w, http.StatusBadRequest, "invalid account id")
 		return
 	}
 
+	log.Info("getting account", "id", id)
 	account, err := h.svc.GetByID(ctx, id)
 	if err != nil {
+		log.Error("failed to get account", "id", id, "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if account == nil {
+		log.Info("account not found", "id", id)
 		h.writeError(w, http.StatusNotFound, "account not found")
 		return
 	}
 
+	log.Info("account retrieved", "id", id)
 	resp := response.NewResponse(*account)
 	h.writeJSON(w, http.StatusOK, resp)
 }
@@ -111,31 +123,38 @@ func (h *AccountHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /accounts [post]
 func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Account", "Create")
+	log := observability.NewLogger(r.Context(), "http", "account")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Account", "Create")
 	defer span.End()
 
 	if r.Method != http.MethodPost {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	var req models.CreateAccountRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Warn("invalid request body", "error", err)
 		h.writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := dto.ValidateCreateAccountRequest(ctx, &req); err != nil {
+		log.Warn("validation failed", "error", err)
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Info("creating account", "name", req.Name, "type", req.Type)
 	account, err := h.svc.Create(ctx, &req)
 	if err != nil {
+		log.Error("failed to create account", "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	log.Info("account created", "id", account.ID)
 	resp := response.NewResponse(*account)
 	h.writeJSON(w, http.StatusCreated, resp)
 }
@@ -154,41 +173,50 @@ func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /accounts/{id} [put]
 func (h *AccountHandler) Update(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Account", "Update")
+	log := observability.NewLogger(r.Context(), "http", "account")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Account", "Update")
 	defer span.End()
 
 	if r.Method != http.MethodPut {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	id := r.PathValue("id")
 	if id == "" {
+		log.Warn("invalid account id")
 		h.writeError(w, http.StatusBadRequest, "invalid account id")
 		return
 	}
 
 	var req models.UpdateAccountRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Warn("invalid request body", "error", err)
 		h.writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := dto.ValidateUpdateAccountRequest(ctx, &req); err != nil {
+		log.Warn("validation failed", "error", err)
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Info("updating account", "id", id)
 	account, err := h.svc.Update(ctx, id, &req)
 	if err != nil {
+		log.Error("failed to update account", "id", id, "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if account == nil {
+		log.Info("account not found", "id", id)
 		h.writeError(w, http.StatusNotFound, "account not found")
 		return
 	}
 
+	log.Info("account updated", "id", id)
 	resp := response.NewResponse(*account)
 	h.writeJSON(w, http.StatusOK, resp)
 }
@@ -206,30 +234,37 @@ func (h *AccountHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /accounts/{id} [delete]
 func (h *AccountHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Account", "Delete")
+	log := observability.NewLogger(r.Context(), "http", "account")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Account", "Delete")
 	defer span.End()
 
 	if r.Method != http.MethodDelete {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	id := r.PathValue("id")
 	if id == "" {
+		log.Warn("invalid account id")
 		h.writeError(w, http.StatusBadRequest, "invalid account id")
 		return
 	}
 
+	log.Info("deleting account", "id", id)
 	account, err := h.svc.Delete(ctx, id)
 	if err != nil {
+		log.Error("failed to delete account", "id", id, "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if account == nil {
+		log.Info("account not found", "id", id)
 		h.writeError(w, http.StatusNotFound, "account not found")
 		return
 	}
 
+	log.Info("account deleted", "id", id)
 	resp := response.NewResponse(*account)
 	h.writeJSON(w, http.StatusOK, resp)
 }

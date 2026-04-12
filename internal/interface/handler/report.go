@@ -32,21 +32,26 @@ func NewReportHandler(svc *service.ReportService) *ReportHandler {
 // @Failure 500 {object} response.Response
 // @Router /reports/summary [get]
 func (h *ReportHandler) Summary(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Report", "Summary")
+	log := observability.NewLogger(r.Context(), "http", "report")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Report", "Summary")
 	defer span.End()
 
 	startDate, endDate, err := dto.ParseReportParams(r)
 	if err != nil {
+		log.Warn("invalid report params", "error", err)
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Info("getting summary report", "start_date", startDate.Format("2006-01-02"), "end_date", endDate.Format("2006-01-02"))
 	summary, err := h.svc.GetSummary(ctx, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	if err != nil {
+		log.Error("failed to get summary report", "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	log.Info("summary report retrieved")
 	h.writeJSON(w, http.StatusOK, response.NewResponse(summary))
 }
 
@@ -63,21 +68,26 @@ func (h *ReportHandler) Summary(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /reports/by-account [get]
 func (h *ReportHandler) ByAccount(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Report", "ByAccount")
+	log := observability.NewLogger(r.Context(), "http", "report")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Report", "ByAccount")
 	defer span.End()
 
 	startDate, endDate, err := dto.ParseReportParams(r)
 	if err != nil {
+		log.Warn("invalid report params", "error", err)
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Info("getting report by account", "start_date", startDate.Format("2006-01-02"), "end_date", endDate.Format("2006-01-02"))
 	report, err := h.svc.GetByAccount(ctx, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	if err != nil {
+		log.Error("failed to get report by account", "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	log.Info("report by account retrieved")
 	h.writeJSON(w, http.StatusOK, response.NewResponse(report))
 }
 
@@ -94,22 +104,26 @@ func (h *ReportHandler) ByAccount(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /reports/by-category [get]
 func (h *ReportHandler) ByCategory(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Report", "ByCategory")
+	log := observability.NewLogger(r.Context(), "http", "report")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Report", "ByCategory")
 	defer span.End()
 
 	startDate, endDate, err := dto.ParseReportParams(r)
 	if err != nil {
+		log.Warn("invalid report params", "error", err)
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Info("getting report by category", "start_date", startDate.Format("2006-01-02"), "end_date", endDate.Format("2006-01-02"))
 	report, err := h.svc.GetByCategory(ctx, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	if err != nil {
-		// Debug: log the actual error
+		log.Error("failed to get report by category", "error", err)
 		h.writeError(w, http.StatusInternalServerError, fmt.Sprintf("ByCategory error: %v", err))
 		return
 	}
 
+	log.Info("report by category retrieved")
 	h.writeJSON(w, http.StatusOK, response.NewResponse(report))
 }
 
@@ -126,21 +140,26 @@ func (h *ReportHandler) ByCategory(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /reports/trends [get]
 func (h *ReportHandler) Trends(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Report", "Trends")
+	log := observability.NewLogger(r.Context(), "http", "report")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Report", "Trends")
 	defer span.End()
 
 	startDate, endDate, err := dto.ParseReportParams(r)
 	if err != nil {
+		log.Warn("invalid report params", "error", err)
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Info("getting trends report", "start_date", startDate.Format("2006-01-02"), "end_date", endDate.Format("2006-01-02"))
 	report, err := h.svc.GetTrends(ctx, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	if err != nil {
+		log.Error("failed to get trends report", "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	log.Info("trends report retrieved")
 	h.writeJSON(w, http.StatusOK, response.NewResponse(report))
 }
 

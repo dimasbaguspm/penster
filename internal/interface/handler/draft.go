@@ -35,18 +35,22 @@ func NewDraftHandler(svc *service.DraftService) *DraftHandler {
 // @Failure 500 {object} response.Response
 // @Router /drafts [get]
 func (h *DraftHandler) List(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "List")
+	log := observability.NewLogger(r.Context(), "http", "draft")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Draft", "List")
 	defer span.End()
 
 	if r.Method != http.MethodGet {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
+	log.Info("listing drafts")
 	params := dto.ParseDraftListParams(r)
 
 	drafts, total, err := h.svc.List(ctx, params)
 	if err != nil {
+		log.Error("failed to list drafts", "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -56,6 +60,7 @@ func (h *DraftHandler) List(w http.ResponseWriter, r *http.Request) {
 		draftList = append(draftList, *d)
 	}
 
+	log.Info("drafts listed", "count", len(draftList), "total", total)
 	resp := response.NewPaginatedResponse(draftList, 1, params.PageSize, total)
 	h.writeJSON(w, http.StatusOK, resp)
 }
@@ -73,39 +78,48 @@ func (h *DraftHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /drafts/{id} [get]
 func (h *DraftHandler) Get(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "Get")
+	log := observability.NewLogger(r.Context(), "http", "draft")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Draft", "Get")
 	defer span.End()
 
 	if r.Method != http.MethodGet {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	id := r.PathValue("id")
 	if id == "" {
+		log.Warn("invalid draft id")
 		h.writeError(w, http.StatusBadRequest, "invalid draft id")
 		return
 	}
 
 	if _, err := uuid.Parse(id); err != nil {
+		log.Warn("invalid draft id format", "error", err)
 		h.writeError(w, http.StatusBadRequest, "invalid draft id format")
 		return
 	}
 
+	log.Info("getting draft", "id", id)
 	draft, err := h.svc.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, entities.ErrDraftNotFound) {
+			log.Info("draft not found", "id", id)
 			h.writeError(w, http.StatusNotFound, err.Error())
 			return
 		}
+		log.Error("failed to get draft", "id", id, "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if draft == nil {
+		log.Info("draft not found", "id", id)
 		h.writeError(w, http.StatusNotFound, "draft not found")
 		return
 	}
 
+	log.Info("draft retrieved", "id", id)
 	resp := response.NewResponse(*draft)
 	h.writeJSON(w, http.StatusOK, resp)
 }
@@ -122,37 +136,45 @@ func (h *DraftHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /drafts [post]
 func (h *DraftHandler) Create(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "Create")
+	log := observability.NewLogger(r.Context(), "http", "draft")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Draft", "Create")
 	defer span.End()
 
 	if r.Method != http.MethodPost {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	var req models.CreateDraftRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Warn("invalid request body", "error", err)
 		h.writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := dto.ValidateCreateDraftRequest(ctx, &req); err != nil {
+		log.Warn("validation failed", "error", err)
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Info("creating draft")
 	draft, err := h.svc.Create(ctx, &req)
 	if err != nil {
 		if errors.Is(err, entities.ErrAccountNotFound) ||
 			errors.Is(err, entities.ErrCategoryNotFound) ||
 			errors.Is(err, entities.ErrTransferAccountNotFound) {
+			log.Warn("bad request creating draft", "error", err)
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		log.Error("failed to create draft", "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	log.Info("draft created", "id", draft.ID)
 	resp := response.NewResponse(*draft)
 	h.writeJSON(w, http.StatusCreated, resp)
 }
@@ -171,48 +193,58 @@ func (h *DraftHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /drafts/{id} [patch]
 func (h *DraftHandler) Update(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "Update")
+	log := observability.NewLogger(r.Context(), "http", "draft")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Draft", "Update")
 	defer span.End()
 
 	if r.Method != http.MethodPatch {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	id := r.PathValue("id")
 	if id == "" {
+		log.Warn("invalid draft id")
 		h.writeError(w, http.StatusBadRequest, "invalid draft id")
 		return
 	}
 
 	if _, err := uuid.Parse(id); err != nil {
+		log.Warn("invalid draft id format", "error", err)
 		h.writeError(w, http.StatusBadRequest, "invalid draft id format")
 		return
 	}
 
 	var req models.UpdateDraftRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Warn("invalid request body", "error", err)
 		h.writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := dto.ValidateUpdateDraftRequest(ctx, &req); err != nil {
+		log.Warn("validation failed", "error", err)
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Info("updating draft", "id", id)
 	draft, err := h.svc.Update(ctx, id, &req)
 	if err != nil {
 		if errors.Is(err, entities.ErrDraftNotFound) {
+			log.Info("draft not found", "id", id)
 			h.writeError(w, http.StatusNotFound, err.Error())
 			return
 		}
 		if errors.Is(err, entities.ErrAccountNotFound) ||
 			errors.Is(err, entities.ErrCategoryNotFound) ||
 			errors.Is(err, entities.ErrTransferAccountNotFound) {
+			log.Warn("bad request updating draft", "error", err)
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		log.Error("failed to update draft", "id", id, "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -220,10 +252,12 @@ func (h *DraftHandler) Update(w http.ResponseWriter, r *http.Request) {
 	// Validate same-account transfer after getting current draft
 	if req.TransferAccountID != nil && req.AccountID != nil &&
 		*req.TransferAccountID == *req.AccountID {
+		log.Warn("transfer account same as source account", "id", id)
 		h.writeError(w, http.StatusBadRequest, "transfer account cannot be the same as source account")
 		return
 	}
 
+	log.Info("draft updated", "id", id)
 	resp := response.NewResponse(*draft)
 	h.writeJSON(w, http.StatusOK, resp)
 }
@@ -241,43 +275,53 @@ func (h *DraftHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /drafts/{id}/confirm [post]
 func (h *DraftHandler) Confirm(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "Confirm")
+	log := observability.NewLogger(r.Context(), "http", "draft")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Draft", "Confirm")
 	defer span.End()
 
 	if r.Method != http.MethodPost {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	id := r.PathValue("id")
 	if id == "" {
+		log.Warn("invalid draft id")
 		h.writeError(w, http.StatusBadRequest, "invalid draft id")
 		return
 	}
 
 	if _, err := uuid.Parse(id); err != nil {
+		log.Warn("invalid draft id format", "error", err)
 		h.writeError(w, http.StatusBadRequest, "invalid draft id format")
 		return
 	}
 
+	log.Info("confirming draft", "id", id)
 	tx, err := h.svc.Confirm(ctx, id)
 	if err != nil {
 		if errors.Is(err, entities.ErrDraftNotFound) {
+			log.Info("draft not found", "id", id)
 			h.writeError(w, http.StatusNotFound, err.Error())
 			return
 		}
 		if errors.Is(err, entities.ErrDraftNotPending) {
+			log.Warn("draft not pending", "id", id, "error", err)
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		if errors.Is(err, entities.ErrInsufficientBalance) {
+			log.Warn("insufficient balance", "id", id, "error", err)
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		log.Error("failed to confirm draft", "id", id, "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	log.Info("draft confirmed", "id", id, "transaction_id", tx.ID)
 	resp := response.NewResponse(*tx)
 	h.writeJSON(w, http.StatusOK, resp)
 }
@@ -295,39 +339,48 @@ func (h *DraftHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /drafts/{id}/reject [post]
 func (h *DraftHandler) Reject(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "Reject")
+	log := observability.NewLogger(r.Context(), "http", "draft")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Draft", "Reject")
 	defer span.End()
 
 	if r.Method != http.MethodPost {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	id := r.PathValue("id")
 	if id == "" {
+		log.Warn("invalid draft id")
 		h.writeError(w, http.StatusBadRequest, "invalid draft id")
 		return
 	}
 
 	if _, err := uuid.Parse(id); err != nil {
+		log.Warn("invalid draft id format", "error", err)
 		h.writeError(w, http.StatusBadRequest, "invalid draft id format")
 		return
 	}
 
+	log.Info("rejecting draft", "id", id)
 	err := h.svc.Reject(ctx, id)
 	if err != nil {
 		if errors.Is(err, entities.ErrDraftNotFound) {
+			log.Info("draft not found", "id", id)
 			h.writeError(w, http.StatusNotFound, err.Error())
 			return
 		}
 		if errors.Is(err, entities.ErrDraftNotPending) {
+			log.Warn("draft not pending", "id", id, "error", err)
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		log.Error("failed to reject draft", "id", id, "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	log.Info("draft rejected", "id", id)
 	h.writeJSON(w, http.StatusOK, response.NewResponse(map[string]string{"status": "rejected"}))
 }
 
@@ -344,39 +397,48 @@ func (h *DraftHandler) Reject(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /drafts/{id} [delete]
 func (h *DraftHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Draft", "Delete")
+	log := observability.NewLogger(r.Context(), "http", "draft")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Draft", "Delete")
 	defer span.End()
 
 	if r.Method != http.MethodDelete {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	id := r.PathValue("id")
 	if id == "" {
+		log.Warn("invalid draft id")
 		h.writeError(w, http.StatusBadRequest, "invalid draft id")
 		return
 	}
 
 	if _, err := uuid.Parse(id); err != nil {
+		log.Warn("invalid draft id format", "error", err)
 		h.writeError(w, http.StatusBadRequest, "invalid draft id format")
 		return
 	}
 
+	log.Info("deleting draft", "id", id)
 	err := h.svc.Delete(ctx, id)
 	if err != nil {
 		if errors.Is(err, entities.ErrDraftNotFound) {
+			log.Info("draft not found", "id", id)
 			h.writeError(w, http.StatusNotFound, err.Error())
 			return
 		}
 		if errors.Is(err, entities.ErrDraftNotRejected) {
+			log.Warn("draft not rejected", "id", id, "error", err)
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		log.Error("failed to delete draft", "id", id, "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	log.Info("draft deleted", "id", id)
 	h.writeJSON(w, http.StatusOK, response.NewResponse(map[string]string{"status": "deleted"}))
 }
 

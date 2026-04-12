@@ -2,7 +2,6 @@ package engine
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/application/service"
 	"github.com/dimasbaguspm/penster/internal/scheduler"
 	"github.com/dimasbaguspm/penster/internal/scheduler/jobs"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 type Engine struct {
@@ -34,10 +34,11 @@ func NewEngine(cfg *config.Config, rateCurrencyS *service.RateCurrencyService) *
 }
 
 func (e *Engine) Start(ctx context.Context) {
+	log := observability.NewLogger(ctx, "scheduler", "engine")
 	e.ticker = time.NewTicker(1 * time.Second)
 	e.done = make(chan struct{})
 
-	log.Println("Starting scheduler with", len(e.jobs), "jobs")
+	log.Info("Starting scheduler", "jobs", len(e.jobs))
 
 	e.wg.Add(1)
 	go func() {
@@ -56,26 +57,28 @@ func (e *Engine) Start(ctx context.Context) {
 }
 
 func (e *Engine) Stop() {
+	log := observability.NewLogger(context.Background(), "scheduler", "engine")
 	if e.ticker != nil {
 		e.ticker.Stop()
 	}
 	close(e.done)
 	e.wg.Wait()
-	log.Println("Scheduler stopped")
+	log.Info("Scheduler stopped")
 }
 
 func (e *Engine) dispatch(now time.Time) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
+	log := observability.NewLogger(context.Background(), "scheduler", "engine")
 	for _, job := range e.jobs {
 		nextRun := e.nextRun[job]
 		if now.After(nextRun) || now.Equal(nextRun) {
-			log.Printf("Dispatching job: %s", job.Name())
+			log.Info("Dispatching job", "job", job.Name())
 			e.nextRun[job] = now.Add(job.Schedule().NextRun(now).Sub(now))
 			go func(j scheduler.Job) {
 				if err := j.Run(context.Background()); err != nil {
-					log.Printf("Job %s failed: %v", j.Name(), err)
+					log.Error("Job failed", "job", j.Name(), "error", err)
 				}
 			}(job)
 		}

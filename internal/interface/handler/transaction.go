@@ -39,18 +39,22 @@ func NewTransactionHandler(svc *service.TransactionService) *TransactionHandler 
 // @Failure 500 {object} response.Response
 // @Router /transactions [get]
 func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Transaction", "List")
+	log := observability.NewLogger(r.Context(), "http", "transaction")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Transaction", "List")
 	defer span.End()
 
 	if r.Method != http.MethodGet {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
+	log.Info("listing transactions")
 	params := dto.ParseTransactionListParams(r)
 	transactions, total, err := h.svc.List(ctx, params)
 
 	if err != nil {
+		log.Error("failed to list transactions", "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -60,6 +64,7 @@ func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 		transactionList = append(transactionList, *tx)
 	}
 
+	log.Info("transactions listed", "count", len(transactionList), "total", total)
 	resp := response.NewPaginatedResponse(transactionList, params.PageNumber, params.PageSize, total)
 	h.writeJSON(w, http.StatusOK, resp)
 }
@@ -77,30 +82,37 @@ func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /transactions/{id} [get]
 func (h *TransactionHandler) Get(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Transaction", "Get")
+	log := observability.NewLogger(r.Context(), "http", "transaction")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Transaction", "Get")
 	defer span.End()
 
 	if r.Method != http.MethodGet {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	id := r.PathValue("id")
 	if id == "" {
+		log.Warn("invalid transaction id")
 		h.writeError(w, http.StatusBadRequest, "invalid transaction id")
 		return
 	}
 
+	log.Info("getting transaction", "id", id)
 	tx, err := h.svc.GetByID(ctx, id)
 	if err != nil {
+		log.Error("failed to get transaction", "id", id, "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if tx == nil {
+		log.Info("transaction not found", "id", id)
 		h.writeError(w, http.StatusNotFound, "transaction not found")
 		return
 	}
 
+	log.Info("transaction retrieved", "id", id)
 	resp := response.NewResponse(*tx)
 	h.writeJSON(w, http.StatusOK, resp)
 }
@@ -117,38 +129,46 @@ func (h *TransactionHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /transactions [post]
 func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Transaction", "Create")
+	log := observability.NewLogger(r.Context(), "http", "transaction")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Transaction", "Create")
 	defer span.End()
 
 	if r.Method != http.MethodPost {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	var req models.CreateTransactionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Warn("invalid request body", "error", err)
 		h.writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := dto.ValidateCreateTransactionRequest(ctx, &req); err != nil {
+		log.Warn("validation failed", "error", err)
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Info("creating transaction", "account_id", req.AccountID, "category_id", req.CategoryID, "amount", req.Amount)
 	tx, err := h.svc.Create(ctx, &req)
 	if err != nil {
 		if errors.Is(err, entities.ErrAccountNotFound) ||
 			errors.Is(err, entities.ErrCategoryNotFound) ||
 			errors.Is(err, entities.ErrTransferAccountNotFound) ||
 			errors.Is(err, entities.ErrInsufficientBalance) {
+			log.Warn("bad request creating transaction", "error", err)
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		log.Error("failed to create transaction", "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	log.Info("transaction created", "id", tx.ID)
 	resp := response.NewResponse(*tx)
 	h.writeJSON(w, http.StatusCreated, resp)
 }
@@ -167,31 +187,37 @@ func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /transactions/{id} [put]
 func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Transaction", "Update")
+	log := observability.NewLogger(r.Context(), "http", "transaction")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Transaction", "Update")
 	defer span.End()
 
 	if r.Method != http.MethodPut {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	id := r.PathValue("id")
 	if id == "" {
+		log.Warn("invalid transaction id")
 		h.writeError(w, http.StatusBadRequest, "invalid transaction id")
 		return
 	}
 
 	var req models.UpdateTransactionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Warn("invalid request body", "error", err)
 		h.writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := dto.ValidateUpdateTransactionRequest(ctx, &req); err != nil {
+		log.Warn("validation failed", "error", err)
 		h.writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Info("updating transaction", "id", id)
 	tx, err := h.svc.Update(ctx, id, &req)
 	if err != nil {
 		if errors.Is(err, entities.ErrAccountNotFound) ||
@@ -199,17 +225,21 @@ func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
 			errors.Is(err, entities.ErrTransferAccountNotFound) ||
 			errors.Is(err, entities.ErrTransferToSameAccount) ||
 			errors.Is(err, entities.ErrInsufficientBalance) {
+			log.Warn("bad request updating transaction", "error", err)
 			h.writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		log.Error("failed to update transaction", "id", id, "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if tx == nil {
+		log.Info("transaction not found", "id", id)
 		h.writeError(w, http.StatusNotFound, "transaction not found")
 		return
 	}
 
+	log.Info("transaction updated", "id", id)
 	resp := response.NewResponse(*tx)
 	h.writeJSON(w, http.StatusOK, resp)
 }
@@ -227,30 +257,37 @@ func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} response.Response
 // @Router /transactions/{id} [delete]
 func (h *TransactionHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	ctx, span := observability.StartHandlerSpan(r.Context(), "Transaction", "Delete")
+	log := observability.NewLogger(r.Context(), "http", "transaction")
+	ctx, span := observability.StartHandlerSpan(log.Context(), "Transaction", "Delete")
 	defer span.End()
 
 	if r.Method != http.MethodDelete {
+		log.Warn("method not allowed", "method", r.Method)
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	id := r.PathValue("id")
 	if id == "" {
+		log.Warn("invalid transaction id")
 		h.writeError(w, http.StatusBadRequest, "invalid transaction id")
 		return
 	}
 
+	log.Info("deleting transaction", "id", id)
 	tx, err := h.svc.Delete(ctx, id)
 	if err != nil {
+		log.Error("failed to delete transaction", "id", id, "error", err)
 		h.writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if tx == nil {
+		log.Info("transaction not found", "id", id)
 		h.writeError(w, http.StatusNotFound, "transaction not found")
 		return
 	}
 
+	log.Info("transaction deleted", "id", id)
 	resp := response.NewResponse(*tx)
 	h.writeJSON(w, http.StatusOK, resp)
 }

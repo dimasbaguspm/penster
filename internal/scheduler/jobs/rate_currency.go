@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
@@ -38,10 +37,11 @@ func (j *RateCurrencyJob) Schedule() scheduler.Schedule {
 }
 
 func (j *RateCurrencyJob) Run(ctx context.Context) error {
-	ctx, span := observability.StartJobSpan(ctx, "rate_currency")
+	log := observability.NewLogger(ctx, "scheduler", "jobs")
+	ctx, span := observability.StartJobSpan(log.Context(), "rate_currency")
 	defer span.End()
 
-	log.Println("Running rate_currency job - fetching ECB rates")
+	log.Info("Running rate_currency job - fetching ECB rates")
 
 	rates, err := fetchECBRates(ctx, j.cfg.RateCurrency.ECBURL)
 	if err != nil {
@@ -57,15 +57,15 @@ func (j *RateCurrencyJob) Run(ctx context.Context) error {
 
 	existing, err := j.svc.Get(ctx, "EUR", "USD", rateDate)
 	if err != nil {
-		log.Printf("Failed to check existing rate: %v", err)
+		log.Error("Failed to check existing rate", "error", err)
 	}
 
 	if existing != nil {
-		log.Printf("Rates for %s already exist, skipping upsert", rateDate.Format("2006-01-02"))
+		log.Info("Rates already exist, skipping upsert", "date", rateDate.Format("2006-01-02"))
 		return nil
 	}
 
-	log.Printf("Upserting %d rates for %s", len(rates), rateDate.Format("2006-01-02"))
+	log.Info("Upserting rates", "count", len(rates), "date", rateDate.Format("2006-01-02"))
 
 	for currency, rate := range rates {
 		req := &models.UpsertRateCurrencyRequest{
@@ -76,11 +76,11 @@ func (j *RateCurrencyJob) Run(ctx context.Context) error {
 		}
 		_, err := j.svc.Upsert(ctx, req)
 		if err != nil {
-			log.Printf("Failed to upsert rate %s/%s: %v", "EUR", currency, err)
+			log.Error("Failed to upsert rate", "from", "EUR", "to", currency, "error", err)
 		}
 	}
 
-	log.Println("Rate currency job completed")
+	log.Info("Rate currency job completed")
 	return nil
 }
 
