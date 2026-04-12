@@ -29,7 +29,7 @@ func NewServer(cfg *config.Config, accountSvc *service.AccountService, categoryS
 }
 
 func (s *Server) Start(ctx context.Context) {
-	log := observability.NewLogger(ctx, "interface", "server")
+	log := observability.NewLogger(ctx, "core", "server")
 	log.Info("Starting server", "addr", s.srv.Addr)
 	go func() {
 		if err := s.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -39,5 +39,7 @@ func (s *Server) Start(ctx context.Context) {
 }
 
 func (s *Server) Stop(ctx context.Context) error {
+	log := observability.NewLogger(ctx, "core", "server")
+	log.Info("Shuting down")
 	return s.srv.Shutdown(ctx)
 }
