@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/dimasbaguspm/penster/config"
 	"github.com/dimasbaguspm/penster/internal/application/service"
 	"github.com/dimasbaguspm/penster/internal/interface/handler"
 	"github.com/dimasbaguspm/penster/internal/interface/router"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 type Server struct {
@@ -28,11 +28,12 @@ func NewServer(cfg *config.Config, accountSvc *service.AccountService, categoryS
 	}
 }
 
-func (s *Server) Start() {
+func (s *Server) Start(ctx context.Context) {
+	log := observability.NewLogger(ctx, "interface", "server")
+	log.Info("Starting server", "addr", s.srv.Addr)
 	go func() {
-		log.Printf("Starting server on :%s", s.srv.Addr)
 		if err := s.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
+			log.Error("Failed to start server", "error", err)
 		}
 	}()
 }

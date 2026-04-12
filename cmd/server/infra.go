@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 
 	"github.com/dimasbaguspm/penster/config"
 	"github.com/dimasbaguspm/penster/internal/application/command"
@@ -12,6 +11,7 @@ import (
 	"github.com/dimasbaguspm/penster/internal/infrastructure/database/query"
 	"github.com/dimasbaguspm/penster/internal/infrastructure/postgres"
 	"github.com/dimasbaguspm/penster/internal/scheduler/engine"
+	"github.com/dimasbaguspm/penster/pkg/observability"
 )
 
 type Infra struct {
@@ -20,16 +20,18 @@ type Infra struct {
 }
 
 func NewInfra(ctx context.Context, cfg *config.Config) *Infra {
+	ctx = observability.GenTransactionID(ctx)
+	log := observability.NewLogger(ctx, "infrastructure", "postgres")
 	conn := postgres.MustConnect(ctx, postgres.Config{
 		Primary:  cfg.DB.Primary,
 		MaxConns: cfg.DB.MaxConns,
 		MinConns: cfg.DB.MinConns,
 	})
 
-	log.Println("Connected to database")
+	log.Info("Connected to database")
 
 	if cfg.Migrate.AutoMigrate {
-		postgres.RunMigration(postgres.Config{
+		postgres.RunMigration(ctx, postgres.Config{
 			Primary: cfg.DB.Primary,
 		})
 	}
@@ -72,10 +74,13 @@ func NewInfra(ctx context.Context, cfg *config.Config) *Infra {
 }
 
 func (i *Infra) Close(ctx context.Context) {
+	log := observability.NewLogger(ctx, "infrastructure", "infra")
 	if i.Scheduler != nil {
 		i.Scheduler.Stop()
 	}
 	if i.Server != nil {
+		log.Info("stopping server")
 		i.Server.Stop(ctx)
 	}
+	log.Info("infra closed")
 }

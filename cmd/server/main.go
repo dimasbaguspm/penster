@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -24,11 +23,11 @@ func main() {
 	defer infra.Close(ctx)
 
 	infra.Scheduler.Start(ctx)
-	infra.Server.Start()
+	infra.Server.Start(ctx)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	slog.Info("shutting down server")
+	obs.Logger.Info("shutting down server")
 }

@@ -3,9 +3,9 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"os"
 
+	"github.com/dimasbaguspm/penster/pkg/observability"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -16,7 +16,8 @@ type Config struct {
 }
 
 func MustConnect(ctx context.Context, cfg Config) *pgxpool.Pool {
-	slog.Info("[Database]: Attempting to connect the database")
+	log := observability.NewLogger(ctx, "infrastructure", "postgres")
+	log.Info("Attempting to connect the database")
 
 	config, err := pgxpool.ParseConfig(cfg.Primary)
 	config.MinConns = int32(cfg.MinConns)
@@ -24,11 +25,11 @@ func MustConnect(ctx context.Context, cfg Config) *pgxpool.Pool {
 
 	conn, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[Database]: Unable to connect with db, %v", err))
+		log.Error(fmt.Sprintf("Unable to connect with db, %v", err))
 		os.Exit(1)
 		return nil
 	}
 
-	slog.Info("[Database]: Connection established")
+	log.Info("Connection established")
 	return conn
 }
