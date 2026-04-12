@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,8 +17,8 @@ func main() {
 	defer cancel()
 
 	cfg := config.Load()
-	tracerShutdown := observability.InitTracer(ctx, cfg)
-	defer tracerShutdown(ctx)
+	obs := observability.Init(ctx, cfg)
+	defer obs.Shutdown(ctx)
 
 	infra := NewInfra(ctx, cfg)
 	defer infra.Close(ctx)
@@ -30,5 +30,5 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	slog.Info("shutting down server")
 }

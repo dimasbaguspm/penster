@@ -18,8 +18,7 @@ services:
       - DB_PASSWORD=placeholder
       - DB_NAME=penster
       - DB_SSLMODE=disable
-      - OTEL_ENABLED=true
-      - OTEL_EXPORTER_OTLP_ENDPOINT=jaeger:4317
+      - OTEL_ENABLED=false
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,16 +46,6 @@ services:
     networks:
       - penster-local
 
-  jaeger:
-    image: cr.jaegertracing.io/jaegertracing/jaeger:2.17.0
-    container_name: jaeger
-    ports:
-      - "16686:16686"  # Jaeger UI (HTTP)
-      - "16685:16685"  # gRPC Query API
-      - "4317:4317"    # OTLP gRPC receiver
-      - "4318:4318"    # OTLP HTTP receiver
-    networks:
-      - penster-local
 
 volumes:
   postgres_data:
