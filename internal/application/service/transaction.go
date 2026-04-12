@@ -158,6 +158,7 @@ func (s *TransactionService) Create(ctx context.Context, req *models.CreateTrans
 	log.Debug("create balances_updated")
 
 	log.Info("create succeeded", "id", tx.ID)
+	observability.TransactionsCreated.Add(ctx, 1)
 	return tx, nil
 }
 
@@ -319,6 +320,7 @@ func (s *TransactionService) Update(ctx context.Context, id string, req *models.
 	}
 
 	log.Info("update succeeded", "id", id)
+	observability.TransactionsUpdated.Add(ctx, 1)
 	return tx, nil
 }
 
@@ -353,5 +355,6 @@ func (s *TransactionService) Delete(ctx context.Context, id string) (*models.Tra
 		return nil, err
 	}
 	log.Info("delete succeeded", "id", id)
+	observability.TransactionsDeleted.Add(ctx, 1)
 	return result, nil
 }

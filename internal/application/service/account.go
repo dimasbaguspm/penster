@@ -37,6 +37,7 @@ func (s *AccountService) Create(ctx context.Context, req *models.CreateAccountRe
 		return nil, err
 	}
 	log.Info("create succeeded", "id", result.ID)
+	observability.AccountsCreated.Add(ctx, 1)
 	return result, nil
 }
 
@@ -86,6 +87,7 @@ func (s *AccountService) Update(ctx context.Context, id string, req *models.Upda
 		return nil, err
 	}
 	log.Info("update succeeded", "id", id)
+	observability.AccountsUpdated.Add(ctx, 1)
 	return result, nil
 }
 
@@ -102,6 +104,7 @@ func (s *AccountService) Delete(ctx context.Context, id string) (*models.Account
 		return nil, err
 	}
 	log.Info("delete succeeded", "id", id)
+	observability.AccountsDeleted.Add(ctx, 1)
 	return result, nil
 }
 

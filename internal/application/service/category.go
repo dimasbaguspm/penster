@@ -35,6 +35,7 @@ func (s *CategoryService) Create(ctx context.Context, req *models.CreateCategory
 		return nil, err
 	}
 	log.Info("create succeeded", "id", result.ID)
+	observability.CategoriesCreated.Add(ctx, 1)
 	return result, nil
 }
 
@@ -84,6 +85,7 @@ func (s *CategoryService) Update(ctx context.Context, id string, req *models.Upd
 		return nil, err
 	}
 	log.Info("update succeeded", "id", id)
+	observability.CategoriesUpdated.Add(ctx, 1)
 	return result, nil
 }
 
@@ -100,5 +102,6 @@ func (s *CategoryService) Delete(ctx context.Context, id string) (*models.Catego
 		return nil, err
 	}
 	log.Info("delete succeeded", "id", id)
+	observability.CategoriesDeleted.Add(ctx, 1)
 	return result, nil
 }

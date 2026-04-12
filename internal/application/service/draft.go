@@ -305,6 +305,7 @@ func (s *DraftService) Confirm(ctx context.Context, draftSubID string) (*models.
 	log.Debug("confirm status_updated")
 
 	log.Info("confirm succeeded", "draft_sub_id", draftSubID, "tx_id", tx.ID)
+	observability.DraftsConfirmed.Add(ctx, 1)
 	return tx, nil
 }
 
@@ -346,6 +347,7 @@ func (s *DraftService) Reject(ctx context.Context, draftSubID string) error {
 	}
 	log.Debug("reject status_updated")
 	log.Info("reject succeeded", "draft_sub_id", draftSubID)
+	observability.DraftsRejected.Add(ctx, 1)
 	return nil
 }
 
