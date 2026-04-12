@@ -27,12 +27,12 @@ type PoolStats interface {
 
 // PoolsStat holds pool statistics.
 type PoolsStat struct {
-	Acquired int64
+	Acquired  int64
 	Acquiredv int64
-	Idle     int64
-	Idlev    int64
-	Total    int64
-	Totalv   int64
+	Idle      int64
+	Idlev     int64
+	Total     int64
+	Totalv    int64
 }
 
 // Metric instruments organized by category
@@ -73,11 +73,6 @@ var (
 
 // InitMeter initializes the OTEL meter with OTLP exporter to Mimir.
 func InitMeter(ctx context.Context, cfg *config.Config) func(context.Context) error {
-	if !cfg.Observability.Enabled {
-		slog.Info("metrics disabled")
-		return func(context.Context) error { return nil }
-	}
-
 	conn, err := otlpmetricgrpc.New(ctx,
 		otlpmetricgrpc.WithEndpoint(cfg.Observability.MetricsEndpoint),
 		otlpmetricgrpc.WithInsecure(),
