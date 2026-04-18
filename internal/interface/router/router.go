@@ -3,11 +3,11 @@ package router
 import (
 	"net/http"
 
-	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"github.com/dimasbaguspm/penster/internal/application/service"
 	"github.com/dimasbaguspm/penster/internal/interface/handler"
 	"github.com/dimasbaguspm/penster/internal/interface/middleware"
 	"github.com/dimasbaguspm/penster/pkg/observability"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 // Router holds all HTTP handlers and provides route registration
@@ -32,7 +32,7 @@ func NewRouter(
 	return &Router{
 		healthHandler:      healthHandler,
 		accountHandler:     handler.NewAccountHandler(accountSvc),
-		categoryHandler:   handler.NewCategoryHandler(categorySvc),
+		categoryHandler:    handler.NewCategoryHandler(categorySvc),
 		transactionHandler: handler.NewTransactionHandler(transactionSvc),
 		draftHandler:       handler.NewDraftHandler(draftSvc),
 		reportHandler:      handler.NewReportHandler(reportSvc),
@@ -45,7 +45,6 @@ func (r *Router) Routes() http.Handler {
 
 	// Health endpoints
 	mux.HandleFunc("GET /health", r.healthHandler.Health)
-	mux.HandleFunc("GET /ready", r.healthHandler.Ready)
 
 	// Swagger endpoint
 	mux.Handle("/swagger/", httpSwagger.Handler(httpSwagger.URL("/swagger/doc.json")))

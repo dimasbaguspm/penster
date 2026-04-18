@@ -911,35 +911,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/ready": {
-            "get": {
-                "description": "Returns the readiness status of the API",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "health"
-                ],
-                "summary": "Readiness check",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.HealthResponse"
-                        }
-                    },
-                    "503": {
-                        "description": "Service Unavailable",
-                        "schema": {
-                            "$ref": "#/definitions/handler.HealthResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/reports/by-account": {
             "get": {
                 "description": "Get aggregated spending data grouped by account",

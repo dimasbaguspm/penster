@@ -54,12 +54,6 @@ var (
 	CategoriesUpdated metric.Int64Counter
 	CategoriesDeleted metric.Int64Counter
 
-	// Infrastructure metrics - database
-	DBPoolConnectionsActive metric.Int64ObservableGauge
-	DBPoolConnectionsIdle   metric.Int64ObservableGauge
-	DBPoolConnectionsUsed   metric.Int64ObservableGauge
-	DBQueryDuration         metric.Float64Histogram
-
 	// Infrastructure metrics - scheduler
 	SchedulerJobsExecuted metric.Int64Counter
 	SchedulerJobsFailed   metric.Int64Counter
@@ -210,53 +204,6 @@ func registerMetrics(m metric.Meter) error {
 		metric.WithUnit("{category}"))
 	if err != nil {
 		return fmt.Errorf("failed to create categories_deleted counter: %w", err)
-	}
-
-	// Infrastructure metrics - database (observable gauges with callbacks)
-	DBPoolConnectionsActive, err = m.Int64ObservableGauge("penster_db_pool_connections_active",
-		metric.WithDescription("Number of active connections in the pool"),
-		metric.WithUnit("{connection}"),
-		metric.WithInt64Callback(func(ctx context.Context, o metric.Int64Observer) error {
-			if dbPool != nil {
-				stat := dbPool.Stat(ctx)
-				o.Observe(stat.Acquired)
-			}
-			return nil
-		}))
-	if err != nil {
-		return fmt.Errorf("failed to create db_pool_connections_active gauge: %w", err)
-	}
-	DBPoolConnectionsIdle, err = m.Int64ObservableGauge("penster_db_pool_connections_idle",
-		metric.WithDescription("Number of idle connections in the pool"),
-		metric.WithUnit("{connection}"),
-		metric.WithInt64Callback(func(ctx context.Context, o metric.Int64Observer) error {
-			if dbPool != nil {
-				stat := dbPool.Stat(ctx)
-				o.Observe(stat.Idle)
-			}
-			return nil
-		}))
-	if err != nil {
-		return fmt.Errorf("failed to create db_pool_connections_idle gauge: %w", err)
-	}
-	DBPoolConnectionsUsed, err = m.Int64ObservableGauge("penster_db_pool_connections_used",
-		metric.WithDescription("Number of used connections in the pool"),
-		metric.WithUnit("{connection}"),
-		metric.WithInt64Callback(func(ctx context.Context, o metric.Int64Observer) error {
-			if dbPool != nil {
-				stat := dbPool.Stat(ctx)
-				o.Observe(stat.Total - stat.Idle)
-			}
-			return nil
-		}))
-	if err != nil {
-		return fmt.Errorf("failed to create db_pool_connections_used gauge: %w", err)
-	}
-	DBQueryDuration, err = m.Float64Histogram("penster_db_query_duration",
-		metric.WithDescription("Duration of database queries"),
-		metric.WithUnit("ms"))
-	if err != nil {
-		return fmt.Errorf("failed to create db_query_duration histogram: %w", err)
 	}
 
 	// Infrastructure metrics - scheduler

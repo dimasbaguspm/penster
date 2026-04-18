@@ -29,20 +29,15 @@ func InitLogger(ctx context.Context, cfg *config.Config) *slog.Logger {
 
 	if observabilityEnabled {
 		slog.Info("logger initialized",
-			"service", cfg.App.Env,
+			"env", cfg.App.Env,
+		)
+	} else {
+		slog.Info("logger disabled",
 			"env", cfg.App.Env,
 		)
 	}
 
 	return logger
-}
-
-func SlogLogger() *slog.Logger {
-	return logger
-}
-
-func GenTransactionID(ctx context.Context) context.Context {
-	return context.WithValue(ctx, txnIDKey, uuid.New().String())
 }
 
 func GetTransactionID(ctx context.Context) string {
@@ -88,9 +83,6 @@ func (l *Logger) Debug(msg string, attrs ...any) {
 }
 
 func (l *Logger) Log(level slog.Level, msg string, attrs ...any) {
-	if !observabilityEnabled {
-		return
-	}
 	args := []any{"layer", l.layer, "component", l.component, "txn_id", GetTransactionID(l.ctx)}
 	args = append(args, attrs...)
 	l.log.Log(l.ctx, level, msg, args...)

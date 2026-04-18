@@ -820,25 +820,6 @@ paths:
       summary: Health check
       tags:
       - health
-  /ready:
-    get:
-      consumes:
-      - application/json
-      description: Returns the readiness status of the API
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.HealthResponse'
-        "503":
-          description: Service Unavailable
-          schema:
-            $ref: '#/definitions/handler.HealthResponse'
-      summary: Readiness check
-      tags:
-      - health
   /reports/by-account:
     get:
       consumes:
