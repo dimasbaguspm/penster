@@ -38,9 +38,9 @@ func doDeleteAccount(id string) (*models.AccountResponse, int, error) {
 	return result, status, err
 }
 
-// doListAccounts GETs the accounts list and returns AccountsResponse + status.
-func doListAccounts() (*models.AccountsResponse, int, error) {
-	result, status, err := doJSONRequest[models.AccountsResponse]("GET", "/accounts", nil)
+// doListAccounts GETs the accounts list and returns AccountPagedResponse + status.
+func doListAccounts() (*models.AccountPagedResponse, int, error) {
+	result, status, err := doJSONRequest[models.AccountPagedResponse]("GET", "/accounts", nil)
 	if result == nil {
 		return nil, status, err
 	}

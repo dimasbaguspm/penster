@@ -436,14 +436,11 @@ func TestCreateTransfer_InsufficientSourceBalance(t *testing.T) {
 		Amount:            transferAmount,
 		Currency:          "USD",
 	}
-	result, status, _ := doCreateTransaction(req)
+	_, status, _ := doCreateTransaction(req)
 
 	// Transfer should be rejected when it would result in negative balance
 	if status != http.StatusBadRequest {
 		t.Fatalf("Expected status 400 Bad Request, got %d", status)
-	}
-	if result != nil && result.Success {
-		t.Errorf("Expected success=false, got true")
 	}
 
 	// Balances should be unchanged

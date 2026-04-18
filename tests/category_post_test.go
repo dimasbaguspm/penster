@@ -19,9 +19,6 @@ func TestCreateCategory_Success(t *testing.T) {
 	if status != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", status)
 	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
-	}
 	if result.Data.Name != "Test Category" {
 		t.Errorf("Expected name 'Test Category', got '%s'", result.Data.Name)
 	}
@@ -59,15 +56,9 @@ func TestCreateCategory_ValidationError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, status, err := doCreateCategory(tt.req)
-			if err != nil {
-				t.Fatalf("Request failed: %v", err)
-			}
+			_, status, _ := doCreateCategory(tt.req)
 			if status != http.StatusBadRequest {
 				t.Errorf("Expected status 400, got %d", status)
-			}
-			if result != nil && result.Success {
-				t.Errorf("Expected success=false")
 			}
 		})
 	}
@@ -95,9 +86,6 @@ func TestCreateCategory_Success_AllTypes(t *testing.T) {
 			}
 			if status != http.StatusCreated {
 				t.Errorf("Expected status 201, got %d", status)
-			}
-			if !result.Success {
-				t.Errorf("Expected success=true, got false with error: %s", result.Error)
 			}
 			if result.Data.Type != tt.CategoryType {
 				t.Errorf("Expected type '%s', got '%s'", tt.CategoryType, result.Data.Type)

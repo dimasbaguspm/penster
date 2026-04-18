@@ -285,12 +285,9 @@ func TestConfirmDraft_Transfer_InsufficientBalance(t *testing.T) {
 	draft, _, _ := doCreateDraft(req)
 
 	// Confirm should fail with 400 Bad Request
-	result, status, _ := doConfirmDraft(draft.Data.SubID)
+	_, status, _ := doConfirmDraft(draft.Data.SubID)
 	if status != http.StatusBadRequest {
 		t.Fatalf("Expected status 400 Bad Request, got %d", status)
-	}
-	if result != nil && result.Success {
-		t.Errorf("Expected success=false for insufficient balance")
 	}
 
 	// Balances should be unchanged

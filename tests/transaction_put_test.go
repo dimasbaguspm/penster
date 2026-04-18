@@ -114,9 +114,6 @@ func TestUpdateTransaction_PartialUpdate_TableDriven(t *testing.T) {
 			if status != http.StatusOK {
 				t.Errorf("Expected status 200, got %d", status)
 			}
-			if !result.Success {
-				t.Errorf("Expected success=true, got false with error: %s", result.Error)
-			}
 			if tt.updateTitle != nil && result.Data.Title != tt.wantTitle {
 				t.Errorf("Expected title %q, got %q", tt.wantTitle, result.Data.Title)
 			}
@@ -512,15 +509,12 @@ func TestUpdateTransaction_Validation_TableDriven(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			id, updateReq := tt.setup(t)
 
-			result, status, err := doUpdateTransaction(id, updateReq)
+			_, status, err := doUpdateTransaction(id, updateReq)
 			if err != nil {
 				t.Fatalf("Request failed: %v", err)
 			}
 			if status != tt.wantStatus {
 				t.Errorf("Expected status %d, got %d", tt.wantStatus, status)
-			}
-			if result.Success {
-				t.Errorf("Expected success=false for %s, got true", tt.name)
 			}
 		})
 	}

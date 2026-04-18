@@ -18,9 +18,6 @@ func TestConfirmDraft_Success_Expense(t *testing.T) {
 	if status != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", status)
 	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
-	}
 	if result.Data.Title != draft.Data.Title {
 		t.Errorf("Expected title '%s', got %s", draft.Data.Title, result.Data.Title)
 	}
@@ -166,12 +163,9 @@ func TestConfirmDraft_Error_TableDriven(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			draftID := tt.setup()
-			result, status, _ := doConfirmDraft(draftID)
+			_, status, _ := doConfirmDraft(draftID)
 			if status != tt.wantStatus {
 				t.Errorf("Expected status %d, got %d", tt.wantStatus, status)
-			}
-			if result != nil && result.Success {
-				t.Errorf("Expected success=false, got true")
 			}
 		})
 	}

@@ -28,9 +28,6 @@ func TestCreateDraft_Success_Expense(t *testing.T) {
 	if status != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", status)
 	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
-	}
 	if result.Data.Title != "Test Expense Draft" {
 		t.Errorf("Expected title 'Test Expense Draft', got %s", result.Data.Title)
 	}
@@ -69,9 +66,6 @@ func TestCreateDraft_Success_Income(t *testing.T) {
 	if status != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", status)
 	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
-	}
 	if result.Data.TransactionType != string(models.TransactionTypeIncome) {
 		t.Errorf("Expected type 'income', got %s", result.Data.TransactionType)
 	}
@@ -99,9 +93,6 @@ func TestCreateDraft_Success_Transfer(t *testing.T) {
 	}
 	if status != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", status)
-	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
 	}
 	if result.Data.TransactionType != string(models.TransactionTypeTransfer) {
 		t.Errorf("Expected type 'transfer', got %s", result.Data.TransactionType)
@@ -158,9 +149,6 @@ func TestCreateDraft_WithNotes(t *testing.T) {
 	}
 	if status != http.StatusCreated {
 		t.Errorf("Expected status 201, got %d", status)
-	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
 	}
 	if result.Data.Notes != "This is a test note" {
 		t.Errorf("Expected notes 'This is a test note', got %s", result.Data.Notes)
@@ -427,15 +415,12 @@ func TestCreateDraft_ValidationError_TableDriven(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, status, err := doCreateDraft(tt.req)
+			_, status, err := doCreateDraft(tt.req)
 			if err != nil {
 				t.Fatalf("Request failed: %v", err)
 			}
 			if status != tt.wantStatus {
 				t.Errorf("Expected status %d, got %d", tt.wantStatus, status)
-			}
-			if tt.wantErr && result.Success {
-				t.Errorf("Expected success=false, got true")
 			}
 		})
 	}

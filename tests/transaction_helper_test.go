@@ -33,18 +33,18 @@ func doUpdateTransaction(id string, req *models.UpdateTransactionRequest) (*mode
 	return result, status, err
 }
 
-// doDeleteTransaction DELETEs a transaction by ID and returns TransactionResponse + status.
-func doDeleteTransaction(id string) (*models.TransactionResponse, int, error) {
-	result, status, err := doJSONRequest[models.TransactionResponse]("DELETE", "/transactions/"+id, nil)
+// doDeleteTransaction DELETEs a transaction by ID and returns ErrorResponse + status.
+func doDeleteTransaction(id string) (*models.ErrorResponse, int, error) {
+	result, status, err := doJSONRequest[models.ErrorResponse]("DELETE", "/transactions/"+id, nil)
 	if result == nil {
 		return nil, status, err
 	}
 	return result, status, err
 }
 
-// doListTransactions GETs the transactions list and returns TransactionsResponse + status.
-func doListTransactions() (*models.TransactionsResponse, int, error) {
-	result, status, err := doJSONRequest[models.TransactionsResponse]("GET", "/transactions", nil)
+// doListTransactions GETs the transactions list and returns TransactionPagedResponse + status.
+func doListTransactions() (*models.TransactionPagedResponse, int, error) {
+	result, status, err := doJSONRequest[models.TransactionPagedResponse]("GET", "/transactions", nil)
 	if result == nil {
 		return nil, status, err
 	}

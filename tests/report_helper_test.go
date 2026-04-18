@@ -1,55 +1,19 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 
 	"github.com/dimasbaguspm/penster/pkg/models"
-	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
-// doGetReportSummary GETs /reports/summary with date range and returns ReportSummary + status.
-func doGetReportSummary(startDate, endDate string) (*models.ReportSummary, int, error) {
+// doGetReportSummary GETs /reports/summary with date range and returns ReportSummaryResponse + status.
+func doGetReportSummary(startDate, endDate string) (*models.ReportSummaryResponse, int, error) {
 	path := fmt.Sprintf("/reports/summary?start_date=%s&end_date=%s", startDate, endDate)
-
-	req, err := http.NewRequest("GET", serverURL+path, nil)
-	if err != nil {
-		return nil, 0, err
+	result, status, err := doJSONRequest[models.ReportSummaryResponse]("GET", path, nil)
+	if result == nil {
+		return nil, status, err
 	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, resp.StatusCode, err
-	}
-
-	var respWrapper response.Response
-	if err := json.Unmarshal(body, &respWrapper); err != nil {
-		return nil, resp.StatusCode, err
-	}
-
-	if !respWrapper.Success {
-		return nil, resp.StatusCode, fmt.Errorf("API error: %s", respWrapper.Error)
-	}
-
-	dataBytes, err := json.Marshal(respWrapper.Data)
-	if err != nil {
-		return nil, resp.StatusCode, err
-	}
-
-	result := &models.ReportSummary{}
-	if err := json.Unmarshal(dataBytes, result); err != nil {
-		return nil, resp.StatusCode, err
-	}
-	return result, resp.StatusCode, nil
+	return result, status, nil
 }
 
 // doGetReportByAccount GETs /reports/by-account with date range and returns ReportByAccount + status.

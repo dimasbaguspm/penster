@@ -16,15 +16,12 @@ func TestDeleteAccount_Success(t *testing.T) {
 	created, _, _ := doCreateAccount(createReq)
 	id := created.Data.SubID
 
-	result, status, err := doDeleteAccount(id)
+	_, status, err := doDeleteAccount(id)
 	if err != nil {
 		t.Fatalf("Failed to delete account: %v", err)
 	}
 	if status != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", status)
-	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
 	}
 
 	_, getStatus, _ := doGetAccount(id)

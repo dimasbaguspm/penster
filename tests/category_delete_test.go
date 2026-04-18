@@ -15,15 +15,12 @@ func TestDeleteCategory_Success(t *testing.T) {
 	created, _, _ := doCreateCategory(createReq)
 	id := created.Data.SubID
 
-	result, status, err := doDeleteCategory(id)
+	_, status, err := doDeleteCategory(id)
 	if err != nil {
 		t.Fatalf("Failed to delete category: %v", err)
 	}
 	if status != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", status)
-	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
 	}
 
 	_, getStatus, _ := doGetCategory(id)

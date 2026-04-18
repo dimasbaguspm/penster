@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/dimasbaguspm/penster/pkg/models"
-	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
 // doCreateDraft POSTs a CreateDraftRequest and returns DraftResponse + status.
@@ -35,9 +34,9 @@ func doUpdateDraft(id string, req *models.UpdateDraftRequest) (*models.DraftResp
 	return result, status, err
 }
 
-// doListDrafts GETs the drafts list and returns DraftsResponse + status.
-func doListDrafts() (*models.DraftsResponse, int, error) {
-	result, status, err := doJSONRequest[models.DraftsResponse]("GET", "/drafts", nil)
+// doListDrafts GETs the drafts list and returns DraftPagedResponse + status.
+func doListDrafts() (*models.DraftPagedResponse, int, error) {
+	result, status, err := doJSONRequest[models.DraftPagedResponse]("GET", "/drafts", nil)
 	if result == nil {
 		return nil, status, err
 	}
@@ -53,18 +52,18 @@ func doConfirmDraft(id string) (*models.TransactionResponse, int, error) {
 	return result, status, err
 }
 
-// doRejectDraft POSTs to reject a draft and returns response.Response + status.
-func doRejectDraft(id string) (*response.Response, int, error) {
-	result, status, err := doJSONRequest[response.Response]("POST", "/drafts/"+id+"/reject", nil)
+// doRejectDraft POSTs to reject a draft and returns ErrorResponse + status.
+func doRejectDraft(id string) (*models.ErrorResponse, int, error) {
+	result, status, err := doJSONRequest[models.ErrorResponse]("POST", "/drafts/"+id+"/reject", nil)
 	if result == nil {
 		return nil, status, err
 	}
 	return result, status, err
 }
 
-// doDeleteDraft DELETEs a draft by ID and returns response.Response + status.
-func doDeleteDraft(id string) (*response.Response, int, error) {
-	result, status, err := doJSONRequest[response.Response]("DELETE", "/drafts/"+id, nil)
+// doDeleteDraft DELETEs a draft by ID and returns ErrorResponse + status.
+func doDeleteDraft(id string) (*models.ErrorResponse, int, error) {
+	result, status, err := doJSONRequest[models.ErrorResponse]("DELETE", "/drafts/"+id, nil)
 	if result == nil {
 		return nil, status, err
 	}

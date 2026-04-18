@@ -11,15 +11,12 @@ import (
 func TestRejectDraft_Success(t *testing.T) {
 	draft, _, _ := createTestDraftWithAccountAndCategory(t)
 
-	result, status, err := doRejectDraft(draft.Data.SubID)
+	_, status, err := doRejectDraft(draft.Data.SubID)
 	if err != nil {
 		t.Fatalf("Failed to reject draft: %v", err)
 	}
 	if status != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", status)
-	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
 	}
 
 	// Verify draft status is now rejected
@@ -62,12 +59,9 @@ func TestRejectDraft_AlreadyRejected(t *testing.T) {
 	}
 
 	// Second reject should fail
-	result, status, _ := doRejectDraft(draft.Data.SubID)
+	_, status, _ := doRejectDraft(draft.Data.SubID)
 	if status != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
 	}
 }
 
@@ -82,12 +76,9 @@ func TestRejectDraft_AlreadyConfirmed(t *testing.T) {
 	}
 
 	// Reject should fail
-	result, status, _ := doRejectDraft(draft.Data.SubID)
+	_, status, _ := doRejectDraft(draft.Data.SubID)
 	if status != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
 	}
 }
 
@@ -107,7 +98,7 @@ func TestRejectDraft_DoesNotCreateTransaction(t *testing.T) {
 	}
 
 	// Find if any transaction has the same title as the draft
-	for _, tx := range txResult.Data {
+	for _, tx := range txResult.Items {
 		if tx.Title == draft.Data.Title {
 			t.Errorf("Draft was rejected but a transaction was created with the same title")
 		}

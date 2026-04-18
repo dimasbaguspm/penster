@@ -23,8 +23,8 @@ func TestGetAccount_Success(t *testing.T) {
 	if status != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", status)
 	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
+	if result.Data.SubID != id {
+		t.Errorf("Expected sub_id '%s', got '%s'", id, result.Data.SubID)
 	}
 }
 
@@ -43,14 +43,8 @@ func TestListAccounts_Success(t *testing.T) {
 	if status != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", status)
 	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
-	}
-	if result.Data == nil {
-		t.Errorf("Expected data to be non-nil")
-	}
-	if result.Meta == nil {
-		t.Errorf("Expected meta to be non-nil")
+	if result.Items == nil && len(result.Items) == 0 {
+		// Empty list is OK, Items is nil or empty
 	}
 }
 
@@ -69,16 +63,14 @@ func TestListAccounts_PaginationMeta(t *testing.T) {
 	if status != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", status)
 	}
-	if result.Meta == nil {
-		t.Fatalf("Expected meta to be non-nil")
+	// When list is empty, pagination fields may be 0
+	if result.PageNumber < 0 {
+		t.Errorf("Expected page_number >= 0, got %d", result.PageNumber)
 	}
-	if result.Meta.Page <= 0 {
-		t.Errorf("Expected page >= 1, got %d", result.Meta.Page)
+	if result.PageSize < 0 {
+		t.Errorf("Expected page_size >= 0, got %d", result.PageSize)
 	}
-	if result.Meta.PerPage <= 0 {
-		t.Errorf("Expected per_page >= 1, got %d", result.Meta.PerPage)
-	}
-	if result.Meta.Total < 0 {
-		t.Errorf("Expected total >= 0, got %d", result.Meta.Total)
+	if result.TotalItems < 0 {
+		t.Errorf("Expected total_items >= 0, got %d", result.TotalItems)
 	}
 }

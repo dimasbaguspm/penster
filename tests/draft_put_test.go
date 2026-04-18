@@ -24,9 +24,6 @@ func TestUpdateDraft_Success(t *testing.T) {
 	if status != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", status)
 	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
-	}
 	if result.Data.Title != newTitle {
 		t.Errorf("Expected title '%s', got %s", newTitle, result.Data.Title)
 	}
@@ -207,15 +204,9 @@ func TestUpdateDraft_InvalidAccountID(t *testing.T) {
 	req := &models.UpdateDraftRequest{
 		AccountID: &invalidAccountID,
 	}
-	result, status, err := doUpdateDraft(draft.Data.SubID, req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	_, status, _ := doUpdateDraft(draft.Data.SubID, req)
 	if status != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
 	}
 }
 
@@ -227,15 +218,9 @@ func TestUpdateDraft_InvalidCategoryID(t *testing.T) {
 	req := &models.UpdateDraftRequest{
 		CategoryID: &invalidCategoryID,
 	}
-	result, status, err := doUpdateDraft(draft.Data.SubID, req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	_, status, _ := doUpdateDraft(draft.Data.SubID, req)
 	if status != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
 	}
 }
 
@@ -247,15 +232,9 @@ func TestUpdateDraft_InvalidTransferAccountID(t *testing.T) {
 	req := &models.UpdateDraftRequest{
 		TransferAccountID: &invalidTransferAccountID,
 	}
-	result, status, err := doUpdateDraft(draft.Data.SubID, req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	_, status, _ := doUpdateDraft(draft.Data.SubID, req)
 	if status != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
 	}
 }
 
@@ -268,15 +247,9 @@ func TestUpdateDraft_TransferToSameAccount(t *testing.T) {
 		TransactionType:   &txType,
 		TransferAccountID: &account.Data.SubID, // same as account_id
 	}
-	result, status, err := doUpdateDraft(draft.Data.SubID, req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	_, status, _ := doUpdateDraft(draft.Data.SubID, req)
 	if status != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
 	}
 }
 
@@ -288,15 +261,9 @@ func TestUpdateDraft_ChangeToZeroAmount(t *testing.T) {
 	req := &models.UpdateDraftRequest{
 		Amount: &zeroAmount,
 	}
-	result, status, err := doUpdateDraft(draft.Data.SubID, req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	_, status, _ := doUpdateDraft(draft.Data.SubID, req)
 	if status != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
 	}
 }
 
@@ -308,14 +275,8 @@ func TestUpdateDraft_ChangeToNegativeAmount(t *testing.T) {
 	req := &models.UpdateDraftRequest{
 		Amount: &negativeAmount,
 	}
-	result, status, err := doUpdateDraft(draft.Data.SubID, req)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	_, status, _ := doUpdateDraft(draft.Data.SubID, req)
 	if status != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
 	}
 }

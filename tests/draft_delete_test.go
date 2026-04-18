@@ -16,15 +16,12 @@ func TestDeleteDraft_Success(t *testing.T) {
 	}
 
 	// Delete the rejected draft
-	result, status, err := doDeleteDraft(draft.Data.SubID)
+	_, status, err := doDeleteDraft(draft.Data.SubID)
 	if err != nil {
 		t.Fatalf("Failed to delete draft: %v", err)
 	}
 	if status != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", status)
-	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
 	}
 
 	// Verify draft is no longer accessible
@@ -55,12 +52,9 @@ func TestDeleteDraft_PendingDraft(t *testing.T) {
 	draft, _, _ := createTestDraftWithAccountAndCategory(t)
 
 	// Try to delete a pending draft (not rejected yet)
-	result, status, _ := doDeleteDraft(draft.Data.SubID)
+	_, status, _ := doDeleteDraft(draft.Data.SubID)
 	if status != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
 	}
 }
 
@@ -75,12 +69,9 @@ func TestDeleteDraft_ConfirmedDraft(t *testing.T) {
 	}
 
 	// Try to delete a confirmed draft
-	result, status, _ := doDeleteDraft(draft.Data.SubID)
+	_, status, _ := doDeleteDraft(draft.Data.SubID)
 	if status != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", status)
-	}
-	if result.Success {
-		t.Errorf("Expected success=false, got true")
 	}
 }
 

@@ -38,9 +38,9 @@ func doDeleteCategory(id string) (*models.CategoryResponse, int, error) {
 	return result, status, err
 }
 
-// doListCategories GETs the categories list and returns CategoriesResponse + status.
-func doListCategories() (*models.CategoriesResponse, int, error) {
-	result, status, err := doJSONRequest[models.CategoriesResponse]("GET", "/categories", nil)
+// doListCategories GETs the categories list and returns CategoryPagedResponse + status.
+func doListCategories() (*models.CategoryPagedResponse, int, error) {
+	result, status, err := doJSONRequest[models.CategoryPagedResponse]("GET", "/categories", nil)
 	if result == nil {
 		return nil, status, err
 	}

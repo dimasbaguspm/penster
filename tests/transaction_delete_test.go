@@ -22,15 +22,12 @@ func TestDeleteTransaction_Success(t *testing.T) {
 	created, _, _ := doCreateTransaction(createReq)
 	id := created.Data.SubID
 
-	result, status, err := doDeleteTransaction(id)
+	_, status, err := doDeleteTransaction(id)
 	if err != nil {
 		t.Fatalf("Failed to delete transaction: %v", err)
 	}
 	if status != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", status)
-	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
 	}
 
 	_, getStatus, _ := doGetTransaction(id)
@@ -129,7 +126,7 @@ func TestDeleteTransaction_ListAfterDelete(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", status)
 	}
 
-	for _, tx := range result.Data {
+	for _, tx := range result.Items {
 		if tx.SubID == id {
 			t.Errorf("Deleted transaction should not appear in list")
 		}

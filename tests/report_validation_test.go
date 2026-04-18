@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/dimasbaguspm/penster/pkg/response"
+	"github.com/dimasbaguspm/penster/pkg/models"
 )
 
 // TestReportValidation_MissingParams_TableDriven verifies validation errors using table-driven subtests.
@@ -38,12 +38,9 @@ func TestReportValidation_MissingParams_TableDriven(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, status, _ := doJSONRequest[response.Response]("GET", tt.path, nil)
+			_, status, _ := doJSONRequest[models.ErrorResponse]("GET", tt.path, nil)
 			if status != tt.wantStatus {
 				t.Errorf("Expected status %d, got %d", tt.wantStatus, status)
-			}
-			if result != nil && result.Success {
-				t.Errorf("Expected success=false, got true")
 			}
 		})
 	}
@@ -80,12 +77,9 @@ func TestReportValidation_InvalidDateFormat_TableDriven(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, status, _ := doJSONRequest[response.Response]("GET", tt.path, nil)
+			_, status, _ := doJSONRequest[models.ErrorResponse]("GET", tt.path, nil)
 			if status != tt.wantStatus {
 				t.Errorf("Expected status %d, got %d", tt.wantStatus, status)
-			}
-			if result != nil && result.Success {
-				t.Errorf("Expected success=false, got true")
 			}
 		})
 	}
@@ -117,12 +111,9 @@ func TestReportValidation_DateRangeErrors_TableDriven(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, status, _ := doJSONRequest[response.Response]("GET", tt.path, nil)
+			_, status, _ := doJSONRequest[models.ErrorResponse]("GET", tt.path, nil)
 			if status != tt.wantStatus {
 				t.Errorf("Expected status %d, got %d", tt.wantStatus, status)
-			}
-			if result != nil && result.Success {
-				t.Errorf("Expected success=false, got true")
 			}
 		})
 	}

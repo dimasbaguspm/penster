@@ -52,11 +52,11 @@ func TestReportSummary_WithTransactions(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", status)
 	}
 	// December is in the future, so we expect 0 - this verifies the date filtering works
-	if result.TotalExpenses != 0 {
-		t.Errorf("Expected total_expenses 0 (future date), got %d", result.TotalExpenses)
+	if result.Data.TotalExpenses != 0 {
+		t.Errorf("Expected total_expenses 0 (future date), got %d", result.Data.TotalExpenses)
 	}
-	if result.TotalIncome != 0 {
-		t.Errorf("Expected total_income 0 (future date), got %d", result.TotalIncome)
+	if result.Data.TotalIncome != 0 {
+		t.Errorf("Expected total_income 0 (future date), got %d", result.Data.TotalIncome)
 	}
 }
 
@@ -65,14 +65,14 @@ func TestReportSummary_EmptyPeriod(t *testing.T) {
 	result, status, err := doGetReportSummary("2099-01-01", "2099-01-31")
 	if status == http.StatusOK && err == nil {
 		// Only verify if parsing succeeds
-		if result.TotalExpenses != 0 {
-			t.Errorf("Expected total_expenses 0, got %d", result.TotalExpenses)
+		if result.Data.TotalExpenses != 0 {
+			t.Errorf("Expected total_expenses 0, got %d", result.Data.TotalExpenses)
 		}
-		if result.TotalIncome != 0 {
-			t.Errorf("Expected total_income 0, got %d", result.TotalIncome)
+		if result.Data.TotalIncome != 0 {
+			t.Errorf("Expected total_income 0, got %d", result.Data.TotalIncome)
 		}
-		if result.TotalTransfers != 0 {
-			t.Errorf("Expected total_transfers 0, got %d", result.TotalTransfers)
+		if result.Data.TotalTransfers != 0 {
+			t.Errorf("Expected total_transfers 0, got %d", result.Data.TotalTransfers)
 		}
 	}
 }
@@ -109,7 +109,7 @@ func TestReportSummary_WithTransfer(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", status)
 	}
 	// December is in the future, so we expect 0 - this verifies the date filtering works
-	if result.TotalTransfers != 0 {
-		t.Errorf("Expected total_transfers 0 (future date), got %d", result.TotalTransfers)
+	if result.Data.TotalTransfers != 0 {
+		t.Errorf("Expected total_transfers 0 (future date), got %d", result.Data.TotalTransfers)
 	}
 }

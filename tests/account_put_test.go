@@ -32,9 +32,6 @@ func TestReplaceAccount_Success(t *testing.T) {
 	if status != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", status)
 	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
-	}
 	if result.Data.Name != "Updated Account" {
 		t.Errorf("Expected name 'Updated Account', got %s", result.Data.Name)
 	}
@@ -189,15 +186,9 @@ func TestReplaceAccount_ValidationError_NegativeBalance(t *testing.T) {
 	replaceReq := &models.UpdateAccountRequest{
 		Balance: &negativeBalance,
 	}
-	result, status, err := doUpdateAccount(id, replaceReq)
-	if err != nil {
-		t.Fatalf("Request failed: %v", err)
-	}
+	_, status, _ := doUpdateAccount(id, replaceReq)
 	if status != http.StatusBadRequest {
 		t.Errorf("Expected status 400 for negative balance, got %d", status)
-	}
-	if result != nil && result.Success {
-		t.Errorf("Expected success=false for negative balance")
 	}
 }
 

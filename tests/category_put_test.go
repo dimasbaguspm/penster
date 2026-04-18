@@ -29,9 +29,6 @@ func TestReplaceCategory_Success(t *testing.T) {
 	if status != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", status)
 	}
-	if !result.Success {
-		t.Errorf("Expected success=true, got false with error: %s", result.Error)
-	}
 	if result.Data.Name != "Updated Category" {
 		t.Errorf("Expected name 'Updated Category', got '%s'", result.Data.Name)
 	}
@@ -158,15 +155,9 @@ func TestReplaceCategory_ValidationError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, status, err := doUpdateCategory(id, tt.req)
-			if err != nil {
-				t.Fatalf("Request failed: %v", err)
-			}
+			_, status, _ := doUpdateCategory(id, tt.req)
 			if status != http.StatusBadRequest {
 				t.Errorf("Expected status 400, got %d", status)
-			}
-			if result != nil && result.Success {
-				t.Errorf("Expected success=false")
 			}
 		})
 	}
