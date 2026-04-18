@@ -21,16 +21,6 @@ type Pool struct {
 	*pgxpool.Pool
 }
 
-// Stat returns pool statistics for observability gauges.
-func (p *Pool) Stat(ctx context.Context) observability.PoolsStat {
-	stat := p.Pool.Stat()
-	return observability.PoolsStat{
-		Acquired: int64(stat.AcquiredConns()),
-		Idle:     int64(stat.IdleConns()),
-		Total:    int64(stat.TotalConns()),
-	}
-}
-
 func MustConnect(ctx context.Context, cfg Config) *Pool {
 	log := observability.NewLogger(ctx, "infrastructure", "postgres")
 	log.Info("Attempting to connect the database")

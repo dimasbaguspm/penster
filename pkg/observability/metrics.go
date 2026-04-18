@@ -4,36 +4,20 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/dimasbaguspm/penster/config"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 var meter metric.Meter
-
-// DB pool reference for observable gauges
-var dbPool PoolStats
-
-// PoolStats abstracts database pool statistics.
-type PoolStats interface {
-	Stat(ctx context.Context) PoolsStat
-}
-
-// PoolsStat holds pool statistics.
-type PoolsStat struct {
-	Acquired  int64
-	Acquiredv int64
-	Idle      int64
-	Idlev     int64
-	Total     int64
-	Totalv    int64
-}
 
 // Metric instruments organized by category
 var (
@@ -67,6 +51,14 @@ var (
 
 // InitMeter initializes the OTEL meter with OTLP exporter to Mimir.
 func InitMeter(ctx context.Context, cfg *config.Config) func(context.Context) error {
+	// Always register no-op metrics first so Add() calls are safe
+	registerMetrics(noop.NewMeterProvider().Meter("penster"))
+
+	if !cfg.Observability.Enabled {
+		slog.Info("metrics disabled, using no-op instruments")
+		return func(context.Context) error { return nil }
+	}
+
 	conn, err := otlpmetricgrpc.New(ctx,
 		otlpmetricgrpc.WithEndpoint(cfg.Observability.MetricsEndpoint),
 		otlpmetricgrpc.WithInsecure(),
@@ -96,14 +88,14 @@ func InitMeter(ctx context.Context, cfg *config.Config) func(context.Context) er
 	otel.SetMeterProvider(provider)
 	meter = provider.Meter("penster")
 
-	if err := registerMetrics(meter); err != nil {
-		slog.Error(fmt.Sprintf("failed to register metrics: %v", err))
-	}
+	registerMetrics(meter)
 
 	slog.Info("metrics initialized", "endpoint", cfg.Observability.MetricsEndpoint)
 
 	return func(ctx context.Context) error {
-		if err := provider.Shutdown(ctx); err != nil {
+		shutdownCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		defer cancel()
+		if err := provider.Shutdown(shutdownCtx); err != nil {
 			slog.Error(fmt.Sprintf("failed to shutdown meter provider: %v", err))
 			return err
 		}
@@ -114,11 +106,6 @@ func InitMeter(ctx context.Context, cfg *config.Config) func(context.Context) er
 // Meter returns the global meter instance.
 func Meter() metric.Meter {
 	return meter
-}
-
-// SetDBPool sets the database pool for observable gauge collection.
-func SetDBPool(pool PoolStats) {
-	dbPool = pool
 }
 
 // RecordJobMetrics records scheduler job execution metrics.
