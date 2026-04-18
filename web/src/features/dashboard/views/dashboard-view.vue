@@ -13,7 +13,7 @@ import {
   Legend,
   Filler,
 } from "chart.js";
-import { Button, Badge, Card, Heading, Text, Icon } from "@/components/ui";
+import { Button, Badge, Card, Heading, Text } from "@/components/ui";
 import { useApi } from "@/composables/use-api";
 import type {
   ModelsAccount,
@@ -44,11 +44,13 @@ const drafts = ref<ModelsDraft[]>([]);
 const reportSummary = ref<ModelsReportSummary | null>(null);
 const reportTrends = ref<ModelsReportTrends | null>(null);
 const reportByCategory = ref<ModelsReportByCategory | null>(null);
+const draftActionLoading = ref<string | null>(null);
 
 // Budget thresholds — hardcoded mock; no real budget API exists
 const MOCK_BUDGETS: Record<string, number> = {
   "cat-001": 800,   // Groceries
   "cat-002": 2500,  // Rent
+  "cat-003": 10000, // Salary
 };
 
 const netBalance = computed(() =>
@@ -145,13 +147,23 @@ const categoryChartOptions = {
 };
 
 async function confirmDraft(id: string) {
-  await api.drafts.confirmCreate(id);
-  drafts.value = drafts.value.filter((d) => d.id !== id);
+  draftActionLoading.value = id;
+  try {
+    await api.drafts.confirmCreate(id);
+    drafts.value = drafts.value.filter((d) => d.id !== id);
+  } finally {
+    draftActionLoading.value = null;
+  }
 }
 
 async function rejectDraft(id: string) {
-  await api.drafts.rejectCreate(id);
-  drafts.value = drafts.value.filter((d) => d.id !== id);
+  draftActionLoading.value = id;
+  try {
+    await api.drafts.rejectCreate(id);
+    drafts.value = drafts.value.filter((d) => d.id !== id);
+  } finally {
+    draftActionLoading.value = null;
+  }
 }
 
 onMounted(async () => {
@@ -298,7 +310,7 @@ onMounted(async () => {
                 <div
                   class="h-full rounded-full transition-all duration-300"
                   :class="cat.type === 'income' ? 'bg-[var(--teal)]' : 'bg-[var(--rust)]'"
-                  :style="{ width: Math.min((cat.total / (MOCK_BUDGETS[cat.category_id] || 1)) * 100, 100) + '%' }"
+                  :style="{ width: Math.min(Math.round((cat.total / (MOCK_BUDGETS[cat.category_id] || 1)) * 100), 100) + '%' }"
                 />
               </div>
             </div>
@@ -331,11 +343,11 @@ onMounted(async () => {
                 class="flex items-center justify-between py-3"
               >
                 <div>
-                  <p class="text-sm font-medium text-[var(--ink)]">{{ tx.description || tx.category_id }}</p>
+                  <p class="text-sm font-medium text-[var(--ink)]">{{ tx.title || 'Untitled Transaction' }}</p>
                   <Text as="p" size="xs" muted>{{ formatRelativeDate(tx.date) }}</Text>
                 </div>
                 <span class="font-mono text-sm" :class="getAmountColor(tx.type)">
-                  {{ tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : '' }}{{ formatCurrency(tx.amount) }}
+                  {{ tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : '~' }}{{ formatCurrency(tx.amount) }}
                 </span>
               </div>
             </div>
@@ -363,13 +375,13 @@ onMounted(async () => {
               >
                 <div class="flex items-center justify-between mb-3">
                   <div>
-                    <p class="text-sm font-medium text-[var(--ink)]">{{ draft.description || 'Untitled Draft' }}</p>
+                    <p class="text-sm font-medium text-[var(--ink)]">{{ draft.title || 'Untitled Draft' }}</p>
                     <Text as="p" size="xs" muted>{{ formatCurrency(draft.amount) }} · {{ draft.source }}</Text>
                   </div>
                 </div>
                 <div class="flex gap-2">
-                  <Button variant="secondary" size="sm" @click="rejectDraft(draft.id)">Reject</Button>
-                  <Button size="sm" @click="confirmDraft(draft.id)">Confirm</Button>
+                  <Button variant="secondary" size="sm" :disabled="draftActionLoading === draft.id" @click="rejectDraft(draft.id)">Reject</Button>
+                  <Button size="sm" :disabled="draftActionLoading === draft.id" @click="confirmDraft(draft.id)">Confirm</Button>
                 </div>
               </div>
             </div>
