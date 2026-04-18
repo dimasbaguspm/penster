@@ -1,0 +1,174 @@
+@import "@fontsource-variable/cormorant";
+@import "@fontsource-variable/dm-sans";
+@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource-variable/playfair-display";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: #faf8f3;
+  --paper-dark: #f0ece3;
+  --ink: #1a1915;
+  --ink-soft: #4a4740;
+  --rule: #d4cfc5;
+  --rust: #b85c38;
+  --rust-muted: #c4795a;
+  --teal: #2a6b6b;
+  --teal-muted: #4a8f8f;
+  --gold: #9c7c38;
+  --gold-light: #c4a55a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "DM Sans Variable", sans-serif;
+  background-color: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(156, 124, 56, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(42, 107, 107, 0.05) 0%, transparent 50%);
+}
+
+::selection {
+  background-color: var(--gold-light);
+  color: var(--ink);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--paper-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--rule);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-soft);
+}
+
+/* Number typography */
+.font-mono {
+  font-family: "JetBrains Mono Variable", monospace;
+}
+
+/* Heading typography */
+.font-display {
+  font-family: "Cormorant Variable", serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+}
+
+/* Ruled lines background effect */
+.ruled-bg {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 31px,
+    var(--rule) 31px,
+    var(--rule) 32px
+  );
+  background-position: 0 8px;
+}
+
+/* Entrance animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideRight {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease both;
+}
+
+.animate-slide-right {
+  animation: slideRight 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.delay-1 {
+  animation-delay: 80ms;
+}
+.delay-2 {
+  animation-delay: 160ms;
+}
+.delay-3 {
+  animation-delay: 240ms;
+}
+.delay-4 {
+  animation-delay: 320ms;
+}
+.delay-5 {
+  animation-delay: 400ms;
+}
+
+/* Card hover */
+.card-hover {
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(26, 25, 21, 0.1);
+}
+
+/* Button press */
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Ink underline */
+.ink-underline {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--rule);
+  transition: text-decoration-color 0.2s ease;
+}
+.ink-underline:hover {
+  text-decoration-color: var(--ink);
+}

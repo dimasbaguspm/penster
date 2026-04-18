@@ -1,4 +1,4 @@
-.PHONY: init vet build test swag sql dev-backend dev-reset
+.PHONY: init vet build test swag sql dev-backend dev-reset dev-web
 
 init:
 	go install github.com/swaggo/swag/cmd/swag@latest
@@ -27,3 +27,6 @@ dev-backend:
 
 dev-reset:
 	docker compose -f infra/docker-compose.local.yml down -v
+
+dev-web:
+	cd web && npm install && npm run dev
