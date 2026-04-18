@@ -191,11 +191,11 @@ onMounted(async () => {
     }),
     wrap(async () => {
       const res = await api.reports.trendsList({ start_date: start, end_date: end });
-      reportTrends.value = res.data.data || null;
+      reportTrends.value = res.data || null;
     }),
     wrap(async () => {
       const res = await api.reports.byCategoryList({ start_date: start, end_date: end });
-      reportByCategory.value = res.data.data || null;
+      reportByCategory.value = res.data || null;
     }),
   ]);
 });
@@ -303,14 +303,14 @@ onMounted(async () => {
               <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium text-[var(--ink)]">{{ cat.category_name }}</span>
                 <span class="text-xs text-[var(--ink-soft)]">
-                  {{ formatCurrency(cat.total) }} / {{ formatCurrency(MOCK_BUDGETS[cat.category_id] || 0) }}
+                  {{ formatCurrency(cat.total) }} / {{ formatCurrency(MOCK_BUDGETS[cat.category_id!] || 0) }}
                 </span>
               </div>
               <div class="h-2 bg-[var(--rule)] rounded-full overflow-hidden">
                 <div
                   class="h-full rounded-full transition-all duration-300"
                   :class="cat.type === 'income' ? 'bg-[var(--teal)]' : 'bg-[var(--rust)]'"
-                  :style="{ width: Math.min(Math.round((cat.total / (MOCK_BUDGETS[cat.category_id] || 1)) * 100), 100) + '%' }"
+                  :style="{ width: Math.min(Math.round(((cat.total ?? 0) / (MOCK_BUDGETS[cat.category_id!] || 1)) * 100), 100) + '%' }"
                 />
               </div>
             </div>
@@ -344,10 +344,10 @@ onMounted(async () => {
               >
                 <div>
                   <p class="text-sm font-medium text-[var(--ink)]">{{ tx.title || 'Untitled Transaction' }}</p>
-                  <Text as="p" size="xs" muted>{{ formatRelativeDate(tx.date) }}</Text>
+                  <Text as="p" size="xs" muted>{{ formatRelativeDate(tx.created_at) }}</Text>
                 </div>
-                <span class="font-mono text-sm" :class="getAmountColor(tx.type)">
-                  {{ tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : '~' }}{{ formatCurrency(tx.amount) }}
+                <span class="font-mono text-sm" :class="getAmountColor(tx.transaction_type)">
+                  {{ tx.transaction_type === 'income' ? '+' : tx.transaction_type === 'expense' ? '-' : '~' }}{{ formatCurrency(tx.amount) }}
                 </span>
               </div>
             </div>
@@ -380,8 +380,8 @@ onMounted(async () => {
                   </div>
                 </div>
                 <div class="flex gap-2">
-                  <Button variant="secondary" size="sm" :disabled="draftActionLoading === draft.id" @click="rejectDraft(draft.id)">Reject</Button>
-                  <Button size="sm" :disabled="draftActionLoading === draft.id" @click="confirmDraft(draft.id)">Confirm</Button>
+                  <Button variant="secondary" size="sm" :disabled="draftActionLoading === (draft.id ?? '')" @click="rejectDraft(draft.id ?? '')">Reject</Button>
+                  <Button size="sm" :disabled="draftActionLoading === (draft.id ?? '')" @click="confirmDraft(draft.id ?? '')">Confirm</Button>
                 </div>
               </div>
             </div>
