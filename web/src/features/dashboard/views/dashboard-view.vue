@@ -1,24 +1,59 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
+import { Line, Doughnut } from "vue-chartjs";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from "chart.js";
 import { Button, Badge, Card, Heading, Text, Icon } from "@/components/ui";
 import { useApi } from "@/composables/use-api";
-import type { ModelsAccount, ModelsReportSummary } from "@/api/types";
+import type {
+  ModelsAccount,
+  ModelsTransaction,
+  ModelsDraft,
+  ModelsReportSummary,
+  ModelsReportTrends,
+  ModelsReportByCategory,
+} from "@/api/types";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 const { api, loading, error, wrap } = useApi();
 
 const accounts = ref<ModelsAccount[]>([]);
-const draftsCount = ref(0);
-const report = ref<ModelsReportSummary | null>(null);
+const transactions = ref<ModelsTransaction[]>([]);
+const drafts = ref<ModelsDraft[]>([]);
+const reportSummary = ref<ModelsReportSummary | null>(null);
+const reportTrends = ref<ModelsReportTrends | null>(null);
+const reportByCategory = ref<ModelsReportByCategory | null>(null);
 
-const netBalance = computed(() => {
-  return accounts.value.reduce((sum, a) => sum + (a.balance || 0), 0);
-});
+// Budget thresholds — hardcoded mock; no real budget API exists
+const MOCK_BUDGETS: Record<string, number> = {
+  "cat-001": 800,   // Groceries
+  "cat-002": 2500,  // Rent
+};
 
-function getBadgeVariant(type?: string) {
-  if (type === "income") return "teal";
-  if (type === "expense") return "rust";
-  return "default";
-}
+const netBalance = computed(() =>
+  accounts.value.reduce((sum, a) => sum + (a.balance || 0), 0)
+);
 
 function formatCurrency(amount?: number) {
   return new Intl.NumberFormat("en-US", {
@@ -27,25 +62,128 @@ function formatCurrency(amount?: number) {
   }).format((amount || 0) / 100);
 }
 
+function getBadgeVariant(type?: string) {
+  if (type === "income") return "teal";
+  if (type === "expense") return "rust";
+  if (type === "transfer") return "gold";
+  return "default";
+}
+
+function getAmountColor(type?: string) {
+  if (type === "income") return "text-[var(--teal)]";
+  if (type === "expense") return "text-[var(--rust)]";
+  return "text-[var(--ink)]";
+}
+
+function formatRelativeDate(dateStr?: string) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// Line chart — monthly spending trend
+const trendChartData = computed(() => {
+  const pts = reportTrends.value?.data_points || [];
+  return {
+    labels: pts.map((p) =>
+      new Date(p.date || "").toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    ),
+    datasets: [
+      {
+        label: "Spending",
+        data: pts.map((p) => Math.abs(p.total || 0)),
+        borderColor: "#3d9a8b",
+        backgroundColor: "rgba(61,154,139,0.1)",
+        fill: true,
+        tension: 0.4,
+      },
+    ],
+  };
+});
+
+const trendChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { grid: { display: false }, ticks: { color: "var(--ink-soft)" } },
+    y: { grid: { color: "var(--rule)" }, ticks: { color: "var(--ink-soft)" } },
+  },
+};
+
+// Donut chart — spending by category
+const categoryChartData = computed(() => {
+  const cats = reportByCategory.value?.categories || [];
+  return {
+    labels: cats.map((c) => c.category_name || ""),
+    datasets: [
+      {
+        data: cats.map((c) => c.total || 0),
+        backgroundColor: ["#b5534a", "#3d9a8b", "#e8b05b", "#7a6f5d"],
+        borderWidth: 0,
+      },
+    ],
+  };
+});
+
+const categoryChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  cutout: "65%",
+  plugins: {
+    legend: {
+      position: "bottom" as const,
+      labels: { color: "var(--ink-soft)", padding: 16, boxWidth: 12 },
+    },
+  },
+};
+
+async function confirmDraft(id: string) {
+  await api.drafts.confirmCreate(id);
+  drafts.value = drafts.value.filter((d) => d.id !== id);
+}
+
+async function rejectDraft(id: string) {
+  await api.drafts.rejectCreate(id);
+  drafts.value = drafts.value.filter((d) => d.id !== id);
+}
+
 onMounted(async () => {
+  const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    .toISOString()
+    .split("T")[0];
+  const end = new Date().toISOString().split("T")[0];
+
   await Promise.allSettled([
     wrap(async () => {
       const res = await api.accounts.accountsList({ page_size: 10 });
       accounts.value = res.data.items || [];
     }),
     wrap(async () => {
-      const res = await api.drafts.draftsList({ status: "pending" });
-      draftsCount.value = res.data.total_items || 0;
+      const res = await api.transactions.transactionsList({ page_size: 5 });
+      transactions.value = res.data.items || [];
     }),
     wrap(async () => {
-      const now = new Date();
-      const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-      const end = now.toISOString().split("T")[0];
-      const res = await api.reports.summaryList({
-        start_date: start,
-        end_date: end,
-      });
-      report.value = res.data.data || null;
+      const res = await api.drafts.draftsList({ status: "pending" });
+      drafts.value = res.data.items || [];
+    }),
+    wrap(async () => {
+      const res = await api.reports.summaryList({ start_date: start, end_date: end });
+      reportSummary.value = res.data.data || null;
+    }),
+    wrap(async () => {
+      const res = await api.reports.trendsList({ start_date: start, end_date: end });
+      reportTrends.value = res.data.data || null;
+    }),
+    wrap(async () => {
+      const res = await api.reports.byCategoryList({ start_date: start, end_date: end });
+      reportByCategory.value = res.data.data || null;
     }),
   ]);
 });
@@ -53,7 +191,7 @@ onMounted(async () => {
 
 <template>
   <div>
-    <!-- Hero greeting -->
+    <!-- Section A — Hero greeting strip -->
     <section class="border-b border-[var(--rule)] bg-[var(--paper-dark)]/40">
       <div class="max-w-7xl mx-auto px-6 lg:px-10 py-10">
         <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
@@ -86,25 +224,14 @@ onMounted(async () => {
       <!-- Loading state -->
       <div v-if="loading" class="flex items-center justify-center py-16 text-[var(--ink-soft)]">
         <svg class="w-5 h-5 animate-spin mr-3" fill="none" viewBox="0 0 24 24">
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          />
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          />
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
         Loading...
       </div>
 
       <template v-else>
-        <!-- Summary strip -->
+        <!-- Section B — Metric strip (3 tiles: Net Balance | Income | Expenses) -->
         <div
           class="grid grid-cols-1 sm:grid-cols-3 gap-px bg-[var(--rule)] border border-[var(--rule)] rounded-lg overflow-hidden mb-10 animate-fade-up delay-1"
         >
@@ -125,7 +252,7 @@ onMounted(async () => {
               Income
             </Text>
             <p class="font-mono text-3xl font-medium text-[var(--teal)]">
-              {{ formatCurrency(report?.total_income) }}
+              {{ formatCurrency(reportSummary?.total_income) }}
             </p>
             <Text as="p" size="xs" muted mt="1">This month</Text>
           </div>
@@ -134,148 +261,173 @@ onMounted(async () => {
               Expenses
             </Text>
             <p class="font-mono text-3xl font-medium text-[var(--rust)]">
-              {{ formatCurrency(report?.total_expenses) }}
+              {{ formatCurrency(reportSummary?.total_expenses) }}
             </p>
             <Text as="p" size="xs" muted mt="1">This month</Text>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          <!-- Accounts list -->
-          <div class="lg:col-span-3 animate-fade-up delay-2">
+        <!-- Section C — Charts row -->
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-10">
+          <Card class="lg:col-span-3 animate-fade-up delay-2">
+            <Heading as="h3" size="lg" mb="4">Spending Trend</Heading>
+            <div class="h-64">
+              <Line :data="trendChartData" :options="trendChartOptions" />
+            </div>
+          </Card>
+          <Card class="lg:col-span-2 animate-fade-up delay-3">
+            <Heading as="h3" size="lg" mb="4">By Category</Heading>
+            <div class="h-64">
+              <Doughnut :data="categoryChartData" :options="categoryChartOptions" />
+            </div>
+          </Card>
+        </div>
+
+        <!-- Section D — Budget progress bars -->
+        <Card class="mb-10 animate-fade-up delay-4">
+          <Heading as="h3" size="lg" mb="4">Spending vs Budget</Heading>
+          <div class="space-y-6">
+            <div
+              v-for="cat in (reportByCategory?.categories || [])"
+              :key="cat.category_id"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-[var(--ink)]">{{ cat.category_name }}</span>
+                <span class="text-xs text-[var(--ink-soft)]">
+                  {{ formatCurrency(cat.total) }} / {{ formatCurrency(MOCK_BUDGETS[cat.category_id] || 0) }}
+                </span>
+              </div>
+              <div class="h-2 bg-[var(--rule)] rounded-full overflow-hidden">
+                <div
+                  class="h-full bg-[var(--rust)] rounded-full transition-all duration-300"
+                  :style="{ width: Math.min((cat.total / (MOCK_BUDGETS[cat.category_id] || 1)) * 100, 100) + '%' }"
+                />
+              </div>
+            </div>
+            <div v-if="!reportByCategory?.categories?.length" class="text-sm text-[var(--ink-soft)]">
+              No category data available.
+            </div>
+          </div>
+        </Card>
+
+        <!-- Section E — Recent Transactions (bottom-left) and Section F — Pending Drafts (bottom-right) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+          <!-- Section E — Recent Transactions -->
+          <Card class="animate-fade-up delay-5">
             <div class="flex items-center justify-between mb-4">
-              <Heading as="h3" size="xl">Accounts</Heading>
+              <Heading as="h3" size="lg">Recent Transactions</Heading>
               <RouterLink
-                to="/accounts"
-                class="text-xs font-medium text-[var(--ink-soft)] hover:text-[var(--ink)] ink-underline transition-colors"
+                to="/transactions"
+                class="text-xs font-medium text-[var(--ink-soft)] hover:text-[var(--ink)] underline transition-colors"
               >
                 View all
               </RouterLink>
             </div>
-
-            <Card>
-              <div v-if="accounts.length === 0" class="p-8 text-center">
-                <Text as="p" size="sm" muted>
-                  No accounts yet. Create one to get started.
-                </Text>
+            <div v-if="transactions.length === 0" class="p-6 text-center">
+              <Text as="p" size="sm" muted>No recent transactions.</Text>
+            </div>
+            <div v-else class="divide-y divide-[var(--rule)]">
+              <div
+                v-for="tx in transactions.slice(0, 5)"
+                :key="tx.id"
+                class="flex items-center justify-between py-3"
+              >
+                <div>
+                  <p class="text-sm font-medium text-[var(--ink)]">{{ tx.description || tx.category_id }}</p>
+                  <Text as="p" size="xs" muted>{{ formatRelativeDate(tx.date) }}</Text>
+                </div>
+                <span class="font-mono text-sm" :class="getAmountColor(tx.type)">
+                  {{ tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : '' }}{{ formatCurrency(tx.amount) }}
+                </span>
               </div>
-              <table v-else class="w-full">
-                <thead>
-                  <tr class="border-b border-[var(--rule)]">
-                    <th
-                      class="text-left text-xs font-medium uppercase tracking-widest text-[var(--ink-soft)] px-5 py-3"
-                    >
-                      Account
-                    </th>
-                    <th
-                      class="text-right text-xs font-medium uppercase tracking-widest text-[var(--ink-soft)] px-5 py-3"
-                    >
-                      Balance
-                    </th>
-                    <th
-                      class="text-right text-xs font-medium uppercase tracking-widest text-[var(--ink-soft)] px-5 py-3"
-                    >
-                      Type
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="account in accounts"
-                    :key="account.id"
-                    class="border-b border-[var(--rule)] last:border-0 hover:bg-[var(--paper-dark)]/40 transition-colors duration-150"
-                  >
-                    <td class="px-5 py-4">
-                      <span class="text-sm font-medium text-[var(--ink)]">{{ account.name }}</span>
-                    </td>
-                    <td class="px-5 py-4 text-right">
-                      <span class="font-mono text-sm text-[var(--ink)]">{{
-                        formatCurrency(account.balance)
-                      }}</span>
-                    </td>
-                    <td class="px-5 py-4 text-right">
-                      <Badge :variant="getBadgeVariant(account.type)">
-                        {{ account.type }}
-                      </Badge>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </Card>
-          </div>
+            </div>
+          </Card>
 
-          <!-- Quick actions -->
-          <div class="lg:col-span-2 animate-fade-up delay-3">
-            <Heading as="h3" size="xl" mb="4">Quick Actions</Heading>
-            <div class="space-y-3">
-              <RouterLink
-                to="/accounts"
-                class="w-full group flex items-center gap-4 p-4 bg-[var(--paper)] border border-[var(--rule)] rounded-lg hover:border-[var(--gold)] hover:shadow-md transition-all duration-200 text-left card-hover"
-              >
-                <div
-                  class="w-9 h-9 rounded-full bg-[var(--paper-dark)] flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--gold-light)]/20 transition-colors"
-                >
-                  <Icon name="plus" size="sm" class="text-[var(--gold)]" />
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-[var(--ink)]">Add Account</p>
-                  <p class="text-xs text-[var(--ink-soft)]">Track a new bank or wallet</p>
-                </div>
-              </RouterLink>
-
-              <RouterLink
-                to="/transactions"
-                class="w-full group flex items-center gap-4 p-4 bg-[var(--paper)] border border-[var(--rule)] rounded-lg hover:border-[var(--teal)] hover:shadow-md transition-all duration-200 text-left card-hover"
-              >
-                <div
-                  class="w-9 h-9 rounded-full bg-[var(--paper-dark)] flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--teal)]/10 transition-colors"
-                >
-                  <Icon name="file-plus" size="sm" class="text-[var(--teal)]" />
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-[var(--ink)]">Record Transaction</p>
-                  <p class="text-xs text-[var(--ink-soft)]">Log income or an expense</p>
-                </div>
-              </RouterLink>
-
+          <!-- Section F — Pending Drafts -->
+          <Card class="animate-fade-up delay-6">
+            <div class="flex items-center justify-between mb-4">
+              <Heading as="h3" size="lg">Pending Drafts</Heading>
               <RouterLink
                 to="/drafts"
-                class="w-full group flex items-center gap-4 p-4 bg-[var(--paper)] border border-[var(--rule)] rounded-lg hover:border-[var(--rust-muted)] hover:shadow-md transition-all duration-200 text-left card-hover"
+                class="text-xs font-medium text-[var(--ink-soft)] hover:text-[var(--ink)] underline transition-colors"
               >
-                <div
-                  class="w-9 h-9 rounded-full bg-[var(--paper-dark)] flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--rust)]/10 transition-colors"
-                >
-                  <Icon name="file-text" size="sm" class="text-[var(--rust)]" />
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-[var(--ink)]">Review Drafts</p>
-                  <p class="text-xs text-[var(--ink-soft)]">Confirm or reject pending</p>
-                </div>
-                <span
-                  v-if="draftsCount > 0"
-                  class="ml-auto inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--gold-light)]/20 text-xs font-mono font-medium text-[var(--gold)]"
-                >
-                  {{ draftsCount }}
-                </span>
-              </RouterLink>
-
-              <RouterLink
-                to="/reports"
-                class="w-full group flex items-center gap-4 p-4 bg-[var(--paper)] border border-[var(--rule)] rounded-lg hover:border-[var(--ink-soft)] hover:shadow-md transition-all duration-200 text-left card-hover"
-              >
-                <div
-                  class="w-9 h-9 rounded-full bg-[var(--paper-dark)] flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--ink)]/10 transition-colors"
-                >
-                  <Icon name="bar-chart-2" size="sm" class="text-[var(--ink-soft)]" />
-                </div>
-                <div>
-                  <p class="text-sm font-medium text-[var(--ink)]">View Reports</p>
-                  <p class="text-xs text-[var(--ink-soft)]">Spending trends & insights</p>
-                </div>
+                View all
               </RouterLink>
             </div>
-          </div>
+            <div v-if="drafts.length === 0" class="p-6 text-center">
+              <Text as="p" size="sm" muted>No pending drafts.</Text>
+            </div>
+            <div v-else class="space-y-4">
+              <div
+                v-for="draft in drafts"
+                :key="draft.id"
+                class="p-4 bg-[var(--paper-dark)]/40 rounded-lg"
+              >
+                <div class="flex items-center justify-between mb-3">
+                  <div>
+                    <p class="text-sm font-medium text-[var(--ink)]">{{ draft.description || 'Untitled Draft' }}</p>
+                    <Text as="p" size="xs" muted>{{ formatCurrency(draft.amount) }} · {{ draft.source }}</Text>
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <Button variant="secondary" size="sm" @click="rejectDraft(draft.id)">Reject</Button>
+                  <Button size="sm" @click="confirmDraft(draft.id)">Confirm</Button>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
+
+        <!-- Section G — Accounts table (collapsible) -->
+        <details class="group">
+          <summary class="flex items-center justify-between cursor-pointer list-none py-4">
+            <Heading as="h3" size="lg">Accounts</Heading>
+            <span class="text-xs text-[var(--ink-soft)] group-open:rotate-180 transition-transform">▼</span>
+          </summary>
+          <Card>
+            <div v-if="accounts.length === 0" class="p-8 text-center">
+              <Text as="p" size="sm" muted>
+                No accounts yet. Create one to get started.
+              </Text>
+            </div>
+            <table v-else class="w-full">
+              <thead>
+                <tr class="border-b border-[var(--rule)]">
+                  <th class="text-left text-xs font-medium uppercase tracking-widest text-[var(--ink-soft)] px-5 py-3">
+                    Account
+                  </th>
+                  <th class="text-right text-xs font-medium uppercase tracking-widest text-[var(--ink-soft)] px-5 py-3">
+                    Balance
+                  </th>
+                  <th class="text-right text-xs font-medium uppercase tracking-widest text-[var(--ink-soft)] px-5 py-3">
+                    Type
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="account in accounts"
+                  :key="account.id"
+                  class="border-b border-[var(--rule)] last:border-0 hover:bg-[var(--paper-dark)]/40 transition-colors duration-150"
+                >
+                  <td class="px-5 py-4">
+                    <span class="text-sm font-medium text-[var(--ink)]">{{ account.name }}</span>
+                  </td>
+                  <td class="px-5 py-4 text-right">
+                    <span class="font-mono text-sm text-[var(--ink)]">
+                      {{ formatCurrency(account.balance) }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-4 text-right">
+                    <Badge :variant="getBadgeVariant(account.type)">
+                      {{ account.type }}
+                    </Badge>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </Card>
+        </details>
       </template>
     </main>
   </div>
