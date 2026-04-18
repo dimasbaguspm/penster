@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import uiCard from "@/components/ui/ui-card.vue";
-import uiBadge from "@/components/ui/ui-badge.vue";
-import uiButton from "@/components/ui/ui-button.vue";
+import { Card, Button, Badge, Heading, Text, Icon } from "@/components/ui";
 import { useApi } from "@/composables/use-api";
 import type { ModelsDraft } from "@/api/types";
 
@@ -58,8 +56,8 @@ onMounted(fetchDrafts);
   <div class="max-w-7xl mx-auto px-6 lg:px-10 py-10">
     <div class="flex items-center justify-between mb-8 animate-fade-up">
       <div>
-        <h1 class="font-display text-3xl font-semibold text-[var(--ink)]">Drafts</h1>
-        <p class="text-sm text-[var(--ink-soft)] mt-1">Pending transactions awaiting your review</p>
+        <Heading as="h1" size="3xl">Drafts</Heading>
+        <Text as="p" size="sm" muted mt="1">Pending transactions awaiting your review</Text>
       </div>
     </div>
 
@@ -84,30 +82,13 @@ onMounted(fetchDrafts);
       Loading...
     </div>
 
-    <uiCard v-else>
+    <Card v-else>
       <div v-if="drafts.length === 0" class="p-12 text-center">
-        <svg
-          class="w-10 h-10 mx-auto text-[var(--rule)] mb-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1"
-        >
-          <path
-            d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            d="M14 2v6h6M16 13H8M16 17H8M10 9H8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-        <h3 class="font-display text-lg font-medium text-[var(--ink)] mb-1">No pending drafts</h3>
-        <p class="text-sm text-[var(--ink-soft)]">
+        <Icon name="file-text" size="xl" class="mx-auto text-[var(--rule)] mb-4" />
+        <Heading as="h3" size="lg" mb="1">No pending drafts</Heading>
+        <Text as="p" size="sm" muted>
           All drafts have been reviewed. You're all caught up.
-        </p>
+        </Text>
       </div>
 
       <table v-else class="w-full">
@@ -158,9 +139,9 @@ onMounted(fetchDrafts);
               </span>
             </td>
             <td class="px-5 py-4">
-              <uiBadge :variant="getStatusVariant(draft.status)">
+              <Badge :variant="getStatusVariant(draft.status)">
                 {{ draft.status || "pending" }}
-              </uiBadge>
+              </Badge>
             </td>
             <td class="px-5 py-4">
               <span class="text-xs text-[var(--ink-soft)] capitalize">
@@ -169,27 +150,27 @@ onMounted(fetchDrafts);
             </td>
             <td class="px-5 py-4 text-right">
               <div class="flex items-center justify-end gap-2">
-                <uiButton
+                <Button
                   variant="secondary"
                   size="sm"
                   :loading="loading"
                   @click="confirmDraft(draft.id!)"
                 >
                   Confirm
-                </uiButton>
-                <uiButton
+                </Button>
+                <Button
                   variant="ghost"
                   size="sm"
                   :loading="loading"
                   @click="rejectDraft(draft.id!)"
                 >
                   Reject
-                </uiButton>
+                </Button>
               </div>
             </td>
           </tr>
         </tbody>
       </table>
-    </uiCard>
+    </Card>
   </div>
 </template>

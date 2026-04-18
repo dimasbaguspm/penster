@@ -172,3 +172,8 @@ body {
 .ink-underline:hover {
   text-decoration-color: var(--ink);
 }
+
+/* Safe area padding for bottom bar */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom);
+}

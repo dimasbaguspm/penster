@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import uiButton from "@/components/ui/ui-button.vue";
-import uiBadge from "@/components/ui/ui-badge.vue";
-import uiCard from "@/components/ui/ui-card.vue";
+import { Button, Badge, Card, Heading, Text, Icon } from "@/components/ui";
 import { useApi } from "@/composables/use-api";
 import type { ModelsAccount, ModelsReportSummary } from "@/api/types";
 
@@ -60,18 +58,16 @@ onMounted(async () => {
       <div class="max-w-7xl mx-auto px-6 lg:px-10 py-10">
         <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div class="animate-fade-up">
-            <p class="text-xs font-medium uppercase tracking-widest text-[var(--ink-soft)] mb-1">
+            <Text as="p" size="xs" muted class="uppercase tracking-widest mb-1">
               Welcome back
-            </p>
-            <h2
-              class="font-display text-4xl lg:text-5xl font-semibold text-[var(--ink)] leading-tight"
-            >
+            </Text>
+            <Heading as="h2" size="4xl" class="lg:text-5xl">
               Your Ledger
-            </h2>
+            </Heading>
           </div>
           <div class="animate-fade-up delay-2 flex items-center gap-3">
-            <uiButton variant="secondary">Filter</uiButton>
-            <uiButton>+ New Transaction</uiButton>
+            <Button variant="secondary">Filter</Button>
+            <Button>+ New Transaction</Button>
           </div>
         </div>
       </div>
@@ -113,34 +109,34 @@ onMounted(async () => {
           class="grid grid-cols-1 sm:grid-cols-3 gap-px bg-[var(--rule)] border border-[var(--rule)] rounded-lg overflow-hidden mb-10 animate-fade-up delay-1"
         >
           <div class="bg-[var(--paper)] p-6">
-            <p class="text-xs font-medium uppercase tracking-widest text-[var(--ink-soft)] mb-3">
+            <Text as="p" size="xs" muted class="uppercase tracking-widest mb-3">
               Net Balance
-            </p>
+            </Text>
             <p class="font-mono text-3xl font-medium text-[var(--ink)]">
               {{ formatCurrency(netBalance) }}
             </p>
-            <p class="text-xs text-[var(--ink-soft)] mt-1">
+            <Text as="p" size="xs" muted mt="1">
               Across {{ accounts.length }}
               {{ accounts.length === 1 ? "account" : "accounts" }}
-            </p>
+            </Text>
           </div>
           <div class="bg-[var(--paper)] p-6">
-            <p class="text-xs font-medium uppercase tracking-widest text-[var(--ink-soft)] mb-3">
+            <Text as="p" size="xs" muted class="uppercase tracking-widest mb-3">
               Income
-            </p>
+            </Text>
             <p class="font-mono text-3xl font-medium text-[var(--teal)]">
               {{ formatCurrency(report?.total_income) }}
             </p>
-            <p class="text-xs text-[var(--ink-soft)] mt-1">This month</p>
+            <Text as="p" size="xs" muted mt="1">This month</Text>
           </div>
           <div class="bg-[var(--paper)] p-6">
-            <p class="text-xs font-medium uppercase tracking-widest text-[var(--ink-soft)] mb-3">
+            <Text as="p" size="xs" muted class="uppercase tracking-widest mb-3">
               Expenses
-            </p>
+            </Text>
             <p class="font-mono text-3xl font-medium text-[var(--rust)]">
               {{ formatCurrency(report?.total_expenses) }}
             </p>
-            <p class="text-xs text-[var(--ink-soft)] mt-1">This month</p>
+            <Text as="p" size="xs" muted mt="1">This month</Text>
           </div>
         </div>
 
@@ -148,7 +144,7 @@ onMounted(async () => {
           <!-- Accounts list -->
           <div class="lg:col-span-3 animate-fade-up delay-2">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-display text-xl font-semibold text-[var(--ink)]">Accounts</h3>
+              <Heading as="h3" size="xl">Accounts</Heading>
               <RouterLink
                 to="/accounts"
                 class="text-xs font-medium text-[var(--ink-soft)] hover:text-[var(--ink)] ink-underline transition-colors"
@@ -157,11 +153,11 @@ onMounted(async () => {
               </RouterLink>
             </div>
 
-            <uiCard>
+            <Card>
               <div v-if="accounts.length === 0" class="p-8 text-center">
-                <p class="text-sm text-[var(--ink-soft)]">
+                <Text as="p" size="sm" muted>
                   No accounts yet. Create one to get started.
-                </p>
+                </Text>
               </div>
               <table v-else class="w-full">
                 <thead>
@@ -198,19 +194,19 @@ onMounted(async () => {
                       }}</span>
                     </td>
                     <td class="px-5 py-4 text-right">
-                      <uiBadge :variant="getBadgeVariant(account.type)">
+                      <Badge :variant="getBadgeVariant(account.type)">
                         {{ account.type }}
-                      </uiBadge>
+                      </Badge>
                     </td>
                   </tr>
                 </tbody>
               </table>
-            </uiCard>
+            </Card>
           </div>
 
           <!-- Quick actions -->
           <div class="lg:col-span-2 animate-fade-up delay-3">
-            <h3 class="font-display text-xl font-semibold text-[var(--ink)] mb-4">Quick Actions</h3>
+            <Heading as="h3" size="xl" mb="4">Quick Actions</Heading>
             <div class="space-y-3">
               <RouterLink
                 to="/accounts"
@@ -219,15 +215,7 @@ onMounted(async () => {
                 <div
                   class="w-9 h-9 rounded-full bg-[var(--paper-dark)] flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--gold-light)]/20 transition-colors"
                 >
-                  <svg
-                    class="w-4 h-4 text-[var(--gold)]"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                  >
-                    <path d="M12 5v14M5 12h14" stroke-linecap="round" />
-                  </svg>
+                  <Icon name="plus" size="sm" class="text-[var(--gold)]" />
                 </div>
                 <div>
                   <p class="text-sm font-medium text-[var(--ink)]">Add Account</p>
@@ -242,29 +230,7 @@ onMounted(async () => {
                 <div
                   class="w-9 h-9 rounded-full bg-[var(--paper-dark)] flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--teal)]/10 transition-colors"
                 >
-                  <svg
-                    class="w-4 h-4 text-[var(--teal)]"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                  >
-                    <path
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <rect
-                      x="9"
-                      y="3"
-                      width="6"
-                      height="4"
-                      rx="1"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path d="M9 12h6M9 16h4" stroke-linecap="round" />
-                  </svg>
+                  <Icon name="file-plus" size="sm" class="text-[var(--teal)]" />
                 </div>
                 <div>
                   <p class="text-sm font-medium text-[var(--ink)]">Record Transaction</p>
@@ -279,24 +245,7 @@ onMounted(async () => {
                 <div
                   class="w-9 h-9 rounded-full bg-[var(--paper-dark)] flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--rust)]/10 transition-colors"
                 >
-                  <svg
-                    class="w-4 h-4 text-[var(--rust)]"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                  >
-                    <path
-                      d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                    <path
-                      d="M14 2v6h6M16 13H8M16 17H8M10 9H8"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
+                  <Icon name="file-text" size="sm" class="text-[var(--rust)]" />
                 </div>
                 <div>
                   <p class="text-sm font-medium text-[var(--ink)]">Review Drafts</p>
@@ -317,19 +266,7 @@ onMounted(async () => {
                 <div
                   class="w-9 h-9 rounded-full bg-[var(--paper-dark)] flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--ink)]/10 transition-colors"
                 >
-                  <svg
-                    class="w-4 h-4 text-[var(--ink-soft)]"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                  >
-                    <path
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
+                  <Icon name="bar-chart-2" size="sm" class="text-[var(--ink-soft)]" />
                 </div>
                 <div>
                   <p class="text-sm font-medium text-[var(--ink)]">View Reports</p>

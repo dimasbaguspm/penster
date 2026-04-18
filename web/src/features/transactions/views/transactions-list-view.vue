@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import uiCard from "@/components/ui/ui-card.vue";
-import uiButton from "@/components/ui/ui-button.vue";
-import uiBadge from "@/components/ui/ui-badge.vue";
+import { Card, Button, Badge, Heading, Text, Icon } from "@/components/ui";
 import { useApi } from "@/composables/use-api";
 import type { ModelsTransaction, ModelsTransactionType } from "@/api/types";
 
@@ -46,10 +44,10 @@ onMounted(fetchTransactions);
   <div class="max-w-7xl mx-auto px-6 lg:px-10 py-10">
     <div class="flex items-center justify-between mb-8 animate-fade-up">
       <div>
-        <h1 class="font-display text-3xl font-semibold text-[var(--ink)]">Transactions</h1>
-        <p class="text-sm text-[var(--ink-soft)] mt-1">A record of all your income and expenses</p>
+        <Heading as="h1" size="3xl">Transactions</Heading>
+        <Text as="p" size="sm" muted mt="1">A record of all your income and expenses</Text>
       </div>
-      <uiButton>+ New Transaction</uiButton>
+      <Button>+ New Transaction</Button>
     </div>
 
     <!-- Error banner -->
@@ -73,36 +71,14 @@ onMounted(fetchTransactions);
       Loading...
     </div>
 
-    <uiCard v-else hover>
+    <Card v-else hover>
       <div v-if="transactions.length === 0" class="p-12 text-center">
-        <svg
-          class="w-10 h-10 mx-auto text-[var(--rule)] mb-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1"
-        >
-          <path
-            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <rect
-            x="9"
-            y="3"
-            width="6"
-            height="4"
-            rx="1"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path d="M9 12h6M9 16h4" stroke-linecap="round" />
-        </svg>
-        <h3 class="font-display text-lg font-medium text-[var(--ink)] mb-1">No transactions yet</h3>
-        <p class="text-sm text-[var(--ink-soft)] mb-6">
+        <Icon name="file-text" size="xl" class="mx-auto text-[var(--rule)] mb-4" />
+        <Heading as="h3" size="lg" mb="1">No transactions yet</Heading>
+        <Text as="p" size="sm" muted mb="6">
           Record your first transaction to begin tracking.
-        </p>
-        <uiButton>Record Transaction</uiButton>
+        </Text>
+        <Button>Record Transaction</Button>
       </div>
 
       <table v-else class="w-full">
@@ -162,9 +138,9 @@ onMounted(fetchTransactions);
               </span>
             </td>
             <td class="px-5 py-4 text-right">
-              <uiBadge :variant="getBadgeVariant(tx.transaction_type)">
+              <Badge :variant="getBadgeVariant(tx.transaction_type)">
                 {{ tx.transaction_type }}
-              </uiBadge>
+              </Badge>
             </td>
             <td class="px-5 py-4 text-right">
               <span class="text-xs text-[var(--ink-soft)]">
@@ -184,7 +160,7 @@ onMounted(fetchTransactions);
           Showing {{ transactions.length }} of {{ totalItems }} transactions
         </p>
         <div class="flex items-center gap-2">
-          <uiButton
+          <Button
             variant="secondary"
             size="sm"
             :disabled="page <= 1"
@@ -194,11 +170,11 @@ onMounted(fetchTransactions);
             "
           >
             Previous
-          </uiButton>
+          </Button>
           <span class="text-xs text-[var(--ink-soft)] px-2">
             Page {{ page }} of {{ totalPages }}
           </span>
-          <uiButton
+          <Button
             variant="secondary"
             size="sm"
             :disabled="page >= totalPages"
@@ -208,9 +184,9 @@ onMounted(fetchTransactions);
             "
           >
             Next
-          </uiButton>
+          </Button>
         </div>
       </div>
-    </uiCard>
+    </Card>
   </div>
 </template>

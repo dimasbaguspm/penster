@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import uiCard from "@/components/ui/ui-card.vue";
-import uiButton from "@/components/ui/ui-button.vue";
-import uiBadge from "@/components/ui/ui-badge.vue";
+import { Button, Badge, Card, Heading, Text, Icon } from "@/components/ui";
 import { useApi } from "@/composables/use-api";
 import type { ModelsAccount } from "@/api/types";
 
@@ -46,10 +44,10 @@ onMounted(fetchAccounts);
   <div class="max-w-7xl mx-auto px-6 lg:px-10 py-10">
     <div class="flex items-center justify-between mb-8 animate-fade-up">
       <div>
-        <h1 class="font-display text-3xl font-semibold text-[var(--ink)]">Accounts</h1>
-        <p class="text-sm text-[var(--ink-soft)] mt-1">Manage your bank accounts and wallets</p>
+        <Heading as="h1" size="3xl">Accounts</Heading>
+        <Text as="p" size="sm" muted mt="1">Manage your bank accounts and wallets</Text>
       </div>
-      <uiButton>+ Add Account</uiButton>
+      <Button>+ Add Account</Button>
     </div>
 
     <!-- Error banner -->
@@ -73,26 +71,14 @@ onMounted(fetchAccounts);
       Loading...
     </div>
 
-    <uiCard v-else hover>
+    <Card v-else hover>
       <div v-if="accounts.length === 0" class="p-12 text-center">
-        <svg
-          class="w-10 h-10 mx-auto text-[var(--rule)] mb-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1"
-        >
-          <path
-            d="M3 21h18M3 7v1a3 3 0 003 3h12a3 3 0 003-3V7M3 7l9-4 9 4M9 21V11h6v10"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-        <h3 class="font-display text-lg font-medium text-[var(--ink)] mb-1">No accounts yet</h3>
-        <p class="text-sm text-[var(--ink-soft)] mb-6">
+        <Icon name="building-2" size="xl" class="mx-auto text-[var(--rule)] mb-4" />
+        <Heading as="h3" size="lg" mb="1">No accounts yet</Heading>
+        <Text as="p" size="sm" muted mb="6">
           Create your first account to start tracking your finances.
-        </p>
-        <uiButton>Create Account</uiButton>
+        </Text>
+        <Button>Create Account</Button>
       </div>
 
       <table v-else class="w-full">
@@ -140,9 +126,9 @@ onMounted(fetchAccounts);
               }}</span>
             </td>
             <td class="px-5 py-4 text-right">
-              <uiBadge :variant="getBadgeVariant(account.type)">
+              <Badge :variant="getBadgeVariant(account.type)">
                 {{ account.type }}
-              </uiBadge>
+              </Badge>
             </td>
             <td class="px-5 py-4 text-right">
               <span class="text-xs text-[var(--ink-soft)]">
@@ -162,7 +148,7 @@ onMounted(fetchAccounts);
           Showing {{ accounts.length }} of {{ totalItems }} accounts
         </p>
         <div class="flex items-center gap-2">
-          <uiButton
+          <Button
             variant="secondary"
             size="sm"
             :disabled="page <= 1"
@@ -172,11 +158,11 @@ onMounted(fetchAccounts);
             "
           >
             Previous
-          </uiButton>
+          </Button>
           <span class="text-xs text-[var(--ink-soft)] px-2">
             Page {{ page }} of {{ totalPages }}
           </span>
-          <uiButton
+          <Button
             variant="secondary"
             size="sm"
             :disabled="page >= totalPages"
@@ -186,9 +172,9 @@ onMounted(fetchAccounts);
             "
           >
             Next
-          </uiButton>
+          </Button>
         </div>
       </div>
-    </uiCard>
+    </Card>
   </div>
 </template>

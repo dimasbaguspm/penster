@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import uiCard from "@/components/ui/ui-card.vue";
+import { Card, Text } from "@/components/ui";
 </script>
 
 <template>
   <div class="max-w-7xl mx-auto px-6 lg:px-10 py-10">
-    <uiCard>
+    <Card>
       <div class="p-12 text-center">
-        <p class="text-sm text-[var(--ink-soft)]">Account detail view</p>
+        <Text as="p" size="sm" muted>Account detail view</Text>
       </div>
-    </uiCard>
+    </Card>
   </div>
 </template>
