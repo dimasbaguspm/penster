@@ -11,12 +11,12 @@ export const reportsHandlers = [
     return HttpResponse.json({ data: mockReportSummary });
   }),
   http.get("/reports/by-category", () => {
-    return HttpResponse.json(mockReportByCategory);
+    return HttpResponse.json({ data: mockReportByCategory });
   }),
   http.get("/reports/by-account", () => {
-    return HttpResponse.json(mockReportByAccount);
+    return HttpResponse.json({ data: mockReportByAccount });
   }),
   http.get("/reports/trends", () => {
-    return HttpResponse.json(mockReportTrends);
+    return HttpResponse.json({ data: mockReportTrends });
   }),
 ];
