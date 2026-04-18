@@ -242,10 +242,7 @@ onMounted(async () => {
             <p class="font-mono text-3xl font-medium text-[var(--ink)]">
               {{ formatCurrency(netBalance) }}
             </p>
-            <Text as="p" size="xs" muted mt="1">
-              Across {{ accounts.length }}
-              {{ accounts.length === 1 ? "account" : "accounts" }}
-            </Text>
+            <Text as="p" size="xs" muted mt="1">This month</Text>
           </div>
           <div class="bg-[var(--paper)] p-6">
             <Text as="p" size="xs" muted class="uppercase tracking-widest mb-3">
@@ -299,7 +296,8 @@ onMounted(async () => {
               </div>
               <div class="h-2 bg-[var(--rule)] rounded-full overflow-hidden">
                 <div
-                  class="h-full bg-[var(--rust)] rounded-full transition-all duration-300"
+                  class="h-full rounded-full transition-all duration-300"
+                  :class="cat.type === 'income' ? 'bg-[var(--teal)]' : 'bg-[var(--rust)]'"
                   :style="{ width: Math.min((cat.total / (MOCK_BUDGETS[cat.category_id] || 1)) * 100, 100) + '%' }"
                 />
               </div>
