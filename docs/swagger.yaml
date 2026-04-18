@@ -8,6 +8,54 @@ definitions:
       version:
         type: string
     type: object
+  models.Account:
+    properties:
+      balance:
+        type: integer
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      type:
+        $ref: '#/definitions/models.AccountType'
+      updated_at:
+        type: string
+    type: object
+  models.AccountBreakdown:
+    properties:
+      account_id:
+        type: string
+      account_name:
+        type: string
+      total:
+        type: integer
+      type:
+        type: string
+    type: object
+  models.AccountPagedResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Account'
+        type: array
+      page_number:
+        type: integer
+      page_size:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  models.AccountResponse:
+    properties:
+      data:
+        $ref: '#/definitions/models.Account'
+    type: object
   models.AccountType:
     enum:
     - expense
@@ -18,6 +66,52 @@ definitions:
     - AccountTypeExpense
     - AccountTypeIncome
     - AccountTypeTransfer
+  models.Category:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      type:
+        $ref: '#/definitions/models.CategoryType'
+      updated_at:
+        type: string
+    type: object
+  models.CategoryBreakdown:
+    properties:
+      category_id:
+        type: string
+      category_name:
+        type: string
+      total:
+        type: integer
+      type:
+        type: string
+    type: object
+  models.CategoryPagedResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Category'
+        type: array
+      page_number:
+        type: integer
+      page_size:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  models.CategoryResponse:
+    properties:
+      data:
+        $ref: '#/definitions/models.Category'
+    type: object
   models.CategoryType:
     enum:
     - expense
@@ -127,6 +221,172 @@ definitions:
     - title
     - transaction_type
     type: object
+  models.Draft:
+    properties:
+      account_id:
+        type: string
+      amount:
+        type: integer
+      category_id:
+        type: string
+      confirmed_at:
+        type: string
+      created_at:
+        type: string
+      currency:
+        type: string
+      currency_rate:
+        type: number
+      deleted_at:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      rejected_at:
+        type: string
+      source:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      transaction_type:
+        type: string
+      transfer_account_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.DraftPagedResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Draft'
+        type: array
+      page_number:
+        type: integer
+      page_size:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  models.DraftResponse:
+    properties:
+      data:
+        $ref: '#/definitions/models.Draft'
+    type: object
+  models.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  models.ReportByAccount:
+    properties:
+      accounts:
+        items:
+          $ref: '#/definitions/models.AccountBreakdown'
+        type: array
+      period_end:
+        type: string
+      period_start:
+        type: string
+    type: object
+  models.ReportByCategory:
+    properties:
+      categories:
+        items:
+          $ref: '#/definitions/models.CategoryBreakdown'
+        type: array
+      period_end:
+        type: string
+      period_start:
+        type: string
+    type: object
+  models.ReportSummary:
+    properties:
+      base_currency:
+        type: string
+      period_end:
+        type: string
+      period_start:
+        type: string
+      total_balance:
+        type: integer
+      total_expenses:
+        type: integer
+      total_income:
+        type: integer
+      total_transfers:
+        type: integer
+    type: object
+  models.ReportSummaryResponse:
+    properties:
+      data:
+        $ref: '#/definitions/models.ReportSummary'
+    type: object
+  models.ReportTrends:
+    properties:
+      data_points:
+        items:
+          $ref: '#/definitions/models.TrendDataPoint'
+        type: array
+      period_end:
+        type: string
+      period_start:
+        type: string
+    type: object
+  models.Transaction:
+    properties:
+      account_id:
+        type: string
+      amount:
+        type: integer
+      category_id:
+        type: string
+      created_at:
+        type: string
+      currency:
+        type: string
+      currency_rate:
+        type: number
+      deleted_at:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      title:
+        type: string
+      transaction_type:
+        $ref: '#/definitions/models.TransactionType'
+      transfer_account_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.TransactionPagedResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Transaction'
+        type: array
+      page_number:
+        type: integer
+      page_size:
+        type: integer
+      total_items:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  models.TransactionResponse:
+    properties:
+      data:
+        $ref: '#/definitions/models.Transaction'
+    type: object
   models.TransactionType:
     enum:
     - expense
@@ -137,6 +397,15 @@ definitions:
     - TransactionTypeExpense
     - TransactionTypeIncome
     - TransactionTypeTransfer
+  models.TrendDataPoint:
+    properties:
+      date:
+        type: string
+      total:
+        type: integer
+      type:
+        type: string
+    type: object
   models.UpdateAccountRequest:
     properties:
       balance:
@@ -191,37 +460,6 @@ definitions:
       transfer_account_id:
         type: string
     type: object
-  response.Meta:
-    properties:
-      page:
-        type: integer
-      per_page:
-        type: integer
-      total:
-        type: integer
-      total_pages:
-        type: integer
-    type: object
-  response.PaginatedResponse:
-    properties:
-      data: {}
-      error:
-        type: string
-      meta:
-        $ref: '#/definitions/response.Meta'
-      success:
-        type: boolean
-    type: object
-  response.Response:
-    properties:
-      data: {}
-      error:
-        type: string
-      meta:
-        $ref: '#/definitions/response.Meta'
-      success:
-        type: boolean
-    type: object
 info:
   contact: {}
 paths:
@@ -259,11 +497,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.PaginatedResponse'
+            $ref: '#/definitions/models.AccountPagedResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: List all accounts
       tags:
       - accounts
@@ -284,15 +522,15 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.AccountResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Create a new account
       tags:
       - accounts
@@ -313,19 +551,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.AccountResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Delete an account
       tags:
       - accounts
@@ -345,19 +583,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.AccountResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Get account by ID
       tags:
       - accounts
@@ -383,19 +621,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.AccountResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Update an account
       tags:
       - accounts
@@ -433,11 +671,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.PaginatedResponse'
+            $ref: '#/definitions/models.CategoryPagedResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: List all categories
       tags:
       - categories
@@ -458,15 +696,15 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.CategoryResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Create a new category
       tags:
       - categories
@@ -487,19 +725,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.CategoryResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Delete a category
       tags:
       - categories
@@ -519,19 +757,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.CategoryResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Get category by ID
       tags:
       - categories
@@ -557,19 +795,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.CategoryResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Update a category
       tags:
       - categories
@@ -599,11 +837,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.PaginatedResponse'
+            $ref: '#/definitions/models.DraftPagedResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: List all drafts
       tags:
       - drafts
@@ -624,15 +862,15 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.DraftResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Create a new draft
       tags:
       - drafts
@@ -653,19 +891,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Delete a draft
       tags:
       - drafts
@@ -685,19 +923,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.DraftResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Get draft by ID
       tags:
       - drafts
@@ -723,19 +961,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.DraftResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Update a draft
       tags:
       - drafts
@@ -756,19 +994,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.TransactionResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Confirm a draft
       tags:
       - drafts
@@ -789,19 +1027,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Reject a draft
       tags:
       - drafts
@@ -842,15 +1080,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ReportByAccount'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Get spending breakdown by account
       tags:
       - reports
@@ -876,15 +1114,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ReportByCategory'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Get spending breakdown by category
       tags:
       - reports
@@ -911,15 +1149,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ReportSummaryResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Get financial report summary
       tags:
       - reports
@@ -945,15 +1183,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ReportTrends'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Get time-series trend data
       tags:
       - reports
@@ -1003,11 +1241,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.PaginatedResponse'
+            $ref: '#/definitions/models.TransactionPagedResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: List all transactions
       tags:
       - transactions
@@ -1029,15 +1267,15 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.TransactionResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Create a new transaction
       tags:
       - transactions
@@ -1058,19 +1296,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.TransactionResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Delete a transaction
       tags:
       - transactions
@@ -1090,19 +1328,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.TransactionResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Get transaction by ID
       tags:
       - transactions
@@ -1128,19 +1366,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.TransactionResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.Response'
+            $ref: '#/definitions/models.ErrorResponse'
       summary: Update a transaction
       tags:
       - transactions

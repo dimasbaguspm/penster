@@ -2,8 +2,6 @@ package models
 
 import (
 	"time"
-
-	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
 type TransactionType string
@@ -54,13 +52,29 @@ type UpdateTransactionRequest struct {
 }
 
 type TransactionResponse struct {
-	response.Response
 	Data Transaction `json:"data"`
 }
 
-type TransactionsResponse struct {
-	response.PaginatedResponse
-	Data []Transaction `json:"data"`
+type TransactionPagedResponse struct {
+	Items      []Transaction `json:"items"`
+	PageSize   int           `json:"page_size"`
+	PageNumber int           `json:"page_number"`
+	TotalPages int           `json:"total_pages"`
+	TotalItems int64         `json:"total_items"`
+}
+
+func NewTransactionPagedResponse(items []Transaction, pageSize, pageNumber int, totalItems int64) TransactionPagedResponse {
+	totalPages := int(totalItems) / pageSize
+	if int(totalItems)%pageSize > 0 {
+		totalPages++
+	}
+	return TransactionPagedResponse{
+		Items:      items,
+		PageSize:   pageSize,
+		PageNumber: pageNumber,
+		TotalPages: totalPages,
+		TotalItems: totalItems,
+	}
 }
 
 type TransactionSearchParams struct {

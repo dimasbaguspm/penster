@@ -10,7 +10,6 @@ import (
 	"github.com/dimasbaguspm/penster/internal/interface/dto"
 	"github.com/dimasbaguspm/penster/pkg/models"
 	"github.com/dimasbaguspm/penster/pkg/observability"
-	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
 type TransactionHandler struct {
@@ -35,8 +34,8 @@ func NewTransactionHandler(svc *service.TransactionService) *TransactionHandler 
 // @Param sort_order query string false "Sort order (asc/desc)"
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Page size" default(10)
-// @Success 200 {object} response.PaginatedResponse
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.TransactionPagedResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /transactions [get]
 func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "transaction")
@@ -65,7 +64,7 @@ func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("transactions listed", "count", len(transactionList), "total", total)
-	resp := response.NewPaginatedResponse(transactionList, params.PageNumber, params.PageSize, total)
+	resp := models.NewTransactionPagedResponse(transactionList, params.PageSize, params.PageNumber, total)
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -76,10 +75,10 @@ func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Transaction UUID"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.TransactionResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /transactions/{id} [get]
 func (h *TransactionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "transaction")
@@ -113,7 +112,7 @@ func (h *TransactionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("transaction retrieved", "id", id)
-	resp := response.NewResponse(*tx)
+	resp := models.TransactionResponse{Data: *tx}
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -124,9 +123,9 @@ func (h *TransactionHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body models.CreateTransactionRequest true "Transaction creation request"
-// @Success 201 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 201 {object} models.TransactionResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /transactions [post]
 func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "transaction")
@@ -169,7 +168,7 @@ func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("transaction created", "id", tx.ID)
-	resp := response.NewResponse(*tx)
+	resp := models.TransactionResponse{Data: *tx}
 	h.writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -181,10 +180,10 @@ func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path string true "Transaction UUID"
 // @Param request body models.UpdateTransactionRequest true "Transaction update request"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.TransactionResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /transactions/{id} [put]
 func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "transaction")
@@ -240,7 +239,7 @@ func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("transaction updated", "id", id)
-	resp := response.NewResponse(*tx)
+	resp := models.TransactionResponse{Data: *tx}
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -251,10 +250,10 @@ func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Transaction UUID"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.TransactionResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /transactions/{id} [delete]
 func (h *TransactionHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "transaction")
@@ -288,7 +287,7 @@ func (h *TransactionHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("transaction deleted", "id", id)
-	resp := response.NewResponse(*tx)
+	resp := models.TransactionResponse{Data: *tx}
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -301,5 +300,5 @@ func (h *TransactionHandler) writeJSON(w http.ResponseWriter, status int, data a
 func (h *TransactionHandler) writeError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(response.NewErrorResponse(message))
+	json.NewEncoder(w).Encode(models.ErrorResponse{Error: message})
 }

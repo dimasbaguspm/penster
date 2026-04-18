@@ -2,8 +2,6 @@ package models
 
 import (
 	"time"
-
-	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
 type DraftStatus string
@@ -66,13 +64,29 @@ type UpdateDraftRequest struct {
 }
 
 type DraftResponse struct {
-	response.Response
 	Data Draft `json:"data"`
 }
 
-type DraftsResponse struct {
-	response.PaginatedResponse
-	Data []Draft `json:"data"`
+type DraftPagedResponse struct {
+	Items      []Draft `json:"items"`
+	PageSize   int     `json:"page_size"`
+	PageNumber int     `json:"page_number"`
+	TotalPages int     `json:"total_pages"`
+	TotalItems int64   `json:"total_items"`
+}
+
+func NewDraftPagedResponse(items []Draft, pageSize, pageNumber int, totalItems int64) DraftPagedResponse {
+	totalPages := int(totalItems) / pageSize
+	if int(totalItems)%pageSize > 0 {
+		totalPages++
+	}
+	return DraftPagedResponse{
+		Items:      items,
+		PageSize:   pageSize,
+		PageNumber: pageNumber,
+		TotalPages: totalPages,
+		TotalItems: totalItems,
+	}
 }
 
 type DraftSearchParams struct {

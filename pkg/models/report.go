@@ -1,6 +1,8 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type ReportSummary struct {
 	TotalBalance   int64     `json:"total_balance"`
@@ -48,4 +50,8 @@ type ReportTrends struct {
 	DataPoints  []TrendDataPoint `json:"data_points"`
 	PeriodStart time.Time        `json:"period_start"`
 	PeriodEnd   time.Time        `json:"period_end"`
+}
+
+type ReportSummaryResponse struct {
+	Data ReportSummary `json:"data"`
 }

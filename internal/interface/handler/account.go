@@ -8,7 +8,6 @@ import (
 	"github.com/dimasbaguspm/penster/internal/interface/dto"
 	"github.com/dimasbaguspm/penster/pkg/models"
 	"github.com/dimasbaguspm/penster/pkg/observability"
-	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
 type AccountHandler struct {
@@ -30,8 +29,8 @@ func NewAccountHandler(svc *service.AccountService) *AccountHandler {
 // @Param sort_order query string false "Sort order (asc/desc)"
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Page size" default(10)
-// @Success 200 {object} response.PaginatedResponse
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.AccountPagedResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /accounts [get]
 func (h *AccountHandler) List(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "account")
@@ -59,7 +58,7 @@ func (h *AccountHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("accounts listed", "count", len(accountList), "total", total)
-	resp := response.NewPaginatedResponse(accountList, params.PageNumber, params.PageSize, total)
+	resp := models.NewAccountPagedResponse(accountList, params.PageSize, params.PageNumber, total)
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -70,10 +69,10 @@ func (h *AccountHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Account UUID"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.AccountResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /accounts/{id} [get]
 func (h *AccountHandler) Get(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "account")
@@ -107,7 +106,7 @@ func (h *AccountHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("account retrieved", "id", id)
-	resp := response.NewResponse(*account)
+	resp := models.AccountResponse{Data: *account}
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -118,9 +117,9 @@ func (h *AccountHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body models.CreateAccountRequest true "Account creation request"
-// @Success 201 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 201 {object} models.AccountResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /accounts [post]
 func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "account")
@@ -155,7 +154,7 @@ func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("account created", "id", account.ID)
-	resp := response.NewResponse(*account)
+	resp := models.AccountResponse{Data: *account}
 	h.writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -167,10 +166,10 @@ func (h *AccountHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path string true "Account UUID"
 // @Param request body models.UpdateAccountRequest true "Account update request"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.AccountResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /accounts/{id} [put]
 func (h *AccountHandler) Update(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "account")
@@ -217,7 +216,7 @@ func (h *AccountHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("account updated", "id", id)
-	resp := response.NewResponse(*account)
+	resp := models.AccountResponse{Data: *account}
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -228,10 +227,10 @@ func (h *AccountHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Account UUID"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.AccountResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /accounts/{id} [delete]
 func (h *AccountHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "account")
@@ -265,7 +264,7 @@ func (h *AccountHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("account deleted", "id", id)
-	resp := response.NewResponse(*account)
+	resp := models.AccountResponse{Data: *account}
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -278,5 +277,5 @@ func (h *AccountHandler) writeJSON(w http.ResponseWriter, status int, data any) 
 func (h *AccountHandler) writeError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(response.NewErrorResponse(message))
+	json.NewEncoder(w).Encode(models.ErrorResponse{Error: message})
 }

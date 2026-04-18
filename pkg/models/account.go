@@ -2,8 +2,6 @@ package models
 
 import (
 	"time"
-
-	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
 type AccountType string
@@ -38,13 +36,29 @@ type UpdateAccountRequest struct {
 }
 
 type AccountResponse struct {
-	response.Response
 	Data Account `json:"data"`
 }
 
-type AccountsResponse struct {
-	response.PaginatedResponse
-	Data []Account `json:"data"`
+type AccountPagedResponse struct {
+	Items      []Account `json:"items"`
+	PageSize   int       `json:"page_size"`
+	PageNumber int       `json:"page_number"`
+	TotalPages int       `json:"total_pages"`
+	TotalItems int64     `json:"total_items"`
+}
+
+func NewAccountPagedResponse(items []Account, pageSize, pageNumber int, totalItems int64) AccountPagedResponse {
+	totalPages := int(totalItems) / pageSize
+	if int(totalItems)%pageSize > 0 {
+		totalPages++
+	}
+	return AccountPagedResponse{
+		Items:      items,
+		PageSize:   pageSize,
+		PageNumber: pageNumber,
+		TotalPages: totalPages,
+		TotalItems: totalItems,
+	}
 }
 
 type AccountSearchParams struct {

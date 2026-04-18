@@ -10,7 +10,6 @@ import (
 	"github.com/dimasbaguspm/penster/internal/interface/dto"
 	"github.com/dimasbaguspm/penster/pkg/models"
 	"github.com/dimasbaguspm/penster/pkg/observability"
-	"github.com/dimasbaguspm/penster/pkg/response"
 	"github.com/google/uuid"
 )
 
@@ -31,8 +30,8 @@ func NewDraftHandler(svc *service.DraftService) *DraftHandler {
 // @Param source query string false "Filter by source (manual, ingestion)"
 // @Param status query string false "Filter by status (pending, confirmed, rejected)"
 // @Param page_size query int false "Page size" default(10)
-// @Success 200 {object} response.PaginatedResponse
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.DraftPagedResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /drafts [get]
 func (h *DraftHandler) List(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "draft")
@@ -61,7 +60,7 @@ func (h *DraftHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("drafts listed", "count", len(draftList), "total", total)
-	resp := response.NewPaginatedResponse(draftList, 1, params.PageSize, total)
+	resp := models.NewDraftPagedResponse(draftList, params.PageSize, 1, total)
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -72,10 +71,10 @@ func (h *DraftHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Draft UUID"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.DraftResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /drafts/{id} [get]
 func (h *DraftHandler) Get(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "draft")
@@ -120,7 +119,7 @@ func (h *DraftHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("draft retrieved", "id", id)
-	resp := response.NewResponse(*draft)
+	resp := models.DraftResponse{Data: *draft}
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -131,9 +130,9 @@ func (h *DraftHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body models.CreateDraftRequest true "Draft creation request"
-// @Success 201 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 201 {object} models.DraftResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /drafts [post]
 func (h *DraftHandler) Create(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "draft")
@@ -175,7 +174,7 @@ func (h *DraftHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("draft created", "id", draft.ID)
-	resp := response.NewResponse(*draft)
+	resp := models.DraftResponse{Data: *draft}
 	h.writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -187,10 +186,10 @@ func (h *DraftHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path string true "Draft UUID"
 // @Param request body models.UpdateDraftRequest true "Draft update request"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.DraftResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /drafts/{id} [patch]
 func (h *DraftHandler) Update(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "draft")
@@ -258,7 +257,7 @@ func (h *DraftHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("draft updated", "id", id)
-	resp := response.NewResponse(*draft)
+	resp := models.DraftResponse{Data: *draft}
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -269,10 +268,10 @@ func (h *DraftHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Draft UUID"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.TransactionResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /drafts/{id}/confirm [post]
 func (h *DraftHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "draft")
@@ -322,7 +321,7 @@ func (h *DraftHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("draft confirmed", "id", id, "transaction_id", tx.ID)
-	resp := response.NewResponse(*tx)
+	resp := models.TransactionResponse{Data: *tx}
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -333,10 +332,10 @@ func (h *DraftHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Draft UUID"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.ErrorResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /drafts/{id}/reject [post]
 func (h *DraftHandler) Reject(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "draft")
@@ -381,7 +380,7 @@ func (h *DraftHandler) Reject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("draft rejected", "id", id)
-	h.writeJSON(w, http.StatusOK, response.NewResponse(map[string]string{"status": "rejected"}))
+	h.writeJSON(w, http.StatusOK, models.ErrorResponse{Error: "rejected"})
 }
 
 // Delete handles DELETE /drafts/:id
@@ -391,10 +390,10 @@ func (h *DraftHandler) Reject(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Draft UUID"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.ErrorResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /drafts/{id} [delete]
 func (h *DraftHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "draft")
@@ -439,7 +438,7 @@ func (h *DraftHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("draft deleted", "id", id)
-	h.writeJSON(w, http.StatusOK, response.NewResponse(map[string]string{"status": "deleted"}))
+	h.writeJSON(w, http.StatusOK, models.ErrorResponse{Error: "deleted"})
 }
 
 func (h *DraftHandler) writeJSON(w http.ResponseWriter, status int, data any) {
@@ -451,5 +450,5 @@ func (h *DraftHandler) writeJSON(w http.ResponseWriter, status int, data any) {
 func (h *DraftHandler) writeError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(response.NewErrorResponse(message))
+	json.NewEncoder(w).Encode(models.ErrorResponse{Error: message})
 }

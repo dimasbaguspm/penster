@@ -7,8 +7,8 @@ import (
 
 	"github.com/dimasbaguspm/penster/internal/application/service"
 	"github.com/dimasbaguspm/penster/internal/interface/dto"
+	"github.com/dimasbaguspm/penster/pkg/models"
 	"github.com/dimasbaguspm/penster/pkg/observability"
-	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
 type ReportHandler struct {
@@ -27,9 +27,9 @@ func NewReportHandler(svc *service.ReportService) *ReportHandler {
 // @Produce json
 // @Param start_date query string true "Start date (YYYY-MM-DD)"
 // @Param end_date query string true "End date (YYYY-MM-DD)"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.ReportSummaryResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /reports/summary [get]
 func (h *ReportHandler) Summary(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "report")
@@ -52,7 +52,7 @@ func (h *ReportHandler) Summary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("summary report retrieved")
-	h.writeJSON(w, http.StatusOK, response.NewResponse(summary))
+	h.writeJSON(w, http.StatusOK, models.ReportSummaryResponse{Data: *summary})
 }
 
 // ByAccount handles GET /reports/by-account
@@ -63,9 +63,9 @@ func (h *ReportHandler) Summary(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param start_date query string true "Start date (YYYY-MM-DD)"
 // @Param end_date query string true "End date (YYYY-MM-DD)"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.ReportByAccount
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /reports/by-account [get]
 func (h *ReportHandler) ByAccount(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "report")
@@ -88,7 +88,7 @@ func (h *ReportHandler) ByAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("report by account retrieved")
-	h.writeJSON(w, http.StatusOK, response.NewResponse(report))
+	h.writeJSON(w, http.StatusOK, report)
 }
 
 // ByCategory handles GET /reports/by-category
@@ -99,9 +99,9 @@ func (h *ReportHandler) ByAccount(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param start_date query string true "Start date (YYYY-MM-DD)"
 // @Param end_date query string true "End date (YYYY-MM-DD)"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.ReportByCategory
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /reports/by-category [get]
 func (h *ReportHandler) ByCategory(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "report")
@@ -124,7 +124,7 @@ func (h *ReportHandler) ByCategory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("report by category retrieved")
-	h.writeJSON(w, http.StatusOK, response.NewResponse(report))
+	h.writeJSON(w, http.StatusOK, report)
 }
 
 // Trends handles GET /reports/trends
@@ -135,9 +135,9 @@ func (h *ReportHandler) ByCategory(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param start_date query string true "Start date (YYYY-MM-DD)"
 // @Param end_date query string true "End date (YYYY-MM-DD)"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.ReportTrends
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /reports/trends [get]
 func (h *ReportHandler) Trends(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "report")
@@ -160,7 +160,7 @@ func (h *ReportHandler) Trends(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("trends report retrieved")
-	h.writeJSON(w, http.StatusOK, response.NewResponse(report))
+	h.writeJSON(w, http.StatusOK, report)
 }
 
 func (h *ReportHandler) writeJSON(w http.ResponseWriter, status int, data any) {
@@ -172,5 +172,5 @@ func (h *ReportHandler) writeJSON(w http.ResponseWriter, status int, data any) {
 func (h *ReportHandler) writeError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(response.NewErrorResponse(message))
+	json.NewEncoder(w).Encode(models.ErrorResponse{Error: message})
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/dimasbaguspm/penster/internal/interface/dto"
 	"github.com/dimasbaguspm/penster/pkg/models"
 	"github.com/dimasbaguspm/penster/pkg/observability"
-	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
 type CategoryHandler struct {
@@ -30,8 +29,8 @@ func NewCategoryHandler(svc *service.CategoryService) *CategoryHandler {
 // @Param sort_order query string false "Sort order (asc/desc)"
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Page size" default(10)
-// @Success 200 {object} response.PaginatedResponse
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.CategoryPagedResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /categories [get]
 func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "category")
@@ -59,7 +58,7 @@ func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("categories listed", "count", len(categoryList), "total", total)
-	resp := response.NewPaginatedResponse(categoryList, params.PageNumber, params.PageSize, total)
+	resp := models.NewCategoryPagedResponse(categoryList, params.PageSize, params.PageNumber, total)
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -70,10 +69,10 @@ func (h *CategoryHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Category UUID"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.CategoryResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /categories/{id} [get]
 func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "category")
@@ -107,7 +106,7 @@ func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("category retrieved", "id", id)
-	resp := response.NewResponse(*category)
+	resp := models.CategoryResponse{Data: *category}
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -118,9 +117,9 @@ func (h *CategoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param request body models.CreateCategoryRequest true "Category creation request"
-// @Success 201 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 201 {object} models.CategoryResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /categories [post]
 func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "category")
@@ -155,7 +154,7 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("category created", "id", category.ID)
-	resp := response.NewResponse(*category)
+	resp := models.CategoryResponse{Data: *category}
 	h.writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -167,10 +166,10 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path string true "Category UUID"
 // @Param request body models.UpdateCategoryRequest true "Category update request"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.CategoryResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /categories/{id} [put]
 func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "category")
@@ -217,7 +216,7 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("category updated", "id", id)
-	resp := response.NewResponse(*category)
+	resp := models.CategoryResponse{Data: *category}
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -228,10 +227,10 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Category UUID"
-// @Success 200 {object} response.Response
-// @Failure 400 {object} response.Response
-// @Failure 404 {object} response.Response
-// @Failure 500 {object} response.Response
+// @Success 200 {object} models.CategoryResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
 // @Router /categories/{id} [delete]
 func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	log := observability.NewLogger(r.Context(), "http", "category")
@@ -265,7 +264,7 @@ func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info("category deleted", "id", id)
-	resp := response.NewResponse(*category)
+	resp := models.CategoryResponse{Data: *category}
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -278,5 +277,5 @@ func (h *CategoryHandler) writeJSON(w http.ResponseWriter, status int, data any)
 func (h *CategoryHandler) writeError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(response.NewErrorResponse(message))
+	json.NewEncoder(w).Encode(models.ErrorResponse{Error: message})
 }

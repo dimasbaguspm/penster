@@ -2,8 +2,6 @@ package models
 
 import (
 	"time"
-
-	"github.com/dimasbaguspm/penster/pkg/response"
 )
 
 type CategoryType string
@@ -35,13 +33,29 @@ type UpdateCategoryRequest struct {
 }
 
 type CategoryResponse struct {
-	response.Response
 	Data Category `json:"data"`
 }
 
-type CategoriesResponse struct {
-	response.PaginatedResponse
-	Data []Category `json:"data"`
+type CategoryPagedResponse struct {
+	Items      []Category `json:"items"`
+	PageSize   int        `json:"page_size"`
+	PageNumber int        `json:"page_number"`
+	TotalPages int        `json:"total_pages"`
+	TotalItems int64      `json:"total_items"`
+}
+
+func NewCategoryPagedResponse(items []Category, pageSize, pageNumber int, totalItems int64) CategoryPagedResponse {
+	totalPages := int(totalItems) / pageSize
+	if int(totalItems)%pageSize > 0 {
+		totalPages++
+	}
+	return CategoryPagedResponse{
+		Items:      items,
+		PageSize:   pageSize,
+		PageNumber: pageNumber,
+		TotalPages: totalPages,
+		TotalItems: totalItems,
+	}
 }
 
 type CategorySearchParams struct {
